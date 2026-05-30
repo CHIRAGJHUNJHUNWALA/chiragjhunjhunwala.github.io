@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Account — The Happening Space</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*{cursor:none!important}
+:root{
+  --red:#bc1f2e;--red-dark:#8f1520;--red-dim:rgba(188,31,46,0.1);
+  --black:#0a0a0a;--off-black:#111;--card-bg:#161616;
+  --border:rgba(255,255,255,0.08);--border-red:rgba(188,31,46,0.4);
+  --text:#f5f5f0;--text-muted:rgba(245,245,240,0.45);--text-mid:rgba(245,245,240,0.7);
+  --yellow:#f5e642;--green:#6aaf7e;--orange:#e8863a;
+}
+html{scroll-behavior:smooth}
+body{background:var(--black);color:var(--text);font-family:'Syne',sans-serif;overflow-x:hidden;min-height:100vh}
+.cursor{position:fixed;width:12px;height:12px;background:var(--red);border-radius:50%;pointer-events:none;z-index:99999;top:0;left:0;transform:translate(-50%,-50%);transition:opacity 0.2s}
+.cursor-ring{position:fixed;width:38px;height:38px;border:2px solid rgba(188,31,46,0.75);border-radius:50%;pointer-events:none;z-index:99998;top:0;left:0;transform:translate(-50%,-50%)}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display:flex;align-items:center;justify-content:space-between;pointer-events:none;background:linear-gradient(to bottom,rgba(10,10,10,0.9),transparent)}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;pointer-events:all}
+.logo-text{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:0.1em;color:var(--text);line-height:1}
+.logo-text span{color:var(--red)}
+.hamburger{display:flex;flex-direction:column;justify-content:center;gap:6px;width:44px;height:44px;pointer-events:all;background:rgba(10,10,10,0.7);backdrop-filter:blur(10px);border:1px solid var(--border);padding:12px;z-index:300;transition:border-color 0.3s}
+.hamburger:hover{border-color:var(--red)}
+.hamburger span{display:block;width:20px;height:1.5px;background:var(--text);transition:transform 0.35s ease,opacity 0.25s ease,width 0.3s ease;transform-origin:center}
+.hamburger.open span:nth-child(1){transform:translateY(7.5px) rotate(45deg)}
+.hamburger.open span:nth-child(2){opacity:0;width:0}
+.hamburger.open span:nth-child(3){transform:translateY(-7.5px) rotate(-45deg)}
+.nav-overlay{position:fixed;inset:0;z-index:250;background:rgba(10,10,10,0.97);display:flex;flex-direction:column;justify-content:center;padding:4rem 3rem;opacity:0;pointer-events:none;transition:opacity 0.4s ease;backdrop-filter:blur(20px)}
+.nav-overlay.open{opacity:1;pointer-events:all}
+.nav-overlay-label{font-size:0.65rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--text-muted);margin-bottom:2.5rem;display:flex;align-items:center;gap:0.75rem}
+.nav-overlay-label::before{content:'';width:24px;height:1px;background:var(--text-muted)}
+.nav-overlay-links{list-style:none;display:flex;flex-direction:column;gap:0}
+.nav-overlay-links li{border-bottom:1px solid var(--border);overflow:hidden;transform:translateY(20px);opacity:0;transition:transform 0.4s ease,opacity 0.4s ease}
+.nav-overlay.open .nav-overlay-links li:nth-child(1){transform:translateY(0);opacity:1;transition-delay:0.08s}
+.nav-overlay.open .nav-overlay-links li:nth-child(2){transform:translateY(0);opacity:1;transition-delay:0.13s}
+.nav-overlay.open .nav-overlay-links li:nth-child(3){transform:translateY(0);opacity:1;transition-delay:0.18s}
+.nav-overlay.open .nav-overlay-links li:nth-child(4){transform:translateY(0);opacity:1;transition-delay:0.23s}
+.nav-overlay.open .nav-overlay-links li:nth-child(5){transform:translateY(0);opacity:1;transition-delay:0.28s}
+.nav-overlay.open .nav-overlay-links li:nth-child(6){transform:translateY(0);opacity:1;transition-delay:0.33s}
+.nav-overlay.open .nav-overlay-links li:nth-child(7){transform:translateY(0);opacity:1;transition-delay:0.38s}
+.nav-overlay.open .nav-overlay-links li:nth-child(8){transform:translateY(0);opacity:1;transition-delay:0.43s}
+.nav-overlay.open .nav-overlay-links li:nth-child(9){transform:translateY(0);opacity:1;transition-delay:0.48s}
+.nav-overlay-links a{display:flex;align-items:center;justify-content:space-between;text-decoration:none;padding:1.1rem 0;font-family:'Bebas Neue',sans-serif;font-size:clamp(2rem,6vw,3.8rem);letter-spacing:0.04em;color:var(--text);transition:color 0.2s,padding-left 0.25s;line-height:1}
+.nav-overlay-links a:hover{color:var(--red);padding-left:0.75rem}
+.link-num{font-family:'Syne',sans-serif;font-size:0.7rem;letter-spacing:0.15em;color:var(--text-muted);font-weight:400;align-self:flex-start;margin-top:0.4rem}
+.nav-overlay-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:2.5rem;flex-wrap:wrap;gap:1rem}
+.nav-overlay-address{font-size:0.75rem;color:var(--text-muted);line-height:1.6;font-style:normal}
+.nav-overlay-social{display:flex;gap:0.75rem}
+.nav-social-btn{width:36px;height:36px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-muted);text-decoration:none;font-size:0.7rem;font-weight:700;transition:border-color 0.2s,color 0.2s}
+.nav-social-btn:hover{border-color:var(--red);color:var(--red)}
+
+/* LOGIN SCREEN */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;position:relative}
+#loginScreen::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,#0a0a0a 0%,#1a0608 50%,#0a0a0a 100%)}
+#loginScreen::after{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(188,31,46,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(188,31,46,0.04) 1px,transparent 1px);background-size:60px 60px}
+.login-box{width:100%;max-width:420px;position:relative;z-index:1}
+.login-eyebrow{font-size:0.65rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--red);margin-bottom:0.75rem;display:flex;align-items:center;gap:0.6rem}
+.login-eyebrow::before{content:'';width:16px;height:1px;background:var(--red)}
+.login-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,8vw,4.5rem);letter-spacing:0.03em;color:var(--text);line-height:0.95;margin-bottom:0.5rem}
+.login-title span{color:var(--red)}
+.login-sub{font-size:0.88rem;color:var(--text-muted);font-weight:300;line-height:1.7;margin-bottom:2.5rem}
+.login-field{margin-bottom:1.25rem}
+.login-field label{display:block;font-size:0.62rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.5rem}
+.phone-input-wrap{display:flex;border:1px solid var(--border);transition:border-color 0.2s;background:rgba(255,255,255,0.04)}
+.phone-input-wrap:focus-within{border-color:var(--red)}
+.phone-prefix{padding:0.85rem 1rem;color:var(--text-mid);font-size:0.9rem;border-right:1px solid var(--border);background:rgba(255,255,255,0.04);white-space:nowrap}
+.phone-input-wrap input{flex:1;background:transparent;border:none;padding:0.85rem 1rem;color:var(--text);font-family:'Syne',sans-serif;font-size:0.9rem;outline:none}
+.phone-input-wrap input::placeholder{color:var(--text-muted)}
+.login-btn{width:100%;background:var(--red);color:#fff;border:none;padding:1rem;font-family:'Syne',sans-serif;font-size:0.82rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;transition:background 0.2s;display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-top:1.5rem}
+.login-btn:hover{background:var(--red-dark)}
+.login-btn:disabled{opacity:0.4}
+.login-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.5}
+.login-note{font-size:0.72rem;color:var(--text-muted);margin-top:0.85rem;line-height:1.6;text-align:center}
+.login-error{font-size:0.78rem;color:#e57373;margin-top:0.75rem;padding:0.65rem 0.85rem;background:rgba(229,115,115,0.08);border-left:2px solid #e57373;display:none}
+.login-error.show{display:block}
+
+/* APP */
+#appScreen{display:none;padding-top:5rem;min-height:100vh}
+
+/* PROFILE HEADER */
+.profile-header{background:var(--off-black);border-bottom:1px solid var(--border);padding:2rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+.profile-info{display:flex;align-items:center;gap:1.25rem}
+.profile-avatar{width:52px;height:52px;background:var(--red);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:#fff;flex-shrink:0}
+.profile-name{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:0.04em;color:var(--text);line-height:1}
+.profile-phone{font-size:0.78rem;color:var(--text-muted);margin-top:0.15rem}
+.logout-link{font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);background:none;border:1px solid var(--border);padding:0.5rem 1rem;font-family:'Syne',sans-serif;cursor:pointer;transition:all 0.2s}
+.logout-link:hover{border-color:var(--red);color:var(--red)}
+
+/* TABS */
+.tabs-wrap{border-bottom:1px solid var(--border);padding:0 2rem;display:flex;gap:0}
+.tab-btn{padding:1rem 1.25rem;font-family:'Syne',sans-serif;font-size:0.78rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.2s;cursor:pointer}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--text);border-bottom-color:var(--red)}
+
+/* CONTENT */
+.tab-content{display:none;padding:2rem;max-width:900px;margin:0 auto}
+.tab-content.active{display:block}
+
+/* SECTION HEADING */
+.section-eyebrow{font-size:0.62rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--red);margin-bottom:0.6rem;display:flex;align-items:center;gap:0.5rem}
+.section-eyebrow::before{content:'';width:14px;height:1px;background:var(--red)}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:0.04em;color:var(--text);margin-bottom:1.5rem}
+
+/* BATCH CARD */
+.batch-info-card{background:var(--card-bg);border:1px solid var(--border);margin-bottom:1.25rem;overflow:hidden}
+.batch-info-header{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem}
+.batch-info-name{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.04em;color:var(--text)}
+.batch-info-trainer{font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-top:0.15rem}
+.status-chip{font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:0.3rem 0.75rem;font-family:'Syne',sans-serif}
+.status-active{background:rgba(106,175,126,0.15);color:var(--green);border:1px solid rgba(106,175,126,0.3)}
+.status-expired{background:rgba(229,115,115,0.12);color:#e57373;border:1px solid rgba(229,115,115,0.25)}
+.status-expiring{background:rgba(232,134,58,0.15);color:var(--orange);border:1px solid rgba(232,134,58,0.3)}
+.batch-info-body{padding:1.5rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1.25rem}
+.info-item strong{display:block;font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.25rem;font-weight:500}
+.info-item span{font-size:0.9rem;color:var(--text)}
+.expiry-bar{padding:0 1.5rem 1.25rem}
+.expiry-track{height:4px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;margin-bottom:0.35rem}
+.expiry-fill{height:100%;border-radius:2px;transition:width 0.5s ease}
+.expiry-label{font-size:0.7rem;color:var(--text-muted);display:flex;justify-content:space-between}
+
+/* ATTENDANCE */
+.attendance-section{margin-top:1.5rem}
+.att-week{background:var(--card-bg);border:1px solid var(--border);margin-bottom:0.75rem;overflow:hidden}
+.att-week-header{padding:0.85rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.att-week-label{font-size:0.8rem;font-weight:500;color:var(--text)}
+.att-week-count{font-size:0.72rem;color:var(--text-muted)}
+.att-days-row{display:flex;padding:0.85rem 1.25rem;gap:0.5rem;flex-wrap:wrap}
+.att-day{display:flex;flex-direction:column;align-items:center;gap:0.3rem;min-width:40px}
+.att-day-name{font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted)}
+.att-day-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700}
+.att-present{background:rgba(106,175,126,0.2);color:var(--green);border:1px solid rgba(106,175,126,0.4)}
+.att-absent{background:rgba(229,115,115,0.1);color:#e57373;border:1px solid rgba(229,115,115,0.2)}
+.att-noclass{background:rgba(255,255,255,0.04);color:var(--text-muted);border:1px solid var(--border)}
+
+/* WORKSHOP BOOKING CARD */
+.booking-card{background:var(--card-bg);border:1px solid var(--border);margin-bottom:1rem;overflow:hidden}
+.booking-card-header{padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem}
+.booking-artist{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.04em;color:var(--text)}
+.booking-style{font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-top:0.1rem}
+.booking-body{padding:1.25rem 1.5rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem}
+.booking-pid{padding:0.75rem 1.5rem;border-top:1px solid var(--border);font-size:0.7rem;color:var(--text-muted);font-family:monospace}
+
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:4rem 2rem;color:var(--text-muted)}
+.empty-state svg{width:48px;height:48px;stroke:var(--border-red);fill:none;stroke-width:1.5;margin:0 auto 1rem;display:block}
+.empty-state h3{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--text);margin-bottom:0.5rem;letter-spacing:0.04em}
+.empty-state p{font-size:0.85rem;font-weight:300;line-height:1.7}
+
+/* LOADING */
+.loading-wrap{text-align:center;padding:4rem 2rem}
+.spinner{width:36px;height:36px;border:2px solid rgba(188,31,46,0.2);border-top-color:var(--red);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-muted)}
+
+/* PILL */
+.pill{display:inline-flex;align-items:center;font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:0.2rem 0.6rem;border-radius:2px;font-family:'Syne',sans-serif}
+.pill-green{background:rgba(106,175,126,0.15);color:var(--green);border:1px solid rgba(106,175,126,0.3)}
+.pill-yellow{background:rgba(245,230,66,0.12);color:var(--yellow);border:1px solid rgba(245,230,66,0.25)}
+.pill-blue{background:rgba(106,176,245,0.15);color:#6ab0f5;border:1px solid rgba(106,176,245,0.3)}
+
+@media(max-width:640px){
+  *{cursor:auto!important}
+  nav{padding:1rem 1.25rem}
+  .tabs-wrap{padding:0 1.25rem;overflow-x:auto}
+  .tab-content{padding:1.25rem}
+  .batch-info-body{grid-template-columns:1fr 1fr}
+  .booking-body{grid-template-columns:1fr 1fr}
+  .profile-header{padding:1.25rem}
+}
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <img src="logo.png" alt="THS" style="width:40px;height:40px;object-fit:cover;border-radius:4px;flex-shrink:0">
+    <div class="logo-text">The <span>Happening</span><br>Space</div>
+  </a>
+  <div class="hamburger" id="hamburger" onclick="toggleMenu()">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+<div class="nav-overlay" id="navOverlay">
+  <div>
+    <button onclick="toggleMenu()" style="position:absolute;top:1.5rem;right:1.5rem;background:none;border:1px solid rgba(255,255,255,0.15);color:var(--text);width:44px;height:44px;font-size:1.3rem;line-height:1;transition:border-color 0.2s,color 0.2s" onmouseover="this.style.borderColor='#bc1f2e';this.style.color='#bc1f2e'" onmouseout="this.style.borderColor='rgba(255,255,255,0.15)';this.style.color='var(--text)'">✕</button>
+    <p class="nav-overlay-label">Menu</p>
+    <ul class="nav-overlay-links">
+      <li><a href="index.html"><span>Home</span><span class="link-num">01</span></a></li>
+      <li><a href="workshops.html"><span>Workshops</span><span class="link-num">02</span></a></li>
+      <li><a href="batches.html"><span>Regular Batches</span><span class="link-num">03</span></a></li>
+      <li><a href="studio-booking.html"><span>Studio Booking</span><span class="link-num">04</span></a></li>
+      <li><a href="about.html"><span>About Us</span><span class="link-num">05</span></a></li>
+      <li><a href="contact.html"><span>Contact Us</span><span class="link-num">06</span></a></li>
+      <li><a href="student.html" style="color:var(--red)"><span>My Account</span><span class="link-num">07</span></a></li>
+      <li><a href="admin.html" style="opacity:0.4;font-size:clamp(1rem,3vw,1.8rem)"><span>Admin Login</span><span class="link-num" style="font-size:0.6rem">08</span></a></li>
+      <li><a href="artist-panel.html" style="opacity:0.4;font-size:clamp(1rem,3vw,1.8rem)"><span>Artist Panel</span><span class="link-num" style="font-size:0.6rem">09</span></a></li>
+    </ul>
+    <div class="nav-overlay-bottom">
+      <address class="nav-overlay-address">311 – International Wealth Center<br>VIP Road, Surat, Gujarat</address>
+      <div class="nav-overlay-social">
+        <a href="https://instagram.com/thehappeningspace_" target="_blank" class="nav-social-btn">IG</a>
+        <a href="https://wa.me/919057975755" target="_blank" class="nav-social-btn">WA</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <p class="login-eyebrow">The Happening Space</p>
+    <h1 class="login-title">MY <span>ACCOUNT</span></h1>
+    <p class="login-sub">Enter your WhatsApp number to view your bookings, batch info and attendance.</p>
+    <div class="login-field">
+      <label>WhatsApp Number</label>
+      <div class="phone-input-wrap">
+        <span class="phone-prefix">+91</span>
+        <input type="tel" id="phoneInput" placeholder="98765 43210" maxlength="10" oninput="this.value=this.value.replace(/\D/g,'')" onkeydown="if(event.key==='Enter')doStudentLogin()">
+      </div>
+    </div>
+    <p class="login-error" id="loginError">No account found with this number. Please check and try again.</p>
+    <button class="login-btn" id="loginBtn" onclick="doStudentLogin()">
+      View My Account
+      <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </button>
+    <p class="login-note">We'll look up your bookings and batch details using your number.</p>
+  </div>
+</div>
+
+<!-- APP SCREEN -->
+<div id="appScreen">
+  <div class="profile-header">
+    <div class="profile-info">
+      <div class="profile-avatar" id="profileInitial">—</div>
+      <div>
+        <p class="profile-name" id="profileName">—</p>
+        <p class="profile-phone" id="profilePhone">—</p>
+      </div>
+    </div>
+    <button class="logout-link" onclick="doLogout()">Log Out</button>
+  </div>
+
+  <div class="tabs-wrap">
+    <button class="tab-btn active" onclick="switchTab('batches',this)">My Batches</button>
+    <button class="tab-btn" onclick="switchTab('workshops',this)">My Workshops</button>
+  </div>
+
+  <!-- BATCHES TAB -->
+  <div class="tab-content active" id="tab-batches">
+    <div class="loading-wrap" id="batchLoading">
+      <div class="spinner"></div>
+      <p class="loading-text">Loading your batch info…</p>
+    </div>
+    <div id="batchContent" style="display:none"></div>
+  </div>
+
+  <!-- WORKSHOPS TAB -->
+  <div class="tab-content" id="tab-workshops">
+    <div class="loading-wrap" id="workshopLoading">
+      <div class="spinner"></div>
+      <p class="loading-text">Loading your bookings…</p>
+    </div>
+    <div id="workshopContent" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+function toggleMenu(){
+  const o=document.getElementById('navOverlay');
+  const b=document.getElementById('hamburger');
+  const open=o.classList.toggle('open');
+  b.classList.toggle('open',open);
+  document.body.style.overflow=open?'hidden':'';
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    document.getElementById('navOverlay').classList.remove('open');
+    document.getElementById('hamburger').classList.remove('open');
+    document.body.style.overflow='';
+  }
+});
+const cursor=document.getElementById('cursor');
+const ring=document.getElementById('cursorRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.transform=`translate(${mx}px,${my}px) translate(-50%,-50%)`;});
+(function animRing(){rx+=(mx-rx)*0.14;ry+=(my-ry)*0.14;ring.style.transform=`translate(${rx}px,${ry}px) translate(-50%,-50%)`;requestAnimationFrame(animRing);})();
+document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';ring.style.opacity='0';});
+document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';ring.style.opacity='1';});
+
+function switchTab(id, btn){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function doLogout(){
+  sessionStorage.removeItem('ths_student');
+  document.getElementById('appScreen').style.display   = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('phoneInput').value = '';
+  document.getElementById('loginError').classList.remove('show');
+}
+</script>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getFirestore, collection, getDocs, query, where, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey:"AIzaSyCvGMYRUhDAr4r2zoTbnRJ3PiCwhCWxLFs",
+  authDomain:"the-happening-space.firebaseapp.com",
+  projectId:"the-happening-space",
+  storageBucket:"the-happening-space.firebasestorage.app",
+  messagingSenderId:"834905576967",
+  appId:"1:834905576967:web:b16776452b9111b6483ca2"
+});
+const db = getFirestore(app);
+
+const BATCHES_CONFIG = {
+  'ladies-batch':      { name:'Ladies Batch',       time:'12:00–1:00 PM',  days:'Mon · Tue · Wed', trainer:'Divyanshi Singhvi' },
+  'beginners-batch':   { name:'Beginners Batch',     time:'4:00–5:00 PM',   days:'Mon · Tue · Wed', trainer:'Divyanshi Singhvi' },
+  'intermediate-6-7':  { name:'Intermediate Batch',  time:'6:00–7:00 PM',   days:'Mon · Tue · Wed', trainer:'Hriday Khubchandani' },
+  'intermediate-7-8':  { name:'Intermediate Batch',  time:'7:00–8:00 PM',   days:'Mon · Tue · Wed', trainer:'Divyanshi Singhvi' },
+  'intermediate-8-9':  { name:'Intermediate Batch',  time:'8:00–9:00 PM',   days:'Mon · Tue · Wed', trainer:'Ritu Hariyani (Aajanachle)' },
+};
+
+function normalisePhone(raw){
+  const digits = raw.replace(/\D/g,'');
+  if(digits.length===10) return digits;
+  if(digits.length===12&&digits.startsWith('91')) return digits.slice(2);
+  if(digits.length===11&&digits.startsWith('0')) return digits.slice(1);
+  return digits;
+}
+
+function getDaysLeft(s){
+  if(!s.joinDate) return -999;
+  const joined = new Date(s.joinDate);
+  const days   = s.subscription==='Weekly' ? 7 : 28;
+  const expiry = new Date(joined);
+  expiry.setDate(joined.getDate()+days);
+  return Math.ceil((expiry-new Date())/(1000*60*60*24));
+}
+
+function getExpiryDate(s){
+  if(!s.joinDate) return '—';
+  const joined = new Date(s.joinDate);
+  const days   = s.subscription==='Weekly' ? 7 : 28;
+  const expiry = new Date(joined);
+  expiry.setDate(joined.getDate()+days);
+  return expiry.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+}
+
+/* ══════ LOGIN ══════ */
+window.doStudentLogin = async function(){
+  const raw   = document.getElementById('phoneInput').value.trim();
+  const phone = normalisePhone(raw);
+  if(phone.length < 10){
+    document.getElementById('loginError').textContent = 'Please enter a valid 10-digit number.';
+    document.getElementById('loginError').classList.add('show');
+    return;
+  }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  btn.textContent = 'Looking up…';
+  document.getElementById('loginError').classList.remove('show');
+
+  try {
+    // Search across registrations + batchStudents
+    const [regSnap, batchSnap] = await Promise.all([
+      getDocs(collection(db,'registrations')),
+      getDocs(collection(db,'batchStudents')),
+    ]);
+
+    const regs    = regSnap.docs.map(d=>({id:d.id,...d.data()}))
+                      .filter(r=>normalisePhone(r.phone||'')===phone);
+    const batches = batchSnap.docs.map(d=>({id:d.id,...d.data()}))
+                      .filter(s=>normalisePhone(s.phone||'')===phone);
+
+    if(!regs.length && !batches.length){
+      document.getElementById('loginError').textContent = 'No account found with this number. Please check and try again.';
+      document.getElementById('loginError').classList.add('show');
+      btn.disabled = false;
+      btn.innerHTML = 'View My Account <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+      return;
+    }
+
+    // Get name from first record found
+    const name = (regs[0]?.name || batches[0]?.name || 'Student').trim();
+    sessionStorage.setItem('ths_student', JSON.stringify({phone, name}));
+    showApp(phone, name, regs, batches);
+
+  } catch(e){
+    document.getElementById('loginError').textContent = 'Something went wrong. Please try again.';
+    document.getElementById('loginError').classList.add('show');
+    btn.disabled = false;
+    btn.innerHTML = 'View My Account <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+  }
+};
+
+/* ══════ SHOW APP ══════ */
+function showApp(phone, name, regs, batches){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display   = 'block';
+
+  document.getElementById('profileInitial').textContent = name.charAt(0).toUpperCase();
+  document.getElementById('profileName').textContent    = name;
+  document.getElementById('profilePhone').textContent   = '+91 ' + phone;
+
+  renderBatches(batches, phone);
+  renderWorkshops(regs);
+}
+
+/* ══════ BATCHES ══════ */
+async function renderBatches(batches, phone){
+  document.getElementById('batchLoading').style.display  = 'none';
+  document.getElementById('batchContent').style.display  = 'block';
+  const el = document.getElementById('batchContent');
+
+  if(!batches.length){
+    el.innerHTML = `<div class="empty-state">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      <h3>No Batch Enrollment</h3>
+      <p>You're not enrolled in any regular batch yet.<br>Contact us on WhatsApp to join one.</p>
+    </div>`;
+    return;
+  }
+
+  let html = `<p class="section-eyebrow">Your Batches</p><h2 class="section-title">REGULAR BATCHES</h2>`;
+
+  for(const s of batches){
+    const cfg      = BATCHES_CONFIG[s.batchId] || {};
+    const left     = getDaysLeft(s);
+    const isActive = left > 0;
+    const pct      = Math.max(0, Math.min(100, s.subscription==='Weekly' ? (left/7)*100 : (left/28)*100));
+    const chipClass = !isActive ? 'status-expired' : left<=3 ? 'status-expiring' : 'status-active';
+    const chipText  = !isActive ? 'Expired' : left<=3 ? `⚡ ${left} day${left!==1?'s':''} left` : 'Active';
+    const barColor  = !isActive ? '#e57373' : left<=3 ? 'var(--orange)' : 'var(--green)';
+
+    html += `
+      <div class="batch-info-card">
+        <div class="batch-info-header">
+          <div>
+            <p class="batch-info-name">${cfg.name||s.batchId}</p>
+            <p class="batch-info-trainer">by ${cfg.trainer||s.artistName||'—'}</p>
+          </div>
+          <span class="status-chip ${chipClass}">${chipText}</span>
+        </div>
+        <div class="batch-info-body">
+          <div class="info-item"><strong>Time</strong><span>${cfg.time||'—'}</span></div>
+          <div class="info-item"><strong>Days</strong><span>${cfg.days||'—'}</span></div>
+          <div class="info-item"><strong>Subscription</strong><span>${s.subscription||'—'}</span></div>
+          <div class="info-item"><strong>Joined</strong><span>${s.joinDate||'—'}</span></div>
+          <div class="info-item"><strong>Valid Until</strong><span style="color:${!isActive?'#e57373':left<=3?'var(--orange)':'var(--text)'}">${getExpiryDate(s)}</span></div>
+          <div class="info-item"><strong>Fee Paid</strong><span style="color:var(--yellow)">₹${parseFloat(s.fee||0).toLocaleString('en-IN')}</span></div>
+        </div>
+        <div class="expiry-bar">
+          <div class="expiry-track"><div class="expiry-fill" style="width:${pct}%;background:${barColor}"></div></div>
+          <div class="expiry-label">
+            <span>Joined ${s.joinDate||'—'}</span>
+            <span>${isActive ? left+' day'+(left!==1?'s':'')+' remaining' : 'Subscription expired'}</span>
+          </div>
+        </div>
+      </div>`;
+
+    // Load attendance for this student + batch
+    html += await renderAttendance(s, phone);
+  }
+
+  el.innerHTML = html;
+}
+
+async function renderAttendance(s, phone){
+  try {
+    // Get all attendance docs for this batch and artist
+    const attSnap = await getDocs(collection(db,'attendance'));
+    const docs    = attSnap.docs
+      .map(d=>({id:d.id,...d.data()}))
+      .filter(d=>d.batchId===s.batchId && d.artistId===s.artistId)
+      .sort((a,b)=>b.weekKey.localeCompare(a.weekKey))
+      .slice(0,8); // Last 8 weeks
+
+    if(!docs.length) return `<div style="padding:1rem 1.5rem 1.5rem"><p style="font-size:0.82rem;color:var(--text-muted)">No attendance recorded yet.</p></div>`;
+
+    const days    = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    let html = `<div class="attendance-section" style="padding:0 1.5rem 1.5rem">
+      <p style="font-size:0.68rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.85rem;font-family:'Syne',sans-serif;font-weight:600">Attendance History</p>`;
+
+    for(const wk of docs){
+      const weekStart = new Date(
+        wk.weekKey.slice(0,4)+'-'+wk.weekKey.slice(4,6)+'-'+wk.weekKey.slice(6,8)
+      );
+      const weekDates = Array.from({length:7},(_,i)=>{
+        const d=new Date(weekStart); d.setDate(weekStart.getDate()+i); return d;
+      });
+      const records   = wk.records?.[s.id] || {};
+      const present   = Object.values(records).filter(v=>v==='present').length;
+      const total     = Object.values(records).filter(v=>v!=='').length;
+
+      const weekLabel = weekDates[0].toLocaleDateString('en-IN',{day:'numeric',month:'short'})
+        + ' – ' + weekDates[6].toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+
+      html += `<div class="att-week">
+        <div class="att-week-header">
+          <span class="att-week-label">${weekLabel}</span>
+          <span class="att-week-count">${present}/${total} classes attended</span>
+        </div>
+        <div class="att-days-row">
+          ${days.map((d,i)=>{
+            const isClass  = [0,1,2].includes(i);
+            const dateKey  = weekDates[i].toISOString().split('T')[0];
+            const status   = records[dateKey]||'';
+            const dotClass = !isClass ? 'att-noclass' : status==='present' ? 'att-present' : status==='absent' ? 'att-absent' : 'att-noclass';
+            const symbol   = !isClass ? '—' : status==='present' ? '✓' : status==='absent' ? '✗' : '·';
+            return `<div class="att-day">
+              <span class="att-day-name">${d}</span>
+              <span class="att-day-dot ${dotClass}">${symbol}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }
+    html += `</div>`;
+    return html;
+  } catch(e){ return ''; }
+}
+
+/* ══════ WORKSHOPS ══════ */
+function renderWorkshops(regs){
+  document.getElementById('workshopLoading').style.display = 'none';
+  document.getElementById('workshopContent').style.display = 'block';
+  const el = document.getElementById('workshopContent');
+
+  if(!regs.length){
+    el.innerHTML = `<div class="empty-state">
+      <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      <h3>No Workshop Bookings</h3>
+      <p>You haven't booked any workshops yet.<br>Browse upcoming workshops and enroll!</p>
+    </div>
+    <div style="text-align:center;margin-top:1.5rem">
+      <a href="workshops.html" style="display:inline-flex;align-items:center;gap:0.5rem;background:var(--red);color:#fff;text-decoration:none;padding:0.85rem 2rem;font-family:'Syne',sans-serif;font-size:0.78rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase">
+        Browse Workshops
+        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>`;
+    return;
+  }
+
+  let html = `<p class="section-eyebrow">Your Bookings</p><h2 class="section-title">WORKSHOP HISTORY</h2>`;
+
+  // Sort newest first
+  const sorted = [...regs].sort((a,b)=>(b.timestamp||'').localeCompare(a.timestamp||''));
+
+  for(const r of sorted){
+    html += `
+      <div class="booking-card">
+        <div class="booking-card-header">
+          <div>
+            <p class="booking-artist">${r.workshop||'—'}</p>
+            <p class="booking-style">${r.style||'Workshop'}</p>
+          </div>
+          <span class="pill pill-green">Confirmed</span>
+        </div>
+        <div class="booking-body">
+          <div class="info-item"><strong>Package</strong><span>${r.package||'—'}</span></div>
+          <div class="info-item"><strong>Date & Slot</strong><span style="font-size:0.82rem">${(r.slots||'—').replace(' | ','<br>')}</span></div>
+          <div class="info-item"><strong>Amount Paid</strong><span style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</span></div>
+          <div class="info-item"><strong>Booked On</strong><span style="font-size:0.78rem">${r.timestamp||'—'}</span></div>
+        </div>
+        <div class="booking-pid">Payment ID: ${r.payment_id||'—'}</div>
+      </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+/* ══════ AUTO-LOGIN ══════ */
+document.addEventListener('DOMContentLoaded', async () => {
+  const saved = sessionStorage.getItem('ths_student');
+  if(saved){
+    try {
+      const {phone, name} = JSON.parse(saved);
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('appScreen').style.display   = 'block';
+      document.getElementById('profileInitial').textContent = name.charAt(0).toUpperCase();
+      document.getElementById('profileName').textContent    = name;
+      document.getElementById('profilePhone').textContent   = '+91 ' + phone;
+
+      const [regSnap, batchSnap] = await Promise.all([
+        getDocs(collection(db,'registrations')),
+        getDocs(collection(db,'batchStudents')),
+      ]);
+      const regs    = regSnap.docs.map(d=>({id:d.id,...d.data()})).filter(r=>normalisePhone(r.phone||'')===phone);
+      const batches = batchSnap.docs.map(d=>({id:d.id,...d.data()})).filter(s=>normalisePhone(s.phone||'')===phone);
+      renderBatches(batches, phone);
+      renderWorkshops(regs);
+    } catch(e){ sessionStorage.removeItem('ths_student'); }
+  }
+});
+</script>
+</body>
+</html>
