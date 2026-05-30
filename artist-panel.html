@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Artist Panel — The Happening Space</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#bc1f2e;--red-dark:#8f1520;--red-dim:rgba(188,31,46,0.1);
+  --black:#0a0a0a;--bg:#0f0f0f;--bg2:#161616;--bg3:#1c1c1c;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#f0ede6;--muted:rgba(240,237,230,0.4);--mid:rgba(240,237,230,0.65);
+  --yellow:#f5e642;--green:#5cb87a;--orange:#e8863a;--blue:#6ab0f5;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-weight:300;min-height:100vh}
+
+/* LOGIN */
+#loginScreen{position:fixed;inset:0;background:var(--black);display:flex;align-items:center;justify-content:center;z-index:1000;padding:1.5rem}
+.login-box{width:100%;max-width:380px}
+.login-logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.1em;color:var(--text);margin-bottom:0.25rem}
+.login-logo span{color:var(--red)}
+.login-sub{font-size:0.75rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:2.5rem}
+.login-label{font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:0.5rem}
+.login-input{width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.8rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;margin-bottom:1rem;transition:border-color 0.2s}
+.login-input:focus{border-color:var(--red)}
+.login-btn{width:100%;background:var(--red);color:#fff;border:none;padding:0.9rem;font-family:'Syne',sans-serif;font-size:0.82rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:background 0.2s;margin-top:0.5rem}
+.login-btn:hover{background:var(--red-dark)}
+.login-error{font-size:0.78rem;color:#e57373;margin-top:0.5rem;display:none}
+.login-error.show{display:block}
+
+/* LAYOUT */
+#appShell{display:none;min-height:100vh}
+.sidebar{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--black);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100}
+.sidebar-logo{padding:1.5rem 1.25rem 1rem;border-bottom:1px solid var(--border)}
+.sidebar-logo-text{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:0.08em;color:var(--text)}
+.sidebar-logo-text span{color:var(--red)}
+.sidebar-tag{font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-top:0.2rem}
+.sidebar-artist{padding:1rem 1.25rem;border-bottom:1px solid var(--border);background:var(--red-dim)}
+.sidebar-artist-name{font-size:0.88rem;font-weight:500;color:var(--text)}
+.sidebar-artist-role{font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--red);margin-top:0.1rem}
+.sidebar-nav{padding:1rem 0;flex:1}
+.nav-section-title{font-size:0.58rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);padding:0.75rem 1.25rem 0.35rem;margin-top:0.5rem}
+.nav-item{display:flex;align-items:center;gap:0.75rem;padding:0.65rem 1.25rem;color:var(--mid);font-size:0.82rem;cursor:pointer;transition:color 0.2s,background 0.2s;border-left:2px solid transparent}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,0.03)}
+.nav-item.active{color:var(--text);border-left-color:var(--red);background:var(--red-dim)}
+.nav-item svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0}
+.sidebar-footer{padding:1rem 1.25rem;border-top:1px solid var(--border)}
+.logout-btn{display:flex;align-items:center;gap:0.6rem;color:var(--muted);font-size:0.78rem;cursor:pointer;transition:color 0.2s;background:none;border:none;font-family:'DM Sans',sans-serif;width:100%}
+.logout-btn:hover{color:var(--red)}
+.logout-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+
+/* MAIN */
+.main{margin-left:220px;padding:2rem;min-height:100vh}
+.page-header{margin-bottom:2rem;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+.page-title{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:0.04em;color:var(--text);line-height:1}
+.page-sub{font-size:0.8rem;color:var(--muted);margin-top:0.25rem}
+
+/* VIEWS */
+.view{display:none}
+.view.active{display:block}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;margin-bottom:2rem}
+.stat-card{background:var(--bg2);border:1px solid var(--border);padding:1.25rem 1.5rem}
+.stat-label{font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;letter-spacing:0.04em;line-height:1;color:var(--text)}
+.stat-val.red{color:var(--red)}
+.stat-val.green{color:var(--green)}
+.stat-val.yellow{color:var(--yellow)}
+
+/* BATCHES */
+.batch-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.25rem;margin-bottom:2rem}
+.batch-card{background:var(--bg2);border:1px solid var(--border);padding:1.5rem;cursor:pointer;transition:border-color 0.2s}
+.batch-card:hover{border-color:var(--border2)}
+.batch-card.selected{border-color:var(--red);background:var(--red-dim)}
+.batch-card-name{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.04em;color:var(--text);margin-bottom:0.25rem}
+.batch-card-time{font-size:0.75rem;letter-spacing:0.1em;color:var(--red);text-transform:uppercase;margin-bottom:0.75rem}
+.batch-card-meta{font-size:0.8rem;color:var(--muted)}
+
+/* TABLE */
+.table-wrap{background:var(--bg2);border:1px solid var(--border);overflow:hidden;margin-bottom:1.5rem}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:0.75rem}
+.table-title{font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:600;color:var(--text)}
+.table-search{background:var(--bg3);border:1px solid var(--border);padding:0.5rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none;width:220px;transition:border-color 0.2s}
+.table-search:focus{border-color:var(--red)}
+.table-search::placeholder{color:var(--muted)}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:0.65rem 1rem;background:var(--bg3);font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:0.75rem 1rem;border-bottom:1px solid var(--border);font-size:0.82rem;color:var(--mid);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,0.02)}
+
+/* PILLS */
+.pill{display:inline-flex;align-items:center;font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:0.2rem 0.6rem;border-radius:2px;font-family:'Syne',sans-serif}
+.pill-green{background:rgba(92,184,122,0.15);color:var(--green);border:1px solid rgba(92,184,122,0.3)}
+.pill-red{background:rgba(188,31,46,0.15);color:#e57373;border:1px solid rgba(188,31,46,0.3)}
+.pill-yellow{background:rgba(245,230,66,0.12);color:var(--yellow);border:1px solid rgba(245,230,66,0.25)}
+.pill-blue{background:rgba(106,176,245,0.15);color:var(--blue);border:1px solid rgba(106,176,245,0.3)}
+.pill-grey{background:rgba(255,255,255,0.07);color:var(--muted);border:1px solid var(--border)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:0.4rem;padding:0.55rem 1rem;font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;border:none;transition:all 0.2s}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:hover{background:var(--red-dark)}
+.btn-outline{background:transparent;color:var(--mid);border:1px solid var(--border2)}
+.btn-outline:hover{border-color:var(--red);color:var(--red)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2)}
+.btn-danger{background:transparent;color:#e57373;border:1px solid rgba(229,115,115,0.3)}
+.btn-danger:hover{background:rgba(229,115,115,0.1)}
+.btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5}
+.btn-sm{padding:0.35rem 0.7rem;font-size:0.65rem}
+
+/* MODAL */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:500;display:flex;align-items:center;justify-content:center;padding:1.5rem;opacity:0;pointer-events:none;transition:opacity 0.25s;backdrop-filter:blur(6px)}
+.modal-backdrop.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border2);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;transform:translateY(16px);transition:transform 0.25s ease}
+.modal-backdrop.open .modal{transform:translateY(0)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg2);z-index:1}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:0.04em;color:var(--text)}
+.modal-close{background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:0.25rem;transition:color 0.2s;line-height:1}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:1.5rem}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+.form-row.full{grid-template-columns:1fr}
+.form-group{display:flex;flex-direction:column;gap:0.4rem}
+.form-group label{font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600}
+.form-group input,.form-group select,.form-group textarea{background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none;transition:border-color 0.2s;width:100%}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--red)}
+.form-group select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(240,237,230,0.4)'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 0.85rem center}
+.form-group option{background:#1c1c1c}
+.form-group textarea{resize:vertical;min-height:70px;line-height:1.6}
+.modal-foot{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:0.75rem;position:sticky;bottom:0;background:var(--bg2)}
+
+/* ATTENDANCE */
+.week-picker{display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.week-picker input[type="date"]{background:var(--bg3);border:1px solid var(--border2);padding:0.5rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none;color-scheme:dark}
+.week-days{display:grid;grid-template-columns:repeat(7,1fr);gap:0.5rem;margin-bottom:1.5rem}
+.week-day{background:var(--bg3);border:1px solid var(--border);padding:0.5rem;text-align:center}
+.week-day-name{font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.25rem}
+.week-day-date{font-size:0.8rem;color:var(--text);font-weight:500}
+.week-day.active-day{border-color:var(--red);background:var(--red-dim)}
+.week-day.active-day .week-day-name{color:var(--red)}
+.att-row{display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-bottom:1px solid var(--border);font-size:0.85rem}
+.att-row:last-child{border-bottom:none}
+.att-name{color:var(--text);font-weight:500}
+.att-phone{color:var(--muted);font-size:0.75rem;margin-top:0.1rem}
+.att-days{display:flex;gap:0.35rem}
+.att-day-btn{width:32px;height:32px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1px}
+.att-day-btn span{font-size:0.5rem;letter-spacing:0.05em}
+.att-day-btn.present{background:var(--green);border-color:var(--green);color:#fff}
+.att-day-btn.absent{background:rgba(229,115,115,0.15);border-color:#e57373;color:#e57373}
+
+/* SECTION BAR */
+.section-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem}
+.section-bar-title{font-family:'Syne',sans-serif;font-size:0.88rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:0.6rem}
+.section-bar-title::before{content:'';width:3px;height:16px;background:var(--red);display:block}
+
+/* TOAST */
+.toast{position:fixed;bottom:2rem;right:2rem;background:var(--bg2);border:1px solid var(--border2);padding:0.85rem 1.25rem;font-size:0.82rem;color:var(--text);z-index:9999;transform:translateY(100px);opacity:0;transition:all 0.3s ease;display:flex;align-items:center;gap:0.6rem;min-width:240px;border-left:3px solid var(--green)}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.error{border-left-color:var(--red)}
+
+/* FILTER TABS */
+.filter-tabs{display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:1.5rem}
+.filter-tab{background:transparent;border:1px solid var(--border);color:var(--muted);padding:0.4rem 0.85rem;font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;transition:all 0.2s}
+.filter-tab:hover{border-color:var(--border2);color:var(--text)}
+.filter-tab.active{background:var(--red);border-color:var(--red);color:#fff}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">The <span>Happening</span> Space</div>
+    <p class="login-sub">Artist Panel</p>
+    <label class="login-label">Username</label>
+    <input class="login-input" id="loginUser" type="text" placeholder="your username" autocomplete="username">
+    <label class="login-label">Password</label>
+    <input class="login-input" id="loginPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Enter Artist Panel</button>
+    <p class="login-error" id="loginError">Incorrect username or password.</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appShell">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-text">The <span>Happening</span> Space</div>
+      <div class="sidebar-tag">Artist Panel</div>
+    </div>
+    <div class="sidebar-artist">
+      <p class="sidebar-artist-name" id="artistDisplayName">—</p>
+      <p class="sidebar-artist-role">Batch Trainer</p>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Overview</div>
+      <div class="nav-item active" onclick="showView('dashboard')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard
+      </div>
+      <div class="nav-section-title">My Batches</div>
+      <div class="nav-item" onclick="showView('students')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>My Students
+      </div>
+      <div class="nav-item" onclick="showView('attendance')">
+        <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Attendance
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="doLogout()">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log Out
+      </button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div class="view active" id="view-dashboard">
+      <div class="page-header">
+        <div><h1 class="page-title" id="dashWelcome">Welcome</h1><p class="page-sub" id="dashDate"></p></div>
+        <button class="btn btn-red" onclick="showView('students');setTimeout(openAddStudent,100)">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Student
+        </button>
+      </div>
+      <div class="stats-grid" id="dashStats"></div>
+      <div class="section-bar"><span class="section-bar-title">My Batches</span></div>
+      <div class="batch-cards" id="dashBatches"></div>
+      <div class="section-bar"><span class="section-bar-title">Recent Students Added</span></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Subscription</th><th>Fee</th><th>Payment</th><th>Joined</th></tr></thead>
+        <tbody id="dashRecentStudents"></tbody></table>
+      </div>
+    </div>
+
+    <!-- STUDENTS -->
+    <div class="view" id="view-students">
+      <div class="page-header">
+        <div><h1 class="page-title">My Students</h1><p class="page-sub">All students across your batches</p></div>
+        <button class="btn btn-red" onclick="openAddStudent()">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Student
+        </button>
+      </div>
+      <div class="filter-tabs" id="batchFilterTabs"></div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">Students</span>
+          <input class="table-search" placeholder="Search name or phone…" oninput="searchStudents(this.value)">
+        </div>
+        <table><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Subscription</th><th>Fee Paid</th><th>Payment Mode</th><th>Join Date</th><th>Notes</th><th></th></tr></thead>
+        <tbody id="studentsTable"></tbody></table>
+      </div>
+    </div>
+
+    <!-- ATTENDANCE -->
+    <div class="view" id="view-attendance">
+      <div class="page-header">
+        <div><h1 class="page-title">Attendance</h1><p class="page-sub">Weekly attendance tracking</p></div>
+        <button class="btn btn-red" onclick="saveAttendance()">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Save Attendance
+        </button>
+      </div>
+      <!-- Batch selector -->
+      <div class="filter-tabs" id="attBatchTabs"></div>
+      <!-- Week picker -->
+      <div class="week-picker">
+        <label style="font-size:0.72rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase">Week of</label>
+        <input type="date" id="weekStart" onchange="loadWeekAttendance()">
+        <button class="btn btn-ghost btn-sm" onclick="changeWeek(-1)">← Prev</button>
+        <button class="btn btn-ghost btn-sm" onclick="changeWeek(1)">Next →</button>
+        <span id="weekLabel" style="font-size:0.8rem;color:var(--muted)"></span>
+      </div>
+      <!-- Days header -->
+      <div class="week-days" id="weekDays"></div>
+      <!-- Attendance list -->
+      <div class="table-wrap">
+        <div class="table-header"><span class="table-title" id="attTableTitle">Attendance</span></div>
+        <div id="attList"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ADD STUDENT MODAL -->
+<div class="modal-backdrop" id="studentModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 class="modal-title" id="studentModalTitle">Add Student</h2>
+      <button class="modal-close" onclick="closeModal('studentModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editStudentId">
+      <div class="form-row">
+        <div class="form-group"><label>Full Name *</label><input type="text" id="sName" placeholder="Student name"></div>
+        <div class="form-group"><label>WhatsApp Number *</label><input type="tel" id="sPhone" placeholder="+91 98765 43210"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Batch *</label><select id="sBatch"></select></div>
+        <div class="form-group"><label>Subscription</label>
+          <select id="sSubscription">
+            <option value="Monthly">Monthly</option>
+            <option value="Weekly">Weekly</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Fee Paid ₹</label><input type="number" id="sFee" placeholder="0"></div>
+        <div class="form-group"><label>Payment Mode</label>
+          <select id="sPayMode">
+            <option value="Cash">Cash</option>
+            <option value="Online">Online / UPI</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Join Date</label><input type="date" id="sJoinDate" style="color-scheme:dark"></div>
+        <div class="form-group"><label>Status</label>
+          <select id="sStatus">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="On Hold">On Hold</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row full">
+        <div class="form-group"><label>Notes</label><textarea id="sNotes" placeholder="Any notes about this student…"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('studentModal')">Cancel</button>
+      <button class="btn btn-red" onclick="saveStudent()">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Save Student
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toastMsg">Saved</span>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, addDoc, onSnapshot, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCvGMYRUhDAr4r2zoTbnRJ3PiCwhCWxLFs",
+  authDomain: "the-happening-space.firebaseapp.com",
+  projectId: "the-happening-space",
+  storageBucket: "the-happening-space.firebasestorage.app",
+  messagingSenderId: "834905576967",
+  appId: "1:834905576967:web:b16776452b9111b6483ca2"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+/* ══════════════════════════════════════
+   ARTISTS CONFIG
+   Add more artists here as needed
+══════════════════════════════════════ */
+const ARTISTS = [
+  {
+    user: 'divysnahisinghvi',
+    pass: 'divyanshids2025',
+    name: 'Divyanshi Singhvi',
+    batches: [
+      { id: 'ladies-batch',        name: 'Ladies Batch',       time: '12:00 PM – 1:00 PM',  days: 'Mon · Tue · Wed' },
+      { id: 'beginners-batch',     name: 'Beginners Batch',    time: '4:00 PM – 5:00 PM',   days: 'Mon · Tue · Wed' },
+      { id: 'intermediate-7-8',    name: 'Intermediate Batch', time: '7:00 PM – 8:00 PM',   days: 'Mon · Tue · Wed' },
+    ]
+  },
+  {
+    user: 'hridhaykhubchandani',
+    pass: 'khubchandanikh2026',
+    name: 'Hriday Khubchandani',
+    batches: [
+      { id: 'intermediate-6-7', name: 'Intermediate Batch', time: '6:00 PM – 7:00 PM', days: 'Mon · Tue · Wed' },
+    ]
+  },
+];
+
+/* ══════════════════════════════════════
+   STATE
+══════════════════════════════════════ */
+let currentArtist  = null;
+let students       = [];
+let attendance     = {};
+let currentBatchFilter = 'all';
+let currentAttBatch    = null;
+let studentSearchQ     = '';
+let editingStudentId   = null;
+
+/* ══════════════════════════════════════
+   LOGIN
+══════════════════════════════════════ */
+window.doLogin = function(){
+  const u  = document.getElementById('loginUser').value.trim();
+  const p  = document.getElementById('loginPass').value;
+  const ok = ARTISTS.find(a => a.user===u && a.pass===p);
+  if(ok){
+    currentArtist = ok;
+    document.getElementById('loginScreen').style.display  = 'none';
+    document.getElementById('appShell').style.display     = 'block';
+    sessionStorage.setItem('ths_artist', JSON.stringify({user:ok.user,name:ok.name}));
+    initApp();
+  } else {
+    document.getElementById('loginError').classList.add('show');
+  }
+};
+
+window.doLogout = function(){
+  sessionStorage.removeItem('ths_artist');
+  location.reload();
+};
+
+// Auto-login
+const saved = sessionStorage.getItem('ths_artist');
+if(saved){
+  const s = JSON.parse(saved);
+  currentArtist = ARTISTS.find(a=>a.user===s.user);
+  if(currentArtist){
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appShell').style.display    = 'block';
+    document.addEventListener('DOMContentLoaded', initApp);
+  }
+}
+
+/* ══════════════════════════════════════
+   INIT
+══════════════════════════════════════ */
+async function initApp(){
+  document.getElementById('artistDisplayName').textContent = currentArtist.name;
+  document.getElementById('dashWelcome').textContent       = 'Hey, ' + currentArtist.name.split(' ')[0] + '!';
+  document.getElementById('dashDate').textContent          = new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  // Set week picker to current week Monday
+  const now   = new Date();
+  const mon   = new Date(now);
+  mon.setDate(now.getDate() - (now.getDay()===0 ? 6 : now.getDay()-1));
+  document.getElementById('weekStart').value = mon.toISOString().split('T')[0];
+
+  buildBatchFilterTabs();
+  buildAttBatchTabs();
+  listenStudents();
+  loadWeekAttendance();
+}
+
+/* ══════════════════════════════════════
+   LISTEN STUDENTS (real-time)
+══════════════════════════════════════ */
+function listenStudents(){
+  const batchIds = currentArtist.batches.map(b=>b.id);
+  onSnapshot(collection(db,'batchStudents'), snap => {
+    students = snap.docs
+      .map(d=>({id:d.id,...d.data()}))
+      .filter(s=>batchIds.includes(s.batchId));
+    students.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    renderDashboard();
+    renderStudentsTable();
+  });
+}
+
+/* ══════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════ */
+function renderDashboard(){
+  const active   = students.filter(s=>s.status==='Active').length;
+  const revenue  = students.reduce((sum,s)=>sum+(parseFloat(s.fee)||0),0);
+  const monthly  = students.filter(s=>s.subscription==='Monthly').length;
+  const weekly   = students.filter(s=>s.subscription==='Weekly').length;
+
+  document.getElementById('dashStats').innerHTML = `
+    <div class="stat-card"><p class="stat-label">Total Students</p><p class="stat-val red">${students.length}</p></div>
+    <div class="stat-card"><p class="stat-label">Active</p><p class="stat-val green">${active}</p></div>
+    <div class="stat-card"><p class="stat-label">Monthly / Weekly</p><p class="stat-val">${monthly}<span style="font-size:1rem;color:var(--muted)"> / ${weekly}</span></p></div>
+    <div class="stat-card"><p class="stat-label">Total Fees Collected</p><p class="stat-val yellow">₹${revenue.toLocaleString('en-IN')}</p></div>
+  `;
+
+  document.getElementById('dashBatches').innerHTML = currentArtist.batches.map(b=>{
+    const count = students.filter(s=>s.batchId===b.id).length;
+    return `<div class="batch-card" onclick="showView('students');filterByBatch('${b.id}')">
+      <p class="batch-card-name">${b.name}</p>
+      <p class="batch-card-time">${b.time}</p>
+      <p class="batch-card-meta">${b.days} · <strong style="color:var(--text)">${count} students</strong></p>
+    </div>`;
+  }).join('');
+
+  const recent = [...students].reverse().slice(0,5);
+  document.getElementById('dashRecentStudents').innerHTML = recent.length
+    ? recent.map(s=>`<tr>
+        <td style="color:var(--text)">${s.name||'—'}</td>
+        <td>${s.phone||'—'}</td>
+        <td>${getBatchName(s.batchId)}</td>
+        <td><span class="pill ${s.subscription==='Monthly'?'pill-blue':'pill-yellow'}">${s.subscription||'—'}</span></td>
+        <td style="color:var(--yellow)">₹${parseFloat(s.fee||0).toLocaleString('en-IN')}</td>
+        <td><span class="pill ${s.payMode==='Cash'?'pill-yellow':'pill-green'}">${s.payMode||'—'}</span></td>
+        <td style="font-size:0.75rem;color:var(--muted)">${s.joinDate||'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem">No students yet</td></tr>';
+}
+
+function getBatchName(id){
+  return currentArtist.batches.find(b=>b.id===id)?.name || id;
+}
+
+/* ══════════════════════════════════════
+   STUDENTS TABLE
+══════════════════════════════════════ */
+function buildBatchFilterTabs(){
+  document.getElementById('batchFilterTabs').innerHTML =
+    `<button class="filter-tab active" onclick="filterByBatch('all',this)">All Batches</button>`
+    + currentArtist.batches.map(b=>`<button class="filter-tab" onclick="filterByBatch('${b.id}',this)">${b.name} · ${b.time}</button>`).join('');
+}
+
+window.filterByBatch = function(id, el){
+  currentBatchFilter = id;
+  document.querySelectorAll('#batchFilterTabs .filter-tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  else{
+    const tabs = document.querySelectorAll('#batchFilterTabs .filter-tab');
+    tabs.forEach(t=>{ if(t.textContent.includes(getBatchName(id))) t.classList.add('active'); });
+  }
+  renderStudentsTable();
+  showView('students');
+};
+
+window.searchStudents = function(q){ studentSearchQ=q; renderStudentsTable(); };
+
+function renderStudentsTable(){
+  let data = [...students];
+  if(currentBatchFilter!=='all') data = data.filter(s=>s.batchId===currentBatchFilter);
+  if(studentSearchQ) data = data.filter(s=>
+    (s.name||'').toLowerCase().includes(studentSearchQ.toLowerCase()) ||
+    (s.phone||'').includes(studentSearchQ)
+  );
+  document.getElementById('studentsTable').innerHTML = data.length
+    ? data.map(s=>`<tr>
+        <td style="color:var(--text)">${s.name||'—'}</td>
+        <td>${s.phone||'—'}</td>
+        <td style="font-size:0.75rem">${getBatchName(s.batchId)}</td>
+        <td><span class="pill ${s.subscription==='Monthly'?'pill-blue':'pill-yellow'}">${s.subscription||'—'}</span></td>
+        <td style="color:var(--yellow)">₹${parseFloat(s.fee||0).toLocaleString('en-IN')}</td>
+        <td><span class="pill ${s.payMode==='Cash'?'pill-yellow':'pill-green'}">${s.payMode||'—'}</span></td>
+        <td style="font-size:0.75rem;color:var(--muted)">${s.joinDate||'—'}</td>
+        <td style="font-size:0.75rem;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.notes||'—'}</td>
+        <td>
+          <div style="display:flex;gap:0.35rem">
+            <button class="btn btn-ghost btn-sm" onclick="openEditStudent('${s.id}')">
+              <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}','${(s.name||'').replace(/'/g,"\\'")}')">
+              <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>`).join('')
+    : '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:3rem">No students found</td></tr>';
+}
+
+/* ══════════════════════════════════════
+   ADD / EDIT STUDENT
+══════════════════════════════════════ */
+window.openAddStudent = function(){
+  document.getElementById('studentModalTitle').textContent = 'Add Student';
+  document.getElementById('editStudentId').value = '';
+  document.getElementById('sName').value      = '';
+  document.getElementById('sPhone').value     = '';
+  document.getElementById('sFee').value       = '';
+  document.getElementById('sNotes').value     = '';
+  document.getElementById('sJoinDate').value  = new Date().toISOString().split('T')[0];
+  document.getElementById('sSubscription').value = 'Monthly';
+  document.getElementById('sPayMode').value   = 'Cash';
+  document.getElementById('sStatus').value    = 'Active';
+  const sel = document.getElementById('sBatch');
+  sel.innerHTML = currentArtist.batches.map(b=>`<option value="${b.id}">${b.name} · ${b.time}</option>`).join('');
+  openModal('studentModal');
+};
+
+window.openEditStudent = function(id){
+  const s = students.find(x=>x.id===id);
+  document.getElementById('studentModalTitle').textContent = 'Edit Student';
+  document.getElementById('editStudentId').value = id;
+  document.getElementById('sName').value      = s.name||'';
+  document.getElementById('sPhone').value     = s.phone||'';
+  document.getElementById('sFee').value       = s.fee||'';
+  document.getElementById('sNotes').value     = s.notes||'';
+  document.getElementById('sJoinDate').value  = s.joinDate||'';
+  document.getElementById('sSubscription').value = s.subscription||'Monthly';
+  document.getElementById('sPayMode').value   = s.payMode||'Cash';
+  document.getElementById('sStatus').value    = s.status||'Active';
+  const sel = document.getElementById('sBatch');
+  sel.innerHTML = currentArtist.batches.map(b=>`<option value="${b.id}" ${b.id===s.batchId?'selected':''}>${b.name} · ${b.time}</option>`).join('');
+  openModal('studentModal');
+};
+
+window.saveStudent = async function(){
+  const name  = document.getElementById('sName').value.trim();
+  const phone = document.getElementById('sPhone').value.trim();
+  if(!name||!phone){ showToast('Name and phone are required','error'); return; }
+  const editId = document.getElementById('editStudentId').value;
+  const data = {
+    name, phone,
+    batchId:      document.getElementById('sBatch').value,
+    subscription: document.getElementById('sSubscription').value,
+    fee:          parseFloat(document.getElementById('sFee').value)||0,
+    payMode:      document.getElementById('sPayMode').value,
+    joinDate:     document.getElementById('sJoinDate').value,
+    status:       document.getElementById('sStatus').value,
+    notes:        document.getElementById('sNotes').value.trim(),
+    artistId:     currentArtist.user,
+    artistName:   currentArtist.name,
+    updatedAt:    Date.now(),
+  };
+  if(!editId) data.createdAt = Date.now();
+  const ref = editId ? doc(db,'batchStudents',editId) : doc(collection(db,'batchStudents'));
+  await setDoc(ref, data, {merge:true});
+  closeModal('studentModal');
+  showToast(editId ? 'Student updated ✓' : 'Student added ✓');
+};
+
+window.deleteStudent = async function(id, name){
+  if(!confirm(`Delete ${name}? This cannot be undone.`)) return;
+  await deleteDoc(doc(db,'batchStudents',id));
+  showToast(`${name} removed`);
+};
+
+/* ══════════════════════════════════════
+   ATTENDANCE
+══════════════════════════════════════ */
+function buildAttBatchTabs(){
+  currentAttBatch = currentArtist.batches[0]?.id || null;
+  document.getElementById('attBatchTabs').innerHTML = currentArtist.batches.map((b,i)=>
+    `<button class="filter-tab ${i===0?'active':''}" onclick="selectAttBatch('${b.id}',this)">${b.name} · ${b.time}</button>`
+  ).join('');
+}
+
+window.selectAttBatch = function(id, el){
+  currentAttBatch = id;
+  document.querySelectorAll('#attBatchTabs .filter-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  loadWeekAttendance();
+};
+
+window.changeWeek = function(dir){
+  const d = new Date(document.getElementById('weekStart').value);
+  d.setDate(d.getDate() + dir*7);
+  document.getElementById('weekStart').value = d.toISOString().split('T')[0];
+  loadWeekAttendance();
+};
+
+window.loadWeekAttendance = async function(){
+  const startStr = document.getElementById('weekStart').value;
+  if(!startStr) return;
+  const start  = new Date(startStr);
+  const days   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const dates  = Array.from({length:7},(_,i)=>{
+    const d = new Date(start); d.setDate(start.getDate()+i); return d;
+  });
+
+  // Week label
+  const opts = {day:'numeric',month:'short'};
+  document.getElementById('weekLabel').textContent =
+    dates[0].toLocaleDateString('en-IN',opts) + ' – ' + dates[6].toLocaleDateString('en-IN',opts);
+
+  // Render day headers — highlight Mon/Tue/Wed
+  document.getElementById('weekDays').innerHTML = days.map((d,i)=>`
+    <div class="week-day ${[0,1,2].includes(i)?'active-day':''}">
+      <p class="week-day-name">${d}</p>
+      <p class="week-day-date">${dates[i].getDate()}</p>
+    </div>`).join('');
+
+  // Load saved attendance from Firebase
+  const weekKey  = startStr.replace(/-/g,'');
+  const attRef   = doc(db,'attendance',`${currentArtist.user}_${currentAttBatch}_${weekKey}`);
+  const attSnap  = await getDoc(attRef);
+  attendance     = attSnap.exists() ? attSnap.data().records||{} : {};
+
+  // Get batch students
+  const batchStudents = students.filter(s=>s.batchId===currentAttBatch);
+  const batch = currentArtist.batches.find(b=>b.id===currentAttBatch);
+  document.getElementById('attTableTitle').textContent = (batch?.name||'') + ' · ' + (batch?.time||'');
+
+  document.getElementById('attList').innerHTML = batchStudents.length
+    ? batchStudents.map(s=>`
+      <div class="att-row">
+        <div>
+          <p class="att-name">${s.name}</p>
+          <p class="att-phone">${s.phone}</p>
+        </div>
+        <div class="att-days">
+          ${days.map((d,i)=>{
+            const dateKey = dates[i].toISOString().split('T')[0];
+            const status  = (attendance[s.id]||{})[dateKey]||'';
+            const isClass = [0,1,2].includes(i);
+            if(!isClass) return `<div class="att-day-btn" style="opacity:0.2;cursor:default"><span>${d}</span></div>`;
+            return `<button class="att-day-btn ${status}" onclick="toggleAtt('${s.id}','${dateKey}',this)" title="${dates[i].toLocaleDateString('en-IN')}">
+              <span>${d}</span>
+              <span>${status==='present'?'✓':status==='absent'?'✗':''}</span>
+            </button>`;
+          }).join('')}
+        </div>
+      </div>`).join('')
+    : '<p style="padding:2rem;text-align:center;color:var(--muted);font-size:0.85rem">No students in this batch yet</p>';
+};
+
+window.toggleAtt = function(studentId, dateKey, btn){
+  if(!attendance[studentId]) attendance[studentId] = {};
+  const cur = attendance[studentId][dateKey]||'';
+  const next = cur===''?'present':cur==='present'?'absent':'';
+  attendance[studentId][dateKey] = next;
+  btn.className = 'att-day-btn ' + next;
+  btn.querySelector('span:last-child').textContent = next==='present'?'✓':next==='absent'?'✗':'';
+};
+
+window.saveAttendance = async function(){
+  const startStr = document.getElementById('weekStart').value;
+  if(!startStr||!currentAttBatch){ showToast('Select a batch and week first','error'); return; }
+  const weekKey = startStr.replace(/-/g,'');
+  await setDoc(doc(db,'attendance',`${currentArtist.user}_${currentAttBatch}_${weekKey}`),{
+    artistId: currentArtist.user,
+    batchId:  currentAttBatch,
+    weekKey,
+    records:  attendance,
+    savedAt:  Date.now(),
+  });
+  showToast('Attendance saved ✓');
+};
+
+/* ══════════════════════════════════════
+   NAV / MODAL / TOAST
+══════════════════════════════════════ */
+window.showView = function(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('view-'+id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+id+"'")) n.classList.add('active');
+  });
+};
+
+window.openModal  = function(id){ document.getElementById(id).classList.add('open'); document.body.style.overflow='hidden'; };
+window.closeModal = function(id){ document.getElementById(id).classList.remove('open'); document.body.style.overflow=''; };
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ document.querySelectorAll('.modal-backdrop.open').forEach(m=>m.classList.remove('open')); document.body.style.overflow=''; }});
+
+let toastTimer;
+window.showToast = function(msg,type='success'){
+  const t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  t.className='toast show '+(type==='error'?'error':'success');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
+};
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const saved = sessionStorage.getItem('ths_artist');
+  if(saved){
+    const s = JSON.parse(saved);
+    currentArtist = ARTISTS.find(a=>a.user===s.user);
+    if(currentArtist) initApp();
+  }
+});
+</script>
+</body>
+</html>
