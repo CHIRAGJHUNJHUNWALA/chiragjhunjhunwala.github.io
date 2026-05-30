@@ -371,7 +371,7 @@ const db  = getFirestore(app);
 ══════════════════════════════════════ */
 const ARTISTS = [
   {
-    user: 'divysnahisinghvi',
+    user: 'divyanshisinghvi',
     pass: 'divyanshids2025',
     name: 'Divyanshi Singhvi',
     batches: [
@@ -424,17 +424,22 @@ window.doLogout = function(){
   location.reload();
 };
 
-// Auto-login
-const saved = sessionStorage.getItem('ths_artist');
-if(saved){
-  const s = JSON.parse(saved);
-  currentArtist = ARTISTS.find(a=>a.user===s.user);
-  if(currentArtist){
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('appShell').style.display    = 'block';
-    document.addEventListener('DOMContentLoaded', initApp);
+// Auto-login — must wait for DOM
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = sessionStorage.getItem('ths_artist');
+  if(saved){
+    try {
+      const s = JSON.parse(saved);
+      const found = ARTISTS.find(a=>a.user===s.user);
+      if(found){
+        currentArtist = found;
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('appShell').style.display    = 'block';
+        initApp();
+      }
+    } catch(e){ sessionStorage.removeItem('ths_artist'); }
   }
-}
+});
 
 /* ══════════════════════════════════════
    INIT
@@ -897,14 +902,6 @@ window.showToast = function(msg,type='success'){
   clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
 };
-
-document.addEventListener('DOMContentLoaded',()=>{
-  const saved = sessionStorage.getItem('ths_artist');
-  if(saved){
-    const s = JSON.parse(saved);
-    currentArtist = ARTISTS.find(a=>a.user===s.user);
-    if(currentArtist) initApp();
-  }
 });
 </script>
 </body>
