@@ -427,7 +427,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);font-family:'Syne',sans-serif" id="activeCountLabel">Active Students</span>
       </div>
       <div class="table-wrap" style="margin-bottom:1rem">
-        <table><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Trainer</th><th>Subscription</th><th>Fee</th><th>Payment</th><th>Joined</th><th>Notes</th></tr></thead>
+        <table><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Trainer</th><th>Subscription</th><th>Fee</th><th>Payment</th><th>Joined</th><th>Expiry</th><th>Notes</th></tr></thead>
         <tbody id="activeBatchStudents"></tbody></table>
       </div>
 
@@ -437,7 +437,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#e57373;font-family:'Syne',sans-serif" id="inactiveCountLabel">Inactive Students</span>
       </div>
       <div class="table-wrap">
-        <table><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Trainer</th><th>Subscription</th><th>Fee</th><th>Payment</th><th>Joined</th><th>Notes</th></tr></thead>
+        <table><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Trainer</th><th>Subscription</th><th>Fee</th><th>Payment</th><th>Joined</th><th>Expiry</th><th>Notes</th></tr></thead>
         <tbody id="inactiveBatchStudents"></tbody></table>
       </div>
     </div>
@@ -1623,33 +1623,63 @@ function listenBatchStudents(){
   });
 }
 
+/* ══════════════════════════════════════
+   AUTO STATUS — same logic as artist panel
+   Weekly = 7 days, Monthly = 28 days
+══════════════════════════════════════ */
+function isBatchStudentActive(s){
+  if(!s.joinDate) return false;
+  const joined = new Date(s.joinDate);
+  const days   = s.subscription==='Weekly' ? 7 : 28;
+  const expiry = new Date(joined);
+  expiry.setDate(joined.getDate() + days);
+  return new Date() <= expiry;
+}
+
+function getBatchDaysLeft(s){
+  if(!s.joinDate) return 0;
+  const joined = new Date(s.joinDate);
+  const days   = s.subscription==='Weekly' ? 7 : 28;
+  const expiry = new Date(joined);
+  expiry.setDate(joined.getDate() + days);
+  return Math.ceil((expiry - new Date()) / (1000*60*60*24));
+}
+
+function getBatchExpiry(s){
+  if(!s.joinDate) return '—';
+  const joined = new Date(s.joinDate);
+  const days   = s.subscription==='Weekly' ? 7 : 28;
+  const expiry = new Date(joined);
+  expiry.setDate(joined.getDate() + days);
+  return expiry.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+}
+
 function renderBatchesView(){
-  // Summary stats
   const total    = batchStudents.length;
-  const active   = batchStudents.filter(s=>s.status==='Active').length;
-  const inactive = batchStudents.filter(s=>s.status!=='Active').length;
+  const active   = batchStudents.filter(s=>isBatchStudentActive(s)).length;
+  const inactive = batchStudents.filter(s=>!isBatchStudentActive(s)).length;
+  const expiring = batchStudents.filter(s=>{ const d=getBatchDaysLeft(s); return d>0&&d<=3; }).length;
   const revenue  = batchStudents.reduce((s,x)=>s+(parseFloat(x.fee)||0),0);
   const monthly  = batchStudents.filter(s=>s.subscription==='Monthly').length;
 
   document.getElementById('batchSummaryStats').innerHTML = `
     <div class="stat-card"><p class="stat-label">Total Students</p><p class="stat-val red">${total}</p></div>
     <div class="stat-card"><p class="stat-label">Active</p><p class="stat-val green">${active}</p></div>
-    <div class="stat-card"><p class="stat-label">Inactive</p><p class="stat-val" style="color:#e57373">${inactive}</p></div>
-    <div class="stat-card"><p class="stat-label">Monthly Subscribers</p><p class="stat-val yellow">${monthly}</p></div>
+    <div class="stat-card"><p class="stat-label">Expired</p><p class="stat-val" style="color:#e57373">${inactive}</p></div>
+    <div class="stat-card"><p class="stat-label">Expiring in 3 days</p><p class="stat-val yellow">${expiring}</p></div>
+    <div class="stat-card"><p class="stat-label">Monthly Subscribers</p><p class="stat-val">${monthly}</p></div>
     <div class="stat-card"><p class="stat-label">Total Fees</p><p class="stat-val green">₹${revenue.toLocaleString('en-IN')}</p></div>
   `;
 
-  // Filter tabs
   document.getElementById('adminBatchTabs').innerHTML =
     `<button class="filter-tab ${currentAdminBatch==='all'?'active':''}" onclick="filterAdminBatch('all',this)">All Batches</button>`
     + BATCHES_CONFIG.map(b=>`<button class="filter-tab ${currentAdminBatch===b.id?'active':''}" onclick="filterAdminBatch('${b.id}',this)">${b.name} · ${b.time}</button>`).join('');
 
-  // Filter data
   let data = [...batchStudents];
   if(currentAdminBatch !== 'all') data = data.filter(s=>s.batchId===currentAdminBatch);
 
-  const activeData   = data.filter(s=>s.status==='Active');
-  const inactiveData = data.filter(s=>s.status!=='Active');
+  const activeData   = data.filter(s=>isBatchStudentActive(s));
+  const inactiveData = data.filter(s=>!isBatchStudentActive(s));
 
   const batch = BATCHES_CONFIG.find(b=>b.id===currentAdminBatch);
   document.getElementById('batchViewTitle').textContent = batch
@@ -1657,30 +1687,34 @@ function renderBatchesView(){
     : 'All Batches';
 
   document.getElementById('activeCountLabel').textContent   = `Active Students · ${activeData.length}`;
-  document.getElementById('inactiveCountLabel').textContent = `Inactive / On Hold · ${inactiveData.length}`;
+  document.getElementById('inactiveCountLabel').textContent = `Expired / Inactive · ${inactiveData.length}`;
 
   const rowHTML = s => {
-    const b = BATCHES_CONFIG.find(x=>x.id===s.batchId);
+    const b    = BATCHES_CONFIG.find(x=>x.id===s.batchId);
+    const left = getBatchDaysLeft(s);
+    const expiryColor = left<=0?'#e57373':left<=3?'var(--orange)':'var(--muted)';
+    const expiryText  = left<=0?'Expired':left<=3?`⚡ ${left}d left`:getBatchExpiry(s);
     return `<tr>
       <td style="color:var(--text)">${s.name||'—'}</td>
       <td>${s.phone||'—'}</td>
       <td style="font-size:0.75rem">${b?.name||s.batchId} · ${b?.time||''}</td>
-      <td style="font-size:0.75rem;color:var(--text-mid)">${s.artistName||b?.trainer||'—'}</td>
+      <td style="font-size:0.75rem;color:var(--mid)">${s.artistName||b?.trainer||'—'}</td>
       <td><span class="pill ${s.subscription==='Monthly'?'pill-blue':'pill-yellow'}">${s.subscription||'—'}</span></td>
       <td style="color:var(--yellow)">₹${parseFloat(s.fee||0).toLocaleString('en-IN')}</td>
       <td><span class="pill ${s.payMode==='Cash'?'pill-yellow':'pill-green'}">${s.payMode||'—'}</span></td>
       <td style="font-size:0.75rem;color:var(--muted)">${s.joinDate||'—'}</td>
-      <td style="font-size:0.75rem;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.notes||'—'}</td>
+      <td style="font-size:0.75rem;color:${expiryColor};font-weight:${left<=3&&left>0?'600':'300'}">${expiryText}</td>
+      <td style="font-size:0.75rem;color:var(--muted);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.notes||'—'}</td>
     </tr>`;
   };
 
   document.getElementById('activeBatchStudents').innerHTML   = activeData.length
     ? activeData.map(rowHTML).join('')
-    : '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:2rem">No active students</td></tr>';
+    : '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:2rem">No active students</td></tr>';
 
   document.getElementById('inactiveBatchStudents').innerHTML = inactiveData.length
     ? inactiveData.map(rowHTML).join('')
-    : '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:2rem">No inactive students</td></tr>';
+    : '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:2rem">No expired students</td></tr>';
 }
 
 window.filterAdminBatch = function(id, el){
