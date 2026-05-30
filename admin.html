@@ -268,6 +268,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="nav-item" onclick="showView('workshops')">
         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>All Workshops
       </div>
+      <div class="nav-section-title">Regular Batches</div>
+      <div class="nav-item" onclick="showView('batches')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>All Batches
+      </div>
       <div class="nav-section-title">Content</div>
       <div class="nav-item" onclick="showView('abouteditor')">
         <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit About Us
@@ -397,8 +401,46 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
     </div>
 
-    <!-- REGISTRATIONS -->
-    <div class="view" id="view-registrations">
+    <!-- REGULAR BATCHES -->
+    <div class="view" id="view-batches">
+      <div class="page-header">
+        <div><h1 class="page-title">Regular Batches</h1><p class="page-sub">Overview of all ongoing batches and their students</p></div>
+      </div>
+
+      <!-- Batch summary cards -->
+      <div class="stats-grid" id="batchSummaryStats"></div>
+
+      <!-- Batch filter tabs -->
+      <div class="filter-tabs" id="adminBatchTabs"></div>
+
+      <!-- Students table for selected batch -->
+      <div class="section-bar">
+        <span class="section-bar-title" id="batchViewTitle">All Batches</span>
+        <button class="btn btn-outline btn-sm" onclick="exportBatchCSV()">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV
+        </button>
+      </div>
+
+      <!-- Active students -->
+      <div style="padding:0.6rem 1rem;background:rgba(92,184,122,0.08);border:1px solid rgba(92,184,122,0.2);border-bottom:none;display:flex;align-items:center;gap:0.6rem">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block"></span>
+        <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);font-family:'Syne',sans-serif" id="activeCountLabel">Active Students</span>
+      </div>
+      <div class="table-wrap" style="margin-bottom:1rem">
+        <table><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Trainer</th><th>Subscription</th><th>Fee</th><th>Payment</th><th>Joined</th><th>Notes</th></tr></thead>
+        <tbody id="activeBatchStudents"></tbody></table>
+      </div>
+
+      <!-- Inactive students -->
+      <div style="padding:0.6rem 1rem;background:rgba(229,115,115,0.06);border:1px solid rgba(229,115,115,0.2);border-bottom:none;display:flex;align-items:center;gap:0.6rem;margin-top:1rem">
+        <span style="width:8px;height:8px;border-radius:50%;background:#e57373;display:inline-block"></span>
+        <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#e57373;font-family:'Syne',sans-serif" id="inactiveCountLabel">Inactive Students</span>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Trainer</th><th>Subscription</th><th>Fee</th><th>Payment</th><th>Joined</th><th>Notes</th></tr></thead>
+        <tbody id="inactiveBatchStudents"></tbody></table>
+      </div>
+    </div>
       <div class="page-header">
         <div><h1 class="page-title">Registrations</h1><p class="page-sub">All student enrollments</p></div>
         <button class="btn btn-outline" onclick="exportCSV()">
@@ -677,6 +719,7 @@ async function initApp(){
   }, 100);
   showToast('Loading data…');
   await Promise.all([listenWorkshops(), listenRegistrations()]);
+  listenBatchStudents();
 }
 
 /* ══════════════════════════════════════
@@ -722,6 +765,7 @@ window.showView = function(id){
     if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+id+"'")) n.classList.add('active');
   });
   if(id==='abouteditor') loadAboutContent();
+  if(id==='batches') renderBatchesView();
 };
 
 /* ══════════════════════════════════════
@@ -1556,8 +1600,111 @@ function renderPayTable(search=''){
 window.searchPayments = function(q){ renderPayTable(q); };
 
 /* ══════════════════════════════════════
-   ABOUT US EDITOR
+   REGULAR BATCHES — admin view
 ══════════════════════════════════════ */
+const BATCHES_CONFIG = [
+  { id:'ladies-batch',     name:'Ladies Batch',       time:'12:00–1:00 PM',  days:'Mon·Tue·Wed', trainer:'Divyanshi Singhvi' },
+  { id:'beginners-batch',  name:'Beginners Batch',    time:'4:00–5:00 PM',   days:'Mon·Tue·Wed', trainer:'Divyanshi Singhvi' },
+  { id:'intermediate-6-7', name:'Intermediate Batch', time:'6:00–7:00 PM',   days:'Mon·Tue·Wed', trainer:'Hriday Khubchandani' },
+  { id:'intermediate-7-8', name:'Intermediate Batch', time:'7:00–8:00 PM',   days:'Mon·Tue·Wed', trainer:'Divyanshi Singhvi' },
+  { id:'intermediate-8-9', name:'Intermediate Batch', time:'8:00–9:00 PM',   days:'Mon·Tue·Wed', trainer:'Ritu Hariyani (Aajanachle)' },
+];
+
+let batchStudents    = [];
+let currentAdminBatch = 'all';
+
+function listenBatchStudents(){
+  onSnapshot(collection(db,'batchStudents'), snap => {
+    batchStudents = snap.docs.map(d=>({id:d.id,...d.data()}));
+    batchStudents.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    if(document.getElementById('view-batches').classList.contains('active')){
+      renderBatchesView();
+    }
+  });
+}
+
+function renderBatchesView(){
+  // Summary stats
+  const total    = batchStudents.length;
+  const active   = batchStudents.filter(s=>s.status==='Active').length;
+  const inactive = batchStudents.filter(s=>s.status!=='Active').length;
+  const revenue  = batchStudents.reduce((s,x)=>s+(parseFloat(x.fee)||0),0);
+  const monthly  = batchStudents.filter(s=>s.subscription==='Monthly').length;
+
+  document.getElementById('batchSummaryStats').innerHTML = `
+    <div class="stat-card"><p class="stat-label">Total Students</p><p class="stat-val red">${total}</p></div>
+    <div class="stat-card"><p class="stat-label">Active</p><p class="stat-val green">${active}</p></div>
+    <div class="stat-card"><p class="stat-label">Inactive</p><p class="stat-val" style="color:#e57373">${inactive}</p></div>
+    <div class="stat-card"><p class="stat-label">Monthly Subscribers</p><p class="stat-val yellow">${monthly}</p></div>
+    <div class="stat-card"><p class="stat-label">Total Fees</p><p class="stat-val green">₹${revenue.toLocaleString('en-IN')}</p></div>
+  `;
+
+  // Filter tabs
+  document.getElementById('adminBatchTabs').innerHTML =
+    `<button class="filter-tab ${currentAdminBatch==='all'?'active':''}" onclick="filterAdminBatch('all',this)">All Batches</button>`
+    + BATCHES_CONFIG.map(b=>`<button class="filter-tab ${currentAdminBatch===b.id?'active':''}" onclick="filterAdminBatch('${b.id}',this)">${b.name} · ${b.time}</button>`).join('');
+
+  // Filter data
+  let data = [...batchStudents];
+  if(currentAdminBatch !== 'all') data = data.filter(s=>s.batchId===currentAdminBatch);
+
+  const activeData   = data.filter(s=>s.status==='Active');
+  const inactiveData = data.filter(s=>s.status!=='Active');
+
+  const batch = BATCHES_CONFIG.find(b=>b.id===currentAdminBatch);
+  document.getElementById('batchViewTitle').textContent = batch
+    ? `${batch.name} · ${batch.time} · ${batch.trainer}`
+    : 'All Batches';
+
+  document.getElementById('activeCountLabel').textContent   = `Active Students · ${activeData.length}`;
+  document.getElementById('inactiveCountLabel').textContent = `Inactive / On Hold · ${inactiveData.length}`;
+
+  const rowHTML = s => {
+    const b = BATCHES_CONFIG.find(x=>x.id===s.batchId);
+    return `<tr>
+      <td style="color:var(--text)">${s.name||'—'}</td>
+      <td>${s.phone||'—'}</td>
+      <td style="font-size:0.75rem">${b?.name||s.batchId} · ${b?.time||''}</td>
+      <td style="font-size:0.75rem;color:var(--text-mid)">${s.artistName||b?.trainer||'—'}</td>
+      <td><span class="pill ${s.subscription==='Monthly'?'pill-blue':'pill-yellow'}">${s.subscription||'—'}</span></td>
+      <td style="color:var(--yellow)">₹${parseFloat(s.fee||0).toLocaleString('en-IN')}</td>
+      <td><span class="pill ${s.payMode==='Cash'?'pill-yellow':'pill-green'}">${s.payMode||'—'}</span></td>
+      <td style="font-size:0.75rem;color:var(--muted)">${s.joinDate||'—'}</td>
+      <td style="font-size:0.75rem;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.notes||'—'}</td>
+    </tr>`;
+  };
+
+  document.getElementById('activeBatchStudents').innerHTML   = activeData.length
+    ? activeData.map(rowHTML).join('')
+    : '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:2rem">No active students</td></tr>';
+
+  document.getElementById('inactiveBatchStudents').innerHTML = inactiveData.length
+    ? inactiveData.map(rowHTML).join('')
+    : '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:2rem">No inactive students</td></tr>';
+}
+
+window.filterAdminBatch = function(id, el){
+  currentAdminBatch = id;
+  renderBatchesView();
+};
+
+window.exportBatchCSV = function(){
+  let data = [...batchStudents];
+  if(currentAdminBatch!=='all') data = data.filter(s=>s.batchId===currentAdminBatch);
+  if(!data.length){ showToast('No students to export','error'); return; }
+  const headers = ['Name','Phone','Batch','Trainer','Subscription','Fee','Payment Mode','Join Date','Status','Notes'];
+  const rows = data.map(s=>{
+    const b = BATCHES_CONFIG.find(x=>x.id===s.batchId);
+    return [s.name||'',s.phone||'',b?.name||s.batchId,s.artistName||b?.trainer||'',s.subscription||'',s.fee||0,s.payMode||'',s.joinDate||'',s.status||'',s.notes||''];
+  });
+  const csv  = [headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = 'batch-students-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  showToast('CSV downloaded!');
+};
 async function loadAboutContent(){
   try {
     const d = await getDoc(doc(db,'settings','about'));
@@ -1597,17 +1744,23 @@ function initAboutEditor(data){
 }
 
 window.saveAboutContent = async function(){
-  const data = {};
-  ['tagline','founded','story1','story2','story3','quote','f1name','f1bio','f2name','f2bio','stat1','stat2','stat3','stat4label'].forEach(k=>{
-    const el = document.getElementById('ab-'+k); if(el) data[k] = el.value.trim();
-  });
-  data.believes = Array.from({length:6},(_,i)=>({
-    title:(document.getElementById('bel-title-'+i)||{}).value||'',
-    text:(document.getElementById('bel-text-'+i)||{}).value||'',
-  }));
-  await setDoc(doc(db,'settings','about'), data);
-  showToast('About Us saved to Firebase ✓');
+  try {
+    const data = {};
+    ['tagline','founded','story1','story2','story3','quote','f1name','f1bio','f2name','f2bio','stat1','stat2','stat3','stat4label'].forEach(k=>{
+      const el = document.getElementById('ab-'+k); if(el) data[k] = el.value.trim();
+    });
+    data.believes = Array.from({length:6},(_,i)=>({
+      title:(document.getElementById('bel-title-'+i)||{}).value||'',
+      text: (document.getElementById('bel-text-'+i)||{}).value||'',
+    }));
+    await setDoc(doc(db,'settings','about'), data);
+    showToast('About Us saved ✓');
+  } catch(e) {
+    showToast('Save failed: '+e.message,'error');
+  }
 };
+
+window.loadAboutContent = loadAboutContent;
 
 window.exportCSV = function(){
   if(!registrations.length){ showToast('No registrations to export','error'); return; }

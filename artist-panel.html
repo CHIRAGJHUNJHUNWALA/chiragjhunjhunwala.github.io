@@ -475,31 +475,36 @@ function listenStudents(){
    DASHBOARD
 ══════════════════════════════════════ */
 function renderDashboard(){
-  const active   = students.filter(s=>s.status==='Active').length;
-  const revenue  = students.reduce((sum,s)=>sum+(parseFloat(s.fee)||0),0);
-  const monthly  = students.filter(s=>s.subscription==='Monthly').length;
-  const weekly   = students.filter(s=>s.subscription==='Weekly').length;
+  const activeStudents   = students.filter(s=>s.status==='Active');
+  const inactiveStudents = students.filter(s=>s.status!=='Active');
 
   document.getElementById('dashStats').innerHTML = `
     <div class="stat-card"><p class="stat-label">Total Students</p><p class="stat-val red">${students.length}</p></div>
-    <div class="stat-card"><p class="stat-label">Active</p><p class="stat-val green">${active}</p></div>
-    <div class="stat-card"><p class="stat-label">Monthly / Weekly</p><p class="stat-val">${monthly}<span style="font-size:1rem;color:var(--muted)"> / ${weekly}</span></p></div>
-    <div class="stat-card"><p class="stat-label">Total Fees Collected</p><p class="stat-val yellow">₹${revenue.toLocaleString('en-IN')}</p></div>
+    <div class="stat-card"><p class="stat-label">Active</p><p class="stat-val green">${activeStudents.length}</p></div>
+    <div class="stat-card"><p class="stat-label">Inactive / On Hold</p><p class="stat-val" style="color:#e57373">${inactiveStudents.length}</p></div>
+    <div class="stat-card"><p class="stat-label">Monthly / Weekly</p><p class="stat-val">${students.filter(s=>s.subscription==='Monthly').length}<span style="font-size:1rem;color:var(--muted)"> / ${students.filter(s=>s.subscription==='Weekly').length}</span></p></div>
+    <div class="stat-card"><p class="stat-label">Total Fees Collected</p><p class="stat-val yellow">₹${students.reduce((sum,s)=>sum+(parseFloat(s.fee)||0),0).toLocaleString('en-IN')}</p></div>
   `;
 
   document.getElementById('dashBatches').innerHTML = currentArtist.batches.map(b=>{
-    const count = students.filter(s=>s.batchId===b.id).length;
+    const bActive   = students.filter(s=>s.batchId===b.id&&s.status==='Active').length;
+    const bInactive = students.filter(s=>s.batchId===b.id&&s.status!=='Active').length;
     return `<div class="batch-card" onclick="showView('students');filterByBatch('${b.id}')">
       <p class="batch-card-name">${b.name}</p>
       <p class="batch-card-time">${b.time}</p>
-      <p class="batch-card-meta">${b.days} · <strong style="color:var(--text)">${count} students</strong></p>
+      <p class="batch-card-meta">${b.days}</p>
+      <div style="display:flex;gap:1rem;margin-top:0.75rem">
+        <span style="font-size:0.75rem;color:var(--green)">● ${bActive} Active</span>
+        ${bInactive?`<span style="font-size:0.75rem;color:#e57373">● ${bInactive} Inactive</span>`:''}
+      </div>
     </div>`;
   }).join('');
 
-  const recent = [...students].reverse().slice(0,5);
-  document.getElementById('dashRecentStudents').innerHTML = recent.length
-    ? recent.map(s=>`<tr>
-        <td style="color:var(--text)">${s.name||'—'}</td>
+  // Recent students — active first then inactive
+  const sortedRecent = [...activeStudents.slice(-3).reverse(), ...inactiveStudents.slice(-2).reverse()];
+  document.getElementById('dashRecentStudents').innerHTML = sortedRecent.length
+    ? sortedRecent.map(s=>`<tr style="${s.status!=='Active'?'opacity:0.55':''}">
+        <td style="color:var(--text)">${s.name||'—'} <span class="pill ${s.status==='Active'?'pill-green':'pill-red'}" style="font-size:0.55rem">${s.status}</span></td>
         <td>${s.phone||'—'}</td>
         <td>${getBatchName(s.batchId)}</td>
         <td><span class="pill ${s.subscription==='Monthly'?'pill-blue':'pill-yellow'}">${s.subscription||'—'}</span></td>
@@ -544,28 +549,62 @@ function renderStudentsTable(){
     (s.name||'').toLowerCase().includes(studentSearchQ.toLowerCase()) ||
     (s.phone||'').includes(studentSearchQ)
   );
-  document.getElementById('studentsTable').innerHTML = data.length
-    ? data.map(s=>`<tr>
-        <td style="color:var(--text)">${s.name||'—'}</td>
-        <td>${s.phone||'—'}</td>
-        <td style="font-size:0.75rem">${getBatchName(s.batchId)}</td>
-        <td><span class="pill ${s.subscription==='Monthly'?'pill-blue':'pill-yellow'}">${s.subscription||'—'}</span></td>
-        <td style="color:var(--yellow)">₹${parseFloat(s.fee||0).toLocaleString('en-IN')}</td>
-        <td><span class="pill ${s.payMode==='Cash'?'pill-yellow':'pill-green'}">${s.payMode||'—'}</span></td>
-        <td style="font-size:0.75rem;color:var(--muted)">${s.joinDate||'—'}</td>
-        <td style="font-size:0.75rem;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.notes||'—'}</td>
-        <td>
-          <div style="display:flex;gap:0.35rem">
-            <button class="btn btn-ghost btn-sm" onclick="openEditStudent('${s.id}')">
-              <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}','${(s.name||'').replace(/'/g,"\\'")}')">
-              <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-            </button>
-          </div>
-        </td>
-      </tr>`).join('')
-    : '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:3rem">No students found</td></tr>';
+
+  const active   = data.filter(s=>s.status==='Active');
+  const inactive = data.filter(s=>s.status!=='Active');
+
+  const rowHTML = (s) => `<tr>
+    <td style="color:var(--text)">${s.name||'—'}</td>
+    <td>${s.phone||'—'}</td>
+    <td style="font-size:0.75rem">${getBatchName(s.batchId)}</td>
+    <td><span class="pill ${s.subscription==='Monthly'?'pill-blue':'pill-yellow'}">${s.subscription||'—'}</span></td>
+    <td style="color:var(--yellow)">₹${parseFloat(s.fee||0).toLocaleString('en-IN')}</td>
+    <td><span class="pill ${s.payMode==='Cash'?'pill-yellow':'pill-green'}">${s.payMode||'—'}</span></td>
+    <td style="font-size:0.75rem;color:var(--muted)">${s.joinDate||'—'}</td>
+    <td style="font-size:0.75rem;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.notes||'—'}</td>
+    <td>
+      <div style="display:flex;gap:0.35rem">
+        <button class="btn btn-ghost btn-sm" onclick="openEditStudent('${s.id}')">
+          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}','${(s.name||'').replace(/'/g,"\\'")}')">
+          <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+      </div>
+    </td>
+  </tr>`;
+
+  const thead = `<thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Subscription</th><th>Fee</th><th>Payment</th><th>Joined</th><th>Notes</th><th></th></tr></thead>`;
+
+  let html = '';
+
+  if(active.length){
+    html += `
+      <div style="padding:0.75rem 1rem;background:rgba(92,184,122,0.08);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.6rem">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block"></span>
+        <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);font-family:'Syne',sans-serif">Active Students · ${active.length}</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse">${thead}<tbody>${active.map(rowHTML).join('')}</tbody></table>`;
+  }
+
+  if(inactive.length){
+    html += `
+      <div style="padding:0.75rem 1rem;background:rgba(229,115,115,0.06);border-bottom:1px solid var(--border);border-top:${active.length?'2px solid var(--border2)':'none'};display:flex;align-items:center;gap:0.6rem;margin-top:${active.length?'0.5rem':'0'}">
+        <span style="width:8px;height:8px;border-radius:50%;background:#e57373;display:inline-block"></span>
+        <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#e57373;font-family:'Syne',sans-serif">Inactive / On Hold · ${inactive.length}</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;opacity:0.6">${thead}<tbody>${inactive.map(rowHTML).join('')}</tbody></table>`;
+  }
+
+  if(!html) html = '<p style="text-align:center;color:var(--muted);padding:3rem;font-size:0.85rem">No students found</p>';
+
+  document.getElementById('studentsTable').innerHTML = '';
+  document.querySelector('#view-students .table-wrap').innerHTML = `
+    <div class="table-header">
+      <span class="table-title">Students</span>
+      <input class="table-search" placeholder="Search name or phone…" oninput="searchStudents(this.value)" value="${studentSearchQ}">
+    </div>
+    ${html}`;
 }
 
 /* ══════════════════════════════════════
