@@ -567,16 +567,13 @@ function updateEnrollBtn(){document.getElementById('enrollBtn').disabled=!valida
 /* POPUP */
 window.openConfirmPopup = function(){
   if(!validateForm())return;
-  const name=document.getElementById('inp-name').value.trim();
-  const phone=document.getElementById('inp-phone').value.trim();
-  const base=parseInt(selectedPkg.price)||0;
-  const fee=Math.round(base*CONVENIENCE/100);
-  const total=base+fee;
+  const name     = document.getElementById('inp-name').value.trim();
+  const phone    = document.getElementById('inp-phone').value.trim();
   const people   = getTotalPeople();
+  const base     = parseInt(selectedPkg.price)||0;
   const subtotal = base * people;
   const fee      = Math.round(subtotal*CONVENIENCE/100);
-  const total    = subtotal+fee;
-  const allNames = [name, ...attendees.map(a=>a.name)].filter(Boolean).join(', ');
+  const total    = subtotal + fee;
   document.getElementById('popupRows').innerHTML=`
     <div class="popup-row"><span>${people>1?'Primary Person':'Name'}</span><span>${name}</span></div>
     ${attendees.map((a,i)=>`<div class="popup-row"><span>Person ${i+2}</span><span>${a.name||'—'} · ${a.phone||'—'}</span></div>`).join('')}
