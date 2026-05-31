@@ -498,32 +498,37 @@ function listenStudents(){
    AUTO STATUS — based on join date
    Weekly = 7 days, Monthly = 28 days
 ══════════════════════════════════════ */
+function parseLocalDate(dateStr){
+  if(!dateStr) return null;
+  const [y,m,d] = dateStr.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+
+function getEffectiveDays(s){
+  return (s.subscription==='Weekly'?7:28) + parseInt(s.extendedDays||0);
+}
+
 function isStudentActive(s){
   if(!s.joinDate) return false;
-  const joined  = new Date(s.joinDate);
-  const today   = new Date();
-  const days    = s.subscription==='Weekly' ? 7 : 28;
-  const expiry  = new Date(joined);
-  expiry.setDate(joined.getDate() + days);
-  return today <= expiry;
+  const joined = parseLocalDate(s.joinDate);
+  const expiry = new Date(joined);
+  expiry.setDate(joined.getDate() + getEffectiveDays(s));
+  return new Date() <= expiry;
 }
 
 function getDaysLeft(s){
-  if(!s.joinDate) return 0;
-  const joined  = new Date(s.joinDate);
-  const days    = s.subscription==='Weekly' ? 7 : 28;
-  const expiry  = new Date(joined);
-  expiry.setDate(joined.getDate() + days);
-  const diff    = Math.ceil((expiry - new Date()) / (1000*60*60*24));
-  return diff;
+  if(!s.joinDate) return -999;
+  const joined = parseLocalDate(s.joinDate);
+  const expiry = new Date(joined);
+  expiry.setDate(joined.getDate() + getEffectiveDays(s));
+  return Math.ceil((expiry - new Date()) / (1000*60*60*24));
 }
 
 function getExpiryDate(s){
   if(!s.joinDate) return '—';
-  const joined = new Date(s.joinDate);
-  const days   = s.subscription==='Weekly' ? 7 : 28;
+  const joined = parseLocalDate(s.joinDate);
   const expiry = new Date(joined);
-  expiry.setDate(joined.getDate() + days);
+  expiry.setDate(joined.getDate() + getEffectiveDays(s));
   return expiry.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
 }
 
@@ -810,23 +815,52 @@ window.loadWeekAttendance = async function(){
   const attSnap = await getDoc(attRef);
   attendance    = attSnap.exists() ? attSnap.data().records||{} : {};
 
+  // Week start and end dates (Mon–Sun)
+  const weekStart = weekDates[0];
+  const weekEnd   = weekDates[6];
+
   // Get batch students
   const batchStudents = students.filter(s=>s.batchId===currentAttBatch);
   const batch = currentArtist.batches.find(b=>b.id===currentAttBatch);
   document.getElementById('attTableTitle').textContent = (batch?.name||'') + ' · ' + (batch?.time||'');
 
-  document.getElementById('attList').innerHTML = batchStudents.length
-    ? batchStudents.map(s=>`
+  if(!batchStudents.length){
+    document.getElementById('attList').innerHTML = '<p style="padding:2rem;text-align:center;color:var(--muted);font-size:0.85rem">No students in this batch yet</p>';
+    return;
+  }
+
+  // Categorise students for this week
+  const activeInWeek  = [];
+  const notStartedYet = [];
+  const expiredInWeek = [];
+
+  batchStudents.forEach(s=>{
+    if(!s.joinDate){ expiredInWeek.push(s); return; }
+    const joined    = parseLocalDate(s.joinDate);
+    const expiry    = new Date(joined);
+    expiry.setDate(joined.getDate() + getEffectiveDays(s));
+
+    if(joined > weekEnd)         notStartedYet.push({...s, joined, expiry});
+    else if(expiry < weekStart)  expiredInWeek.push({...s, joined, expiry});
+    else                         activeInWeek.push({...s, joined, expiry});
+  });
+
+  let html = '';
+
+  // ACTIVE students
+  if(activeInWeek.length){
+    html += `<div style="padding:0.6rem 1rem;background:rgba(92,184,122,0.06);border-bottom:1px solid var(--border);font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);font-family:'Syne',sans-serif">Active · ${activeInWeek.length}</div>`;
+    html += activeInWeek.map(s=>`
       <div class="att-row">
-        <div>
+        <div style="min-width:0;flex:1">
           <p class="att-name">${s.name}</p>
-          <p class="att-phone">${s.phone}</p>
+          <p class="att-phone">${s.phone} · <span style="color:var(--green);font-size:0.65rem">until ${s.expiry.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span></p>
         </div>
         <div class="att-days">
           ${dayNames.map((d,i)=>{
-            const dateKey = weekDates[i].toLocaleDateString('en-CA'); // YYYY-MM-DD
+            const dateKey = weekDates[i].toLocaleDateString('en-CA');
             const status  = (attendance[s.id]||{})[dateKey]||'';
-            const isClass = i<=2; // Mon, Tue, Wed only
+            const isClass = i<=2;
             if(!isClass) return `<div class="att-day-btn" style="opacity:0.18;cursor:default;font-size:0.6rem;color:var(--muted)">${d}</div>`;
             return `<button class="att-day-btn ${status}" onclick="toggleAtt('${s.id}','${dateKey}',this)" title="${weekDates[i].toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short'})}">
               <span>${d}</span>
@@ -835,8 +869,74 @@ window.loadWeekAttendance = async function(){
             </button>`;
           }).join('')}
         </div>
-      </div>`).join('')
-    : '<p style="padding:2rem;text-align:center;color:var(--muted);font-size:0.85rem">No students in this batch yet</p>';
+      </div>`).join('');
+  }
+
+  // EXPIRED students
+  if(expiredInWeek.length){
+    html += `<div style="padding:0.6rem 1rem;background:rgba(229,115,115,0.06);border-bottom:1px solid var(--border);border-top:2px solid var(--border2);font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#e57373;font-family:'Syne',sans-serif;margin-top:${activeInWeek.length?'0.5rem':'0'}">Subscription Expired · ${expiredInWeek.length}</div>`;
+    html += expiredInWeek.map(s=>`
+      <div class="att-row" style="opacity:0.7;background:rgba(229,115,115,0.04)">
+        <div style="min-width:0;flex:1">
+          <p class="att-name">${s.name}</p>
+          <p class="att-phone" style="color:#e57373;font-size:0.7rem">${s.expiry?'Expired '+s.expiry.toLocaleDateString('en-IN',{day:'numeric',month:'short'}):'No join date'}</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.6rem">
+          <span style="font-size:0.68rem;color:#e57373;font-family:'Syne',sans-serif;font-weight:600">EXPIRED</span>
+          <button onclick="extendStudent('${s.id}','${(s.name||'').replace(/'/g,"\\'")}','${s.subscription||'Monthly'}')" style="font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--yellow);background:rgba(245,230,66,0.1);border:1px solid rgba(245,230,66,0.3);padding:0.35rem 0.75rem;cursor:pointer;font-family:'Syne',sans-serif;transition:all 0.2s">Extend ↻</button>
+        </div>
+      </div>`).join('');
+  }
+
+  // NOT STARTED YET
+  if(notStartedYet.length){
+    html += `<div style="padding:0.6rem 1rem;background:rgba(106,176,245,0.06);border-bottom:1px solid var(--border);border-top:2px solid var(--border2);font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--blue);font-family:'Syne',sans-serif;margin-top:0.5rem">Joining Later · ${notStartedYet.length}</div>`;
+    html += notStartedYet.map(s=>`
+      <div class="att-row" style="opacity:0.5">
+        <div style="min-width:0;flex:1">
+          <p class="att-name">${s.name}</p>
+          <p class="att-phone" style="color:var(--blue);font-size:0.7rem">Starts ${s.joined.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</p>
+        </div>
+        <span style="font-size:0.68rem;color:var(--blue);font-family:'Syne',sans-serif;font-weight:600">NOT STARTED</span>
+      </div>`).join('');
+  }
+
+  document.getElementById('attList').innerHTML = html || '<p style="padding:2rem;text-align:center;color:var(--muted);font-size:0.85rem">No students found</p>';
+};
+
+/* ══ EXTEND SUBSCRIPTION ══ */
+const EXTEND_PASSWORD = 'extend2025';
+
+window.extendStudent = async function(id, name, subscription){
+  const pass = prompt(`Enter password to extend ${name}'s subscription:`);
+  if(pass===null) return;
+  if(pass!==EXTEND_PASSWORD){
+    showToast('Incorrect password','error');
+    return;
+  }
+  const defaultDays = subscription==='Weekly' ? 7 : 28;
+  const extra = prompt(`How many days to extend for ${name}?\n(Default: ${defaultDays} days for ${subscription})`);
+  if(extra===null) return;
+  const days = parseInt(extra)||defaultDays;
+
+  const s = students.find(x=>x.id===id);
+  if(!s) return;
+
+  // extendedDays accumulates — each extension adds on top
+  const newExtended = (parseInt(s.extendedDays||0)) + days;
+
+  // New joinDate stays same, extendedDays grows
+  await setDoc(doc(db,'batchStudents',id), {extendedDays: newExtended}, {merge:true});
+
+  // Calculate and show new expiry
+  const joined  = parseLocalDate(s.joinDate);
+  const total   = getEffectiveDays({...s, extendedDays: newExtended});
+  const expiry  = new Date(joined);
+  expiry.setDate(joined.getDate()+total);
+  showToast(`${name} extended by ${days} days → new expiry: ${expiry.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}`);
+
+  // Reload attendance for current week
+  loadWeekAttendance();
 };
 
 window.toggleAtt = function(studentId, dateKey, btn){
