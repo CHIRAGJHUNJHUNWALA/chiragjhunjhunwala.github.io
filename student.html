@@ -276,6 +276,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 function toggleMenu(){
   const o=document.getElementById('navOverlay');
@@ -563,7 +564,8 @@ function renderWorkshops(regs){
   // Sort newest first
   const sorted = [...regs].sort((a,b)=>(b.timestamp||'').localeCompare(a.timestamp||''));
 
-  for(const r of sorted){
+  for(const [i,r] of sorted.entries()){
+    const qrVal = 'THS-REG-' + r.id;
     html += `
       <div class="booking-card">
         <div class="booking-card-header">
@@ -573,17 +575,29 @@ function renderWorkshops(regs){
           </div>
           <span class="pill pill-green">Confirmed</span>
         </div>
-        <div class="booking-body">
-          <div class="info-item"><strong>Package</strong><span>${r.package||'—'}</span></div>
-          <div class="info-item"><strong>Date & Slot</strong><span style="font-size:0.82rem">${(r.slots||'—').replace(' | ','<br>')}</span></div>
-          <div class="info-item"><strong>Amount Paid</strong><span style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</span></div>
-          <div class="info-item"><strong>Booked On</strong><span style="font-size:0.78rem">${r.timestamp||'—'}</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:start">
+          <div class="booking-body">
+            <div class="info-item"><strong>Package</strong><span>${r.package||'—'}</span></div>
+            <div class="info-item"><strong>Date & Slot</strong><span style="font-size:0.82rem">${(r.slots||'—').replace(' | ','<br>')}</span></div>
+            <div class="info-item"><strong>Amount Paid</strong><span style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</span></div>
+            <div class="info-item"><strong>Booked On</strong><span style="font-size:0.78rem">${r.timestamp||'—'}</span></div>
+          </div>
+          <div style="padding:1.25rem 1.25rem 0 0;text-align:center">
+            <div style="background:#fff;padding:8px;display:inline-block;border-radius:4px" id="qr-${i}"></div>
+            <p style="font-size:0.6rem;color:var(--text-muted);margin-top:0.4rem;letter-spacing:0.05em">Show at entry</p>
+          </div>
         </div>
-        <div class="booking-pid">Payment ID: ${r.payment_id||'—'}</div>
+        <div class="booking-pid">ID: ${qrVal}</div>
       </div>`;
   }
 
   el.innerHTML = html;
+
+  // Render QR codes after DOM update
+  sorted.forEach((r,i)=>{
+    const wrap = document.getElementById('qr-'+i);
+    if(wrap && window.QRCode) new QRCode(wrap,{text:'THS-REG-'+r.id,width:120,height:120,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.H});
+  });
 }
 
 /* ══════ AUTO-LOGIN ══════ */

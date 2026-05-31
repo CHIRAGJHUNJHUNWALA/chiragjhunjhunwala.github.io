@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entry Scanner — The Happening Space</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#bc1f2e;--red-dark:#8f1520;--red-dim:rgba(188,31,46,0.1);
+  --black:#0a0a0a;--bg:#0f0f0f;--bg2:#161616;--bg3:#1c1c1c;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#f0ede6;--muted:rgba(240,237,230,0.4);--mid:rgba(240,237,230,0.65);
+  --yellow:#f5e642;--green:#5cb87a;--orange:#e8863a;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;padding:0}
+
+/* LOGIN */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;background:var(--black)}
+.login-box{width:100%;max-width:360px;text-align:center}
+.login-logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.1em;color:var(--text);margin-bottom:0.25rem}
+.login-logo span{color:var(--red)}
+.login-sub{font-size:0.72rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:2.5rem}
+.login-input{width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.8rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;margin-bottom:1rem;transition:border-color 0.2s;text-align:left}
+.login-input:focus{border-color:var(--red)}
+.login-btn{width:100%;background:var(--red);color:#fff;border:none;padding:0.9rem;font-family:'Syne',sans-serif;font-size:0.82rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:background 0.2s}
+.login-btn:hover{background:var(--red-dark)}
+.login-error{font-size:0.78rem;color:#e57373;margin-top:0.75rem;display:none}
+.login-error.show{display:block}
+
+/* APP */
+#app{display:none;max-width:480px;margin:0 auto;padding:1.5rem;min-height:100vh}
+.app-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+.app-title{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:0.04em;color:var(--text)}
+.app-title span{color:var(--red)}
+.logout-btn{font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);background:none;border:1px solid var(--border);padding:0.35rem 0.75rem;cursor:pointer;font-family:'Syne',sans-serif;transition:all 0.2s}
+.logout-btn:hover{border-color:var(--red);color:var(--red)}
+
+/* SCANNER */
+.scanner-wrap{background:var(--bg2);border:1px solid var(--border);overflow:hidden;margin-bottom:1.25rem}
+.scanner-header{padding:0.85rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.scanner-label{font-size:0.72rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text);font-family:'Syne',sans-serif}
+.scanner-status{font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;font-family:'Syne',sans-serif}
+.status-ready{color:var(--green)}
+.status-scanning{color:var(--yellow)}
+.status-off{color:var(--muted)}
+#reader{width:100%}
+#reader video{width:100%!important;border-radius:0!important}
+.scanner-controls{padding:0.85rem 1rem;display:flex;gap:0.75rem}
+.scan-btn{flex:1;padding:0.75rem;font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;border:none;transition:all 0.2s}
+.scan-btn-start{background:var(--green);color:#fff}
+.scan-btn-start:hover{opacity:0.85}
+.scan-btn-stop{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+.scan-btn-stop:hover{border-color:var(--red);color:var(--red)}
+
+/* MANUAL INPUT */
+.manual-wrap{background:var(--bg2);border:1px solid var(--border);padding:1rem;margin-bottom:1.25rem}
+.manual-label{font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;font-family:'Syne',sans-serif;font-weight:600}
+.manual-row{display:flex;gap:0.5rem}
+.manual-input{flex:1;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;transition:border-color 0.2s}
+.manual-input:focus{border-color:var(--red)}
+.manual-btn{background:var(--red);color:#fff;border:none;padding:0.65rem 1rem;font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:background 0.2s;white-space:nowrap}
+.manual-btn:hover{background:var(--red-dark)}
+
+/* RESULT CARD */
+.result-card{margin-bottom:1.25rem;border:2px solid;overflow:hidden;animation:slideUp 0.3s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.result-card.valid{border-color:var(--green)}
+.result-card.invalid{border-color:#e57373}
+.result-card.used{border-color:var(--orange)}
+.result-header{padding:1rem 1.25rem;display:flex;align-items:center;gap:0.85rem}
+.result-icon{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+.result-icon.valid{background:rgba(92,184,122,0.2);color:var(--green)}
+.result-icon.invalid{background:rgba(229,115,115,0.15);color:#e57373}
+.result-icon.used{background:rgba(232,134,58,0.15);color:var(--orange)}
+.result-title{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.04em;line-height:1}
+.result-sub{font-size:0.72rem;color:var(--muted);margin-top:0.15rem}
+.result-body{padding:0 1.25rem 1.25rem;display:grid;grid-template-columns:1fr 1fr;gap:0.75rem}
+.result-item strong{display:block;font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem;font-family:'Syne',sans-serif}
+.result-item span{font-size:0.85rem;color:var(--text)}
+.checkin-btn{margin:0 1.25rem 1.25rem;width:calc(100% - 2.5rem);background:var(--green);color:#fff;border:none;padding:0.85rem;font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:background 0.2s;display:flex;align-items:center;justify-content:center;gap:0.5rem}
+.checkin-btn:hover{opacity:0.85}
+.checkin-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.5}
+
+/* HISTORY */
+.history-wrap{background:var(--bg2);border:1px solid var(--border)}
+.history-header{padding:0.75rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.history-title{font-size:0.72rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text);font-family:'Syne',sans-serif}
+.history-count{font-size:0.65rem;color:var(--muted)}
+.history-list{max-height:280px;overflow-y:auto}
+.history-item{padding:0.65rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:0.8rem}
+.history-item:last-child{border-bottom:none}
+.history-name{color:var(--text);font-weight:500}
+.history-time{font-size:0.68rem;color:var(--muted)}
+.history-badge{font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:0.15rem 0.5rem;font-family:'Syne',sans-serif}
+.badge-in{background:rgba(92,184,122,0.15);color:var(--green);border:1px solid rgba(92,184,122,0.3)}
+.badge-dup{background:rgba(232,134,58,0.15);color:var(--orange);border:1px solid rgba(232,134,58,0.3)}
+.badge-inv{background:rgba(229,115,115,0.12);color:#e57373;border:1px solid rgba(229,115,115,0.25)}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <p class="login-logo">The <span>Happening</span> Space</p>
+    <p class="login-sub">Entry Scanner — Staff Only</p>
+    <input class="login-input" id="loginPass" type="password" placeholder="Enter staff password" onkeydown="if(event.key==='Enter')doScannerLogin()">
+    <button class="login-btn" onclick="doScannerLogin()">Enter Scanner</button>
+    <p class="login-error" id="loginErr">Incorrect password</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="app-header">
+    <p class="app-title">Entry <span>Scanner</span></p>
+    <button class="logout-btn" onclick="doScannerLogout()">Log Out</button>
+  </div>
+
+  <!-- SCANNER -->
+  <div class="scanner-wrap">
+    <div class="scanner-header">
+      <span class="scanner-label">Camera Scanner</span>
+      <span class="scanner-status status-off" id="scanStatus">Off</span>
+    </div>
+    <div id="reader"></div>
+    <div class="scanner-controls">
+      <button class="scan-btn scan-btn-start" id="startBtn" onclick="startScanner()">▶ Start Camera</button>
+      <button class="scan-btn scan-btn-stop" id="stopBtn" onclick="stopScanner()" style="display:none">■ Stop</button>
+    </div>
+  </div>
+
+  <!-- MANUAL ENTRY -->
+  <div class="manual-wrap">
+    <p class="manual-label">Manual Entry (type or paste QR code)</p>
+    <div class="manual-row">
+      <input class="manual-input" id="manualCode" placeholder="THS-REG-..." onkeydown="if(event.key==='Enter')manualLookup()">
+      <button class="manual-btn" onclick="manualLookup()">Look Up</button>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="resultArea"></div>
+
+  <!-- HISTORY -->
+  <div class="history-wrap">
+    <div class="history-header">
+      <span class="history-title">Scan History</span>
+      <span class="history-count" id="histCount">0 scanned</span>
+    </div>
+    <div class="history-list" id="historyList">
+      <div style="padding:1.5rem;text-align:center;font-size:0.8rem;color:var(--muted)">No scans yet</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// STAFF PASSWORDS — same as admin
+const SCANNER_PASSWORDS = ['happening2025','space2025','studio2025'];
+const scanHistory = [];
+let html5QrCode   = null;
+let isScanning    = false;
+
+function doScannerLogin(){
+  const pass = document.getElementById('loginPass').value;
+  if(SCANNER_PASSWORDS.includes(pass)){
+    sessionStorage.setItem('ths_scanner','1');
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display         = 'block';
+  } else {
+    document.getElementById('loginErr').classList.add('show');
+  }
+}
+
+function doScannerLogout(){
+  sessionStorage.removeItem('ths_scanner');
+  stopScanner();
+  location.reload();
+}
+
+if(sessionStorage.getItem('ths_scanner')==='1'){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display         = 'block';
+}
+</script>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getFirestore, doc, getDoc, updateDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey:"AIzaSyCvGMYRUhDAr4r2zoTbnRJ3PiCwhCWxLFs",
+  authDomain:"the-happening-space.firebaseapp.com",
+  projectId:"the-happening-space",
+  storageBucket:"the-happening-space.firebasestorage.app",
+  messagingSenderId:"834905576967",
+  appId:"1:834905576967:web:b16776452b9111b6483ca2"
+});
+const db = getFirestore(app);
+
+/* ══ SCANNER ══ */
+window.startScanner = function(){
+  const reader = document.getElementById('reader');
+  reader.innerHTML = '';
+  html5QrCode = new Html5Qrcode('reader');
+  document.getElementById('startBtn').style.display = 'none';
+  document.getElementById('stopBtn').style.display  = 'inline-block';
+  document.getElementById('scanStatus').textContent  = 'Starting…';
+  document.getElementById('scanStatus').className    = 'scanner-status status-scanning';
+
+  html5QrCode.start(
+    { facingMode:'environment' },
+    { fps:10, qrbox:{width:250,height:250} },
+    async (text) => {
+      if(isScanning) return;
+      isScanning = true;
+      await processCode(text);
+      setTimeout(()=>{ isScanning=false; }, 2000);
+    },
+    () => {}
+  ).then(()=>{
+    document.getElementById('scanStatus').textContent = 'Scanning…';
+    document.getElementById('scanStatus').className   = 'scanner-status status-scanning';
+  }).catch(()=>{
+    document.getElementById('scanStatus').textContent = 'Camera error';
+    document.getElementById('startBtn').style.display = 'inline-block';
+    document.getElementById('stopBtn').style.display  = 'none';
+  });
+};
+
+window.stopScanner = function(){
+  if(html5QrCode) html5QrCode.stop().catch(()=>{});
+  document.getElementById('startBtn').style.display = 'inline-block';
+  document.getElementById('stopBtn').style.display  = 'none';
+  document.getElementById('scanStatus').textContent  = 'Off';
+  document.getElementById('scanStatus').className    = 'scanner-status status-off';
+  document.getElementById('reader').innerHTML = '';
+};
+
+window.manualLookup = async function(){
+  const code = document.getElementById('manualCode').value.trim();
+  if(!code) return;
+  await processCode(code);
+  document.getElementById('manualCode').value = '';
+};
+
+/* ══ PROCESS QR ══ */
+async function processCode(raw){
+  const code  = raw.trim();
+  const regId = code.startsWith('THS-REG-') ? code.replace('THS-REG-','') : code;
+
+  // Vibrate on scan
+  if(navigator.vibrate) navigator.vibrate(100);
+
+  const resultArea = document.getElementById('resultArea');
+  resultArea.innerHTML = `<div class="result-card valid"><div class="result-header"><div class="result-icon valid"><span class="spinner"></span></div><div><p class="result-title">Looking up…</p><p class="result-sub">${code}</p></div></div></div>`;
+
+  try {
+    const snap = await getDoc(doc(db,'registrations',regId));
+
+    if(!snap.exists()){
+      // Try searching by payment_id as fallback
+      const allSnap = await getDocs(collection(db,'registrations'));
+      const found   = allSnap.docs.find(d=>d.data().payment_id===regId||'THS-REG-'+d.id===code);
+      if(!found){
+        showResult('invalid', '✗', 'Invalid QR', 'This QR code was not found in the system.', null, null);
+        addHistory(code, 'invalid');
+        return;
+      }
+      await processReg(found.id, found.data());
+    } else {
+      await processReg(snap.id, snap.data());
+    }
+  } catch(e){
+    showResult('invalid','✗','Error','Could not look up this code. Check connection.',null,null);
+  }
+}
+
+async function processReg(id, data){
+  const checkedIn = data.checkedIn || false;
+  const checkedAt = data.checkedInAt || null;
+
+  if(checkedIn){
+    showResult('used','⚠','Already Checked In',
+      `Checked in at ${checkedAt||'earlier'}`,
+      data, null);
+    addHistory(data.name||'Unknown', 'duplicate');
+    if(navigator.vibrate) navigator.vibrate([100,50,100,50,100]);
+    return;
+  }
+
+  // Mark as checked in
+  await updateDoc(doc(db,'registrations',id),{
+    checkedIn: true,
+    checkedInAt: new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+  });
+
+  showResult('valid','✓','Welcome!', 'Check-in successful', data, id);
+  addHistory(data.name||'Unknown', 'valid');
+  if(navigator.vibrate) navigator.vibrate(200);
+}
+
+function showResult(type, icon, title, sub, data, regId){
+  const resultArea = document.getElementById('resultArea');
+  const bodyHTML   = data ? `
+    <div class="result-body">
+      <div class="result-item"><strong>Name</strong><span>${data.name||'—'}</span></div>
+      <div class="result-item"><strong>Workshop</strong><span>${data.workshop||'—'}</span></div>
+      <div class="result-item"><strong>Package</strong><span>${data.package||'—'}</span></div>
+      <div class="result-item"><strong>Slot</strong><span style="font-size:0.78rem">${(data.slots||'—').replace(' | ',' / ')}</span></div>
+    </div>` : '';
+
+  resultArea.innerHTML = `
+    <div class="result-card ${type}">
+      <div class="result-header">
+        <div class="result-icon ${type}">${icon}</div>
+        <div>
+          <p class="result-title" style="color:${type==='valid'?'var(--green)':type==='used'?'var(--orange)':'#e57373'}">${title}</p>
+          <p class="result-sub">${sub}</p>
+        </div>
+      </div>
+      ${bodyHTML}
+    </div>`;
+}
+
+function addHistory(name, type){
+  const now = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  scanHistory.unshift({name, type, time:now});
+
+  document.getElementById('histCount').textContent = scanHistory.length + ' scanned';
+  document.getElementById('historyList').innerHTML = scanHistory.slice(0,20).map(h=>`
+    <div class="history-item">
+      <div>
+        <p class="history-name">${h.name}</p>
+        <p class="history-time">${h.time}</p>
+      </div>
+      <span class="history-badge ${h.type==='valid'?'badge-in':h.type==='duplicate'?'badge-dup':'badge-inv'}">
+        ${h.type==='valid'?'Checked In':h.type==='duplicate'?'Duplicate':'Invalid'}
+      </span>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>

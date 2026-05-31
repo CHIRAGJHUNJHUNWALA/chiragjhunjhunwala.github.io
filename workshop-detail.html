@@ -201,6 +201,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
       <li><a href="studio-booking.html"><span>Studio Booking</span><span class="link-num">04</span></a></li>
       <li><a href="about.html"><span>About Us</span><span class="link-num">05</span></a></li>
       <li><a href="contact.html"><span>Contact Us</span><span class="link-num">06</span></a></li>
+      <li><a href="student.html" style="color:var(--red)"><span>My Account</span><span class="link-num">07</span></a></li>
       <li><a href="admin.html" style="opacity:0.4;font-size:clamp(1rem,3vw,1.8rem)"><span>Admin Login</span><span class="link-num" style="font-size:0.6rem">07</span></a></li>
       <li><a href="artist-panel.html" style="opacity:0.4;font-size:clamp(1rem,3vw,1.8rem)"><span>Artist Panel</span><span class="link-num" style="font-size:0.6rem">08</span></a></li>
     </ul>
@@ -294,6 +295,17 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
   <h2 class="success-title">You're In!</h2>
   <p class="success-sub">Your spot is confirmed. We'll see you on the floor — come ready to move.</p>
   <div class="success-details" id="successDetails"></div>
+
+  <!-- QR CODE -->
+  <div id="qrSection" style="display:none;margin:1.5rem auto;max-width:280px">
+    <p style="font-size:0.65rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.85rem;text-align:center">Your Entry QR Code</p>
+    <div style="background:#fff;padding:1.25rem;display:inline-block;border-radius:4px;margin:0 auto;display:block;width:fit-content">
+      <canvas id="qrCanvas"></canvas>
+    </div>
+    <p id="qrRegId" style="font-size:0.65rem;color:var(--text-muted);text-align:center;margin-top:0.6rem;font-family:monospace;letter-spacing:0.05em"></p>
+    <p style="font-size:0.72rem;color:var(--text-muted);text-align:center;margin-top:0.5rem;line-height:1.6">Screenshot this QR code — show it at the entry gate.</p>
+  </div>
+
   <p class="success-note">Screenshot this screen for your records.</p>
 </div>
 
@@ -312,7 +324,22 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
   </div>
 </div>
 
-<script type="module">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+function generateQR(canvasId, text){
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  // Use QRCode library to draw on canvas
+  const qr = new QRCode(canvas, {
+    text: text,
+    width: 200,
+    height: 200,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+}
+</script>
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
@@ -523,7 +550,11 @@ window.initiatePayment = function(){
         timestamp:new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
       };
       // Save to Firebase
-      try{ await addDoc(collection(db,'registrations'),data); }catch(e){}
+      let regId = data.payment_id;
+      try{
+        const ref = await addDoc(collection(db,'registrations'),data);
+        regId = ref.id;
+      }catch(e){}
       // Update spots in Firebase
       try{
         const wsDoc=await getDoc(doc(db,'workshops',workshop.id));
@@ -536,7 +567,7 @@ window.initiatePayment = function(){
           await updateDoc(doc(db,'workshops',workshop.id),{slots:w.slots});
         }
       }catch(e){}
-      showSuccess(data);
+      showSuccess(data, regId);
     },
     modal:{ondismiss:function(){btn.innerHTML='Pay Now <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';btn.disabled=false;}}
   };
@@ -545,7 +576,7 @@ window.initiatePayment = function(){
   rzp.open();
 };
 
-function showSuccess(data){
+function showSuccess(data, regId){
   document.getElementById('mainContent').style.display='none';
   document.querySelector('.back-link').style.display='none';
   document.getElementById('posterHero').style.display='none';
@@ -556,6 +587,15 @@ function showSuccess(data){
     <div class="success-row"><span>Date(s)</span><span>${data.slots}</span></div>
     <div class="success-row"><span>Amount paid</span><span>₹${data.amount_paid.toLocaleString('en-IN')}</span></div>
     <div class="success-row"><span>Payment ID</span><span style="font-size:0.72rem">${data.payment_id}</span></div>`;
+
+  // Generate QR code
+  if(regId){
+    const qrVal = 'THS-REG-' + regId;
+    document.getElementById('qrSection').style.display = 'block';
+    document.getElementById('qrRegId').textContent = qrVal;
+    generateQR('qrCanvas', qrVal);
+  }
+
   document.getElementById('successScreen').classList.add('show');
   window.scrollTo({top:0,behavior:'smooth'});
 }
