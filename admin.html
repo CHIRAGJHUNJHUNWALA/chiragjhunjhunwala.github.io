@@ -2119,7 +2119,7 @@ function listenBatchStudents(){
 function isBatchStudentActive(s){
   if(!s.joinDate) return false;
   const joined = new Date(s.joinDate);
-  const days   = s.subscription==='Weekly' ? 7 : 28;
+  const days   = (s.subscription==='Weekly' ? 6 : 27) + parseInt(s.extendedDays||0);
   const expiry = new Date(joined);
   expiry.setDate(joined.getDate() + days);
   return new Date() <= expiry;
@@ -2128,7 +2128,7 @@ function isBatchStudentActive(s){
 function getBatchDaysLeft(s){
   if(!s.joinDate) return 0;
   const joined = new Date(s.joinDate);
-  const days   = s.subscription==='Weekly' ? 7 : 28;
+  const days   = (s.subscription==='Weekly' ? 6 : 27) + parseInt(s.extendedDays||0);
   const expiry = new Date(joined);
   expiry.setDate(joined.getDate() + days);
   return Math.ceil((expiry - new Date()) / (1000*60*60*24));
@@ -2137,7 +2137,7 @@ function getBatchDaysLeft(s){
 function getBatchExpiry(s){
   if(!s.joinDate) return '—';
   const joined = new Date(s.joinDate);
-  const days   = s.subscription==='Weekly' ? 7 : 28;
+  const days   = (s.subscription==='Weekly' ? 6 : 27) + parseInt(s.extendedDays||0);
   const expiry = new Date(joined);
   expiry.setDate(joined.getDate() + days);
   return expiry.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});

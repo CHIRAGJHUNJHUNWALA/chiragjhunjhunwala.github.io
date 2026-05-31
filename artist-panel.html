@@ -257,7 +257,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="batch-cards" id="dashBatches"></div>
       <div class="section-bar"><span class="section-bar-title">Recent Students Added</span></div>
       <div class="table-wrap">
-        <table><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Subscription</th><th>Fee</th><th>Payment</th><th>Joined</th></tr></thead>
+        <table><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Subscription</th><th>Fee</th><th>Payment</th><th>Expiry</th><th></th></tr></thead>
         <tbody id="dashRecentStudents"></tbody></table>
       </div>
     </div>
@@ -670,7 +670,8 @@ function parseLocalDate(dateStr){
 }
 
 function getEffectiveDays(s){
-  return (s.subscription==='Weekly'?7:28) + parseInt(s.extendedDays||0);
+  // Start day counts as day 1, so 7 days weekly = valid through day 6 after join
+  return (s.subscription==='Weekly'?6:27) + parseInt(s.extendedDays||0);
 }
 
 function isStudentActive(s){
@@ -733,7 +734,7 @@ function renderDashboard(){
     ? sortedRecent.map(s=>{
         const active = isStudentActive(s);
         const left   = getDaysLeft(s);
-        return `<tr style="${!active?'opacity:0.55':''}">
+        return `<tr style="${!active?'background:rgba(229,115,115,0.04)':''}">
           <td style="color:var(--text)">${s.name||'—'} <span class="pill ${active?'pill-green':'pill-red'}" style="font-size:0.55rem">${active?'Active':'Expired'}</span></td>
           <td>${s.phone||'—'}</td>
           <td>${getBatchName(s.batchId)}</td>
@@ -743,9 +744,15 @@ function renderDashboard(){
           <td style="font-size:0.75rem;color:${left<=3&&left>0?'var(--orange)':left<=0?'#e57373':'var(--muted)'}">
             ${active ? (left<=3?`⚡ ${left}d left`:getExpiryDate(s)) : 'Expired '+getExpiryDate(s)}
           </td>
+          <td>
+            ${!active ? `<div style="display:flex;gap:0.35rem;flex-wrap:nowrap">
+              <button onclick="extendStudent('${s.id}','${(s.name||'').replace(/'/g,"\\'")}','${s.subscription||'Monthly'}')" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--yellow);background:rgba(245,230,66,0.1);border:1px solid rgba(245,230,66,0.3);padding:0.25rem 0.5rem;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap">Extend ↻</button>
+              <button onclick="notifyExpiredStudent('${s.id}')" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#25d366;background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.3);padding:0.25rem 0.5rem;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap">Notify</button>
+            </div>` : ''}
+          </td>
         </tr>`;
       }).join('')
-    : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem">No students yet</td></tr>';
+    : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem">No students yet</td></tr>';
 }
 
 function getBatchName(id){
@@ -791,7 +798,7 @@ function renderStudentsTable(){
     const left = getDaysLeft(s);
     const expiryColor = left<=0?'#e57373':left<=3?'var(--orange)':'var(--muted)';
     const expiryText  = left<=0?'Expired':left<=3?`⚡ ${left}d left`:getExpiryDate(s);
-    return `<tr style="${!act?'opacity:0.6':''}">
+    return `<tr style="${!act?'background:rgba(229,115,115,0.04)':''}">
       <td style="color:var(--text)">${s.name||'—'}</td>
       <td>${s.phone||'—'}</td>
       <td style="font-size:0.75rem">${getBatchName(s.batchId)}</td>
@@ -802,10 +809,14 @@ function renderStudentsTable(){
       <td style="font-size:0.75rem;color:${expiryColor};font-weight:${left<=3&&left>0?'600':'300'}">${expiryText}</td>
       <td style="font-size:0.75rem;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.notes||'—'}</td>
       <td>
-        <div style="display:flex;gap:0.35rem">
+        <div style="display:flex;gap:0.35rem;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" onclick="openEditStudent('${s.id}')">
             <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
+          ${!act?`
+          <button onclick="extendStudent('${s.id}','${(s.name||'').replace(/'/g,"\\'")}','${s.subscription||'Monthly'}')" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--yellow);background:rgba(245,230,66,0.1);border:1px solid rgba(245,230,66,0.3);padding:0.25rem 0.5rem;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap">Extend ↻</button>
+          <button onclick="notifyExpiredStudent('${s.id}')" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#25d366;background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.3);padding:0.25rem 0.5rem;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap">Notify</button>
+          `:''}
           <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}','${(s.name||'').replace(/'/g,"\\'")}')">
             <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
           </button>
@@ -1111,15 +1122,16 @@ window.extendStudent = async function(id, name, subscription){
     return;
   }
   const defaultDays = subscription==='Weekly' ? 7 : 28;
-  const extra = prompt(`How many days to extend for ${name}?\n(Default: ${defaultDays} days for ${subscription})`);
+  const extra = prompt(`How many days to extend for ${name}?\n(Enter full period: 7 for weekly, 28 for monthly)`);
   if(extra===null) return;
   const days = parseInt(extra)||defaultDays;
 
   const s = students.find(x=>x.id===id);
   if(!s) return;
 
-  // extendedDays accumulates — each extension adds on top
-  const newExtended = (parseInt(s.extendedDays||0)) + days;
+  // extendedDays stores extra days BEYOND base (base = 6 or 27)
+  // Each extension adds a full new period
+  const newExtended = (parseInt(s.extendedDays||0)) + (days - 1); // -1 because start day is included
 
   // New joinDate stays same, extendedDays grows
   await setDoc(doc(db,'batchStudents',id), {extendedDays: newExtended}, {merge:true});
