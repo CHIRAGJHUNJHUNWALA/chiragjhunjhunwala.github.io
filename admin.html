@@ -588,8 +588,8 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <div class="modal-body">
       <input type="hidden" id="wsEditId">
       <div class="form-row">
-        <div class="form-group"><label>Artist Name *</label><input type="text" id="wsArtist" placeholder="e.g. Heet Samani"></div>
-        <div class="form-group"><label>Initials</label><input type="text" id="wsInitials" placeholder="HS" maxlength="3"></div>
+        <div class="form-group"><label>Artist Name *</label><input type="text" id="wsArtist" placeholder="e.g. Om Tarphe"></div>
+        <div class="form-group"><label>Artist ID <span style="font-weight:300;color:var(--muted);font-size:0.75em">(for artist login)</span></label><input type="text" id="wsArtistId" placeholder="e.g. omtarphe"></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Dance Style *</label><input type="text" id="wsStyle" placeholder="Hip-Hop · Breaking"></div>
@@ -1263,7 +1263,8 @@ window.openAddWorkshop = function(){
   document.getElementById('wsModalTitle').textContent = 'Add New Workshop';
   document.getElementById('wsEditId').value   = '';
   document.getElementById('wsArtist').value   = '';
-  document.getElementById('wsInitials').value = '';
+  document.getElementById('wsArtistId').value  = '';
+  document.getElementById('wsInitials') && (document.getElementById('wsInitials').value = '');
   document.getElementById('wsStyle').value    = '';
   document.getElementById('wsStatus').value   = 'active';
   document.getElementById('wsDesc').value     = '';
@@ -1284,6 +1285,7 @@ window.openEditWorkshop = function(id){
   document.getElementById('wsModalTitle').textContent = 'Edit Workshop';
   document.getElementById('wsEditId').value   = id;
   document.getElementById('wsArtist').value   = w.artist||'';
+  document.getElementById('wsArtistId').value  = w.artistId||'';
   document.getElementById('wsInitials').value = w.initials||'';
   document.getElementById('wsStyle').value    = w.style||'';
   document.getElementById('wsStatus').value   = w.status||'active';
@@ -1409,7 +1411,8 @@ window.saveWorkshop = async function(saveStatus){
 
   const wsData = {
     artist, id,
-    initials: document.getElementById('wsInitials').value.trim() || artist.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2),
+    artistId: document.getElementById('wsArtistId')?.value.trim()||'',
+    initials: artist.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2),
     style:    document.getElementById('wsStyle').value.trim(),
     status:   saveStatus || document.getElementById('wsStatus').value,
     poster:   posterToSave,

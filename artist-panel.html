@@ -200,19 +200,29 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
     <div class="sidebar-artist">
       <p class="sidebar-artist-name" id="artistDisplayName">—</p>
-      <p class="sidebar-artist-role">Batch Trainer</p>
+      <p class="sidebar-artist-role" id="sidebar-artist-role">Artist</p>
     </div>
     <nav class="sidebar-nav">
-      <div class="nav-section-title">Overview</div>
-      <div class="nav-item active" onclick="showView('dashboard')">
-        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard
+      <!-- TRAINER NAV -->
+      <div id="trainerNav" style="display:none">
+        <div class="nav-section-title">Overview</div>
+        <div class="nav-item active" onclick="showView('dashboard')">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard
+        </div>
+        <div class="nav-section-title">My Batches</div>
+        <div class="nav-item" onclick="showView('students')">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>My Students
+        </div>
+        <div class="nav-item" onclick="showView('attendance')">
+          <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Attendance
+        </div>
       </div>
-      <div class="nav-section-title">My Batches</div>
-      <div class="nav-item" onclick="showView('students')">
-        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>My Students
-      </div>
-      <div class="nav-item" onclick="showView('attendance')">
-        <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Attendance
+      <!-- WORKSHOP ARTIST NAV -->
+      <div id="workshopNav" style="display:none">
+        <div class="nav-section-title">My Workshops</div>
+        <div class="nav-item active" onclick="showView('wsStats')">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Workshop Stats
+        </div>
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -223,6 +233,16 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   </div>
 
   <div class="main">
+
+    <!-- WORKSHOP STATS VIEW -->
+    <div class="view" id="view-wsStats">
+      <div class="page-header">
+        <div><h1 class="page-title" id="dashWelcome">My Workshops</h1><p class="page-sub" id="dashDate"></p></div>
+      </div>
+      <div class="stats-grid" id="wsStatsGrid" style="margin-bottom:2rem"></div>
+      <div class="section-bar"><span class="section-bar-title">My Workshops</span></div>
+      <div id="wsStatCards"></div>
+    </div>
 
     <!-- DASHBOARD -->
     <div class="view active" id="view-dashboard">
@@ -354,8 +374,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 <script>
 // Login handled outside module so onclick works
 const ARTIST_CREDS = [
-  { user:'divyanshisinghvi',    pass:'divyanshids2025',    name:'Divyanshi Singhvi' },
-  { user:'hridhaykhubchandani', pass:'khubchandanikh2026', name:'Hriday Khubchandani' },
+  { user:'divyanshisinghvi',    pass:'divyanshids2025',    name:'Divyanshi Singhvi',    role:'trainer' },
+  { user:'hridhaykhubchandani', pass:'khubchandanikh2026', name:'Hriday Khubchandani',  role:'trainer' },
+  { user:'omtarphe',            pass:'omtarphe2025',       name:'Om Tarphe',            role:'workshop' },
+  { user:'heetsamani',          pass:'heetsamani2025',     name:'Heet Samani',          role:'workshop' },
 ];
 
 function doLogin(){
@@ -404,6 +426,7 @@ const ARTISTS = [
     user: 'divyanshisinghvi',
     pass: 'divyanshids2025',
     name: 'Divyanshi Singhvi',
+    role: 'trainer',
     batches: [
       { id: 'ladies-batch',        name: 'Ladies Batch',       time: '12:00 PM – 1:00 PM',  days: 'Mon · Tue · Wed' },
       { id: 'beginners-batch',     name: 'Beginners Batch',    time: '4:00 PM – 5:00 PM',   days: 'Mon · Tue · Wed' },
@@ -414,9 +437,26 @@ const ARTISTS = [
     user: 'hridhaykhubchandani',
     pass: 'khubchandanikh2026',
     name: 'Hriday Khubchandani',
+    role: 'trainer',
     batches: [
       { id: 'intermediate-6-7', name: 'Intermediate Batch', time: '6:00 PM – 7:00 PM', days: 'Mon · Tue · Wed' },
     ]
+  },
+  {
+    user: 'omtarphe',
+    pass: 'omtarphe2025',
+    name: 'Om Tarphe',
+    role: 'workshop',
+    artistId: 'omtarphe',
+    batches: []
+  },
+  {
+    user: 'heetsamani',
+    pass: 'heetsamani2025',
+    name: 'Heet Samani',
+    role: 'workshop',
+    artistId: 'heetsamani',
+    batches: []
   },
 ];
 
@@ -465,22 +505,147 @@ async function initApp(){
   document.getElementById('dashWelcome').textContent       = 'Hey, ' + currentArtist.name.split(' ')[0] + '!';
   document.getElementById('dashDate').textContent          = new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
-  // Set week picker to current week's Monday (local time)
-  const now     = new Date();
-  const dow     = now.getDay(); // 0=Sun,1=Mon,...6=Sat
-  const toMon   = dow===0 ? -6 : 1-dow;
-  const mon     = new Date(now);
-  mon.setDate(now.getDate() + toMon);
-  document.getElementById('weekStart').value = mon.toLocaleDateString('en-CA'); // YYYY-MM-DD
-
-  buildBatchFilterTabs();
-  buildAttBatchTabs();
-  listenStudents();
-  loadWeekAttendance();
+  if(currentArtist.role === 'workshop'){
+    // Show workshop artist UI, hide trainer UI
+    document.getElementById('trainerNav').style.display  = 'none';
+    document.getElementById('workshopNav').style.display = 'block';
+    document.getElementById('sidebar-artist-role').textContent = 'Workshop Artist';
+    listenWorkshopStats();
+    showView('wsStats');
+  } else {
+    // Trainer UI
+    document.getElementById('trainerNav').style.display  = 'block';
+    document.getElementById('workshopNav').style.display = 'none';
+    document.getElementById('sidebar-artist-role').textContent = 'Batch Trainer';
+    const now   = new Date();
+    const dow   = now.getDay();
+    const toMon = dow===0 ? -6 : 1-dow;
+    const mon   = new Date(now);
+    mon.setDate(now.getDate() + toMon);
+    document.getElementById('weekStart').value = mon.toLocaleDateString('en-CA');
+    buildBatchFilterTabs();
+    buildAttBatchTabs();
+    listenStudents();
+    loadWeekAttendance();
+  }
 }
 
 /* ══════════════════════════════════════
-   LISTEN STUDENTS (real-time)
+   WORKSHOP ARTIST — live stats
+══════════════════════════════════════ */
+let myWorkshops     = [];
+let myRegistrations = [];
+
+function listenWorkshopStats(){
+  // Listen to workshops matching this artist's ID
+  onSnapshot(collection(db,'workshops'), snap => {
+    myWorkshops = snap.docs
+      .map(d=>({id:d.id,...d.data()}))
+      .filter(w=>w.artistId===currentArtist.artistId || w.artist===currentArtist.name);
+    renderWsStats();
+  });
+
+  // Listen to registrations for this artist's workshops
+  onSnapshot(collection(db,'registrations'), snap => {
+    const names = myWorkshops.map(w=>w.artist);
+    myRegistrations = snap.docs
+      .map(d=>({id:d.id,...d.data()}))
+      .filter(r=>names.includes(r.workshop)||r.workshop===currentArtist.name);
+    renderWsStats();
+  });
+}
+
+function renderWsStats(){
+  const active     = myWorkshops.filter(w=>w.status==='active').length;
+  const total      = myWorkshops.length;
+  const totalRegs  = myRegistrations.length;
+  const checkedIn  = myRegistrations.filter(r=>r.checkedIn===true).length;
+
+  // Total spots across all workshops
+  const totalSpots = myWorkshops.reduce((s,w)=>
+    s+(w.slots||[]).reduce((ss,sl)=>ss+(parseInt(sl.totalSpots)||0),0),0);
+  const spotsUsed  = myRegistrations.reduce((s,r)=>s+(r.slots||'').split('|').length,0);
+  const fillPct    = totalSpots>0?Math.round(spotsUsed/totalSpots*100):0;
+
+  document.getElementById('wsStatsGrid').innerHTML = `
+    <div class="stat-card"><p class="stat-label">Active Workshops</p><p class="stat-val red">${active}</p><p class="stat-meta">${total} total</p></div>
+    <div class="stat-card"><p class="stat-label">Total Registrations</p><p class="stat-val">${totalRegs}</p></div>
+    <div class="stat-card"><p class="stat-label">Spots Filled</p><p class="stat-val yellow">${spotsUsed}/${totalSpots}</p><p class="stat-meta">${fillPct}% fill rate</p></div>
+    <div class="stat-card"><p class="stat-label">Checked In</p><p class="stat-val green">${checkedIn}</p><p class="stat-meta">of ${totalRegs} registered</p></div>
+  `;
+
+  if(!myWorkshops.length){
+    document.getElementById('wsStatCards').innerHTML = `<div style="text-align:center;padding:3rem;color:var(--muted);font-size:0.85rem">No workshops found for your account yet.<br>Ask admin to link your workshops to your artist ID.</div>`;
+    return;
+  }
+
+  document.getElementById('wsStatCards').innerHTML = myWorkshops
+    .sort((a,b)=>(b.status==='active'?1:0)-(a.status==='active'?1:0))
+    .map(w=>{
+      const regs      = myRegistrations.filter(r=>r.workshop===w.artist);
+      const slots     = w.slots||[];
+      const totalSp   = slots.reduce((s,sl)=>s+(parseInt(sl.totalSpots)||0),0);
+      const usedSp    = regs.reduce((s,r)=>s+(r.slots||'').split('|').length,0);
+      const pct       = totalSp>0?Math.round(usedSp/totalSp*100):0;
+      const checkedIn = regs.filter(r=>r.checkedIn===true).length;
+      const statusColors = {active:'pill-green',full:'pill-red',cancelled:'pill-orange',completed:'pill-grey',draft:'pill-blue'};
+      const bgStyle   = w.poster&&w.poster.startsWith('data:')
+        ? `background-image:url('${w.poster}');background-size:cover;background-position:center`
+        : `background:${w.posterBg||'linear-gradient(135deg,#1a0407,#bc1f2e)'}`;
+
+      return `<div class="table-wrap" style="margin-bottom:1.25rem;overflow:hidden">
+        <!-- Poster strip -->
+        <div style="position:relative;height:120px;overflow:hidden">
+          <div style="position:absolute;inset:0;${bgStyle}"></div>
+          <div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,0.7),transparent)"></div>
+          <div style="position:absolute;bottom:1rem;left:1.25rem">
+            <p style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:0.04em;color:#fff;line-height:1">${w.artist}</p>
+            <p style="font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.6)">${w.style||''}</p>
+          </div>
+          <span class="pill ${statusColors[w.status]||'pill-grey'}" style="position:absolute;top:1rem;right:1rem">${w.status}</span>
+        </div>
+        <!-- Stats row -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--border)">
+          ${[
+            {label:'Registrations', val:regs.length,    color:'var(--text)'},
+            {label:'Spots Filled',  val:`${usedSp}/${totalSp}`, color:'var(--yellow)'},
+            {label:'Fill Rate',     val:`${pct}%`,      color:pct>=80?'var(--green)':pct>=50?'var(--yellow)':'#e57373'},
+            {label:'Checked In',    val:checkedIn,      color:'var(--green)'},
+          ].map(s=>`<div style="padding:1rem;border-right:1px solid var(--border);text-align:center">
+            <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.35rem;font-family:'Syne',sans-serif">${s.label}</p>
+            <p style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:0.04em;color:${s.color};line-height:1">${s.val}</p>
+          </div>`).join('')}
+        </div>
+        <!-- Slots breakdown -->
+        ${slots.length ? `<div style="padding:0.85rem 1.25rem;border-top:1px solid var(--border)">
+          <p style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;font-family:'Syne',sans-serif;font-weight:600">Slots</p>
+          <div style="display:flex;flex-direction:column;gap:0.4rem">
+            ${slots.map(s=>{
+              const slotRegs = regs.filter(r=>(r.slots||'').includes(s.date));
+              const slotUsed = slotRegs.length;
+              const slotPct  = s.totalSpots>0?Math.round(slotUsed/s.totalSpots*100):0;
+              return `<div style="display:flex;align-items:center;gap:0.75rem">
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem">
+                    <span style="font-size:0.75rem;color:var(--text)">${s.song?'♪ '+s.song+' · ':''} ${s.time}</span>
+                    <span style="font-size:0.72rem;color:var(--muted)">${slotUsed}/${s.totalSpots} spots</span>
+                  </div>
+                  <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden">
+                    <div style="height:100%;width:${slotPct}%;background:${slotPct>=80?'var(--green)':slotPct>=50?'var(--yellow)':'var(--red)'};border-radius:2px"></div>
+                  </div>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>` : ''}
+        <!-- Dates -->
+        ${w.dateFrom?`<div style="padding:0.65rem 1.25rem;border-top:1px solid var(--border);font-size:0.72rem;color:var(--muted)">📅 ${w.dateFrom}${w.dateTo&&w.dateTo!==w.dateFrom?' → '+w.dateTo:''}</div>`:''}
+      </div>`;
+    }).join('');
+}
+
+/* ══════════════════════════════════════
+   BATCH TRAINER — live students
 ══════════════════════════════════════ */
 function listenStudents(){
   const batchIds = currentArtist.batches.map(b=>b.id);
