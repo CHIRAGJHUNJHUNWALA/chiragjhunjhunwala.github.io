@@ -282,6 +282,17 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
       <label>Workshop</label>
       <div class="prefilled" id="form-workshop">—</div>
     </div>
+
+    <!-- ATTENDEES -->
+    <div id="attendeesSection" style="margin-bottom:1rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+        <label style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted)">Attendees</label>
+        <button type="button" id="addAttendeeBtn" onclick="addAttendee()" style="font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--red);background:none;border:1px solid rgba(188,31,46,0.3);padding:0.3rem 0.75rem;cursor:pointer;font-family:'Syne',sans-serif;font-weight:600;transition:all 0.2s">+ Add Person</button>
+      </div>
+      <div id="attendeeList"></div>
+      <p id="attendeeNote" style="font-size:0.72rem;color:var(--text-muted);margin-top:0.4rem">All attendees will be enrolled in the same slot. Max 4 people total including yourself.</p>
+    </div>
+
     <div class="form-summary" id="formSummary"><p class="form-summary-placeholder">Select a package to see pricing</p></div>
     <button class="enroll-btn" id="enrollBtn" disabled onclick="openConfirmPopup()">
       Review & Pay <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -436,6 +447,8 @@ function renderPage(){
 /* SLOTS */
 function getSessionCount(p){
   if(!p) return 1;
+  // Use explicit slotsAllowed field if set, otherwise fall back to name parsing
+  if(p.slotsAllowed) return parseInt(p.slotsAllowed);
   const t=((p.name||'')+' '+(p.desc||'')).toLowerCase();
   const m=t.match(/(\d+)\s*(class|session|day)/);
   return m?parseInt(m[1]):1;
@@ -480,17 +493,68 @@ window.selectSlotToggle = function(id){
   updateEnrollBtn();
 };
 
-/* FORM */
+/* ATTENDEES */
+let attendees = []; // extra people beyond primary
+
+window.addAttendee = function(){
+  if(attendees.length >= 3){ // max 3 extra = 4 total
+    alert('Maximum 4 people per booking including yourself.');
+    return;
+  }
+  const idx = attendees.length;
+  attendees.push({name:'',phone:''});
+  renderAttendees();
+  updateFormSummary();
+};
+
+window.removeAttendee = function(idx){
+  attendees.splice(idx,1);
+  renderAttendees();
+  updateFormSummary();
+};
+
+function renderAttendees(){
+  const list = document.getElementById('attendeeList');
+  list.innerHTML = attendees.map((a,i)=>`
+    <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);padding:0.85rem;margin-bottom:0.6rem;position:relative">
+      <button type="button" onclick="removeAttendee(${i})" style="position:absolute;top:0.6rem;right:0.6rem;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;line-height:1">✕</button>
+      <p style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--red);margin-bottom:0.6rem;font-family:'Syne',sans-serif;font-weight:600">Person ${i+2}</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+        <div>
+          <label style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:0.3rem">Full Name</label>
+          <input type="text" placeholder="Full name" value="${a.name||''}"
+            oninput="attendees[${i}].name=this.value;updateEnrollBtn()"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);padding:0.55rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none">
+        </div>
+        <div>
+          <label style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:0.3rem">WhatsApp Number</label>
+          <input type="tel" placeholder="+91 98765 43210" value="${a.phone||''}"
+            oninput="attendees[${i}].phone=this.value;updateEnrollBtn()"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);padding:0.55rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none">
+        </div>
+      </div>
+    </div>`).join('');
+
+  // Show/hide add button
+  const btn = document.getElementById('addAttendeeBtn');
+  if(btn) btn.style.display = attendees.length >= 3 ? 'none' : 'inline-block';
+}
+
+function getTotalPeople(){ return 1 + attendees.length; }
 function updateFormSummary(){
   const el=document.getElementById('formSummary');
   if(!selectedPkg){el.innerHTML='<p class="form-summary-placeholder">Select a package to see pricing</p>';return;}
-  const base=parseInt(selectedPkg.price)||0;
-  const fee=Math.round(base*CONVENIENCE/100);
-  const total=base+fee;
+  const people   = getTotalPeople();
+  const base     = parseInt(selectedPkg.price)||0;
+  const subtotal = base * people;
+  const fee      = Math.round(subtotal*CONVENIENCE/100);
+  const total    = subtotal+fee;
+  const peopleNote = people > 1 ? ` × ${people} people` : '';
   el.innerHTML=`
-    <div class="form-summary-row"><span>${selectedPkg.name}</span><span>₹${base.toLocaleString('en-IN')}</span></div>
+    <div class="form-summary-row"><span>${selectedPkg.name}${peopleNote}</span><span>₹${subtotal.toLocaleString('en-IN')}</span></div>
     <div class="form-summary-row"><span>Convenience fee (${CONVENIENCE}%)</span><span>₹${fee.toLocaleString('en-IN')}</span></div>
-    <div class="form-summary-row total"><span>Total</span><span>₹${total.toLocaleString('en-IN')}</span></div>`;
+    <div class="form-summary-row total"><span>Total</span><span>₹${total.toLocaleString('en-IN')}</span></div>
+    ${people>1?`<div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.4rem">₹${base.toLocaleString('en-IN')} per person × ${people} people</div>`:''}`;
 }
 
 function validateForm(){
@@ -508,13 +572,20 @@ window.openConfirmPopup = function(){
   const base=parseInt(selectedPkg.price)||0;
   const fee=Math.round(base*CONVENIENCE/100);
   const total=base+fee;
+  const people   = getTotalPeople();
+  const subtotal = base * people;
+  const fee      = Math.round(subtotal*CONVENIENCE/100);
+  const total    = subtotal+fee;
+  const allNames = [name, ...attendees.map(a=>a.name)].filter(Boolean).join(', ');
   document.getElementById('popupRows').innerHTML=`
-    <div class="popup-row"><span>Name</span><span>${name}</span></div>
+    <div class="popup-row"><span>${people>1?'Primary Person':'Name'}</span><span>${name}</span></div>
+    ${attendees.map((a,i)=>`<div class="popup-row"><span>Person ${i+2}</span><span>${a.name||'—'} · ${a.phone||'—'}</span></div>`).join('')}
     <div class="popup-row"><span>Phone</span><span>${phone}</span></div>
     <div class="popup-row"><span>Artist</span><span>${workshop.artist}</span></div>
     <div class="popup-row"><span>Package</span><span>${selectedPkg.name}</span></div>
-    <div class="popup-row"><span>Date(s)</span><span style="line-height:1.6">${selectedSlots.map(s=>s.date+' · '+s.time).join('<br>')}</span></div>
-    <div class="popup-row"><span>Base price</span><span>₹${base.toLocaleString('en-IN')}</span></div>
+    <div class="popup-row"><span>Slot(s)</span><span style="line-height:1.6">${selectedSlots.map(s=>s.song?'♪ '+s.song+' · '+s.time:s.date+' · '+s.time).join('<br>')}</span></div>
+    ${people>1?`<div class="popup-row"><span>Price per person</span><span>₹${base.toLocaleString('en-IN')}</span></div>`:''}
+    <div class="popup-row"><span>Subtotal (${people} ${people>1?'people':'person'})</span><span>₹${subtotal.toLocaleString('en-IN')}</span></div>
     <div class="popup-row"><span>Convenience fee</span><span>₹${fee.toLocaleString('en-IN')}</span></div>
     <div class="popup-row total"><span>Total Payable</span><span>₹${total.toLocaleString('en-IN')}</span></div>`;
   document.getElementById('popupBackdrop').classList.add('open');
@@ -523,52 +594,71 @@ window.openConfirmPopup = function(){
 window.closePopup=function(){document.getElementById('popupBackdrop').classList.remove('open');document.body.style.overflow='';};
 
 /* PAYMENT */
-window.initiatePayment = function(){
-  const name=document.getElementById('inp-name').value.trim();
-  const phone=document.getElementById('inp-phone').value.trim();
-  const base=parseInt(selectedPkg.price)||0;
-  const fee=Math.round(base*CONVENIENCE/100);
-  const total=base+fee;
-  const slots=selectedSlots.map(s=>s.date+' · '+s.time).join(' | ');
-  const btn=document.getElementById('popupPayBtn');
+window.initiatePayment = async function(){
+  const name   = document.getElementById('inp-name').value.trim();
+  const phone  = document.getElementById('inp-phone').value.trim();
+  const people = getTotalPeople();
+  const base   = parseInt(selectedPkg.price)||0;
+  const subtotal = base * people;
+  const fee    = Math.round(subtotal*CONVENIENCE/100);
+  const total  = subtotal+fee;
+  const slots  = selectedSlots.map(s=>s.song?'♪ '+s.song+' · '+s.time:s.date+' · '+s.time).join(' | ');
+  const btn    = document.getElementById('popupPayBtn');
   btn.innerHTML='<span class="btn-spinner"></span> Opening…';
-  btn.disabled=true;
+  btn.disabled = true;
 
   const options={
-    key:RAZORPAY_KEY,amount:total*100,currency:'INR',
-    name:'The Happening Space',description:workshop.artist+' — '+selectedPkg.name,
-    prefill:{name,contact:phone},
-    notes:{artist:workshop.artist,package:selectedPkg.name,slots},
+    key:RAZORPAY_KEY, amount:total*100, currency:'INR',
+    name:'The Happening Space', description:workshop.artist+' — '+selectedPkg.name+(people>1?' ('+people+' people)':''),
+    prefill:{name, contact:phone},
+    notes:{artist:workshop.artist, package:selectedPkg.name, slots, people},
     theme:{color:'#bc1f2e'},
     handler:async function(response){
       closePopup();
-      const data={
-        name,phone,workshop:workshop.artist,style:workshop.style||'',
-        package:selectedPkg.name,slots,amount_paid:total,
-        payment_type:'Online',
-        payment_id:response.razorpay_payment_id,
-        order_id:response.razorpay_order_id||'',
-        timestamp:new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
-      };
-      // Save to Firebase
-      let regId = data.payment_id;
+      const timestamp = new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'});
+      const paymentId = response.razorpay_payment_id;
+
+      // Build all people array
+      const allPeople = [
+        {name, phone},
+        ...attendees.map(a=>({name:a.name||'', phone:a.phone||''}))
+      ];
+
+      // Save one registration per person
+      const regIds = [];
+      for(const [i, person] of allPeople.entries()){
+        const data = {
+          name: person.name, phone: person.phone,
+          workshop: workshop.artist, style: workshop.style||'',
+          package: selectedPkg.name, slots,
+          amount_paid: i===0 ? total : 0, // full amount on primary
+          payment_type: 'Online',
+          payment_id: paymentId + (i>0?`-p${i+1}`:''),
+          group_payment_id: paymentId,
+          group_size: people,
+          is_primary: i===0,
+          timestamp,
+        };
+        try{
+          const ref = await addDoc(collection(db,'registrations'), data);
+          regIds.push(ref.id);
+        } catch(e){ regIds.push(paymentId); }
+      }
+
+      // Update spots — deduct per person per slot
       try{
-        const ref = await addDoc(collection(db,'registrations'),data);
-        regId = ref.id;
-      }catch(e){}
-      // Update spots in Firebase
-      try{
-        const wsDoc=await getDoc(doc(db,'workshops',workshop.id));
+        const wsDoc = await getDoc(doc(db,'workshops',workshop.id));
         if(wsDoc.exists()){
-          const w=wsDoc.data();
+          const w = wsDoc.data();
           selectedSlots.forEach(sel=>{
-            const idx=w.slots.findIndex(s=>s.id===sel.id);
-            if(idx>-1&&w.slots[idx].spots>0) w.slots[idx].spots--;
+            const idx = w.slots.findIndex(s=>s.id===sel.id);
+            if(idx>-1) w.slots[idx].spots = Math.max(0, (w.slots[idx].spots||0) - people);
           });
           await updateDoc(doc(db,'workshops',workshop.id),{slots:w.slots});
         }
-      }catch(e){}
-      showSuccess(data, regId);
+      } catch(e){}
+
+      showSuccess({name, phone, workshop:workshop.artist, package:selectedPkg.name, slots, amount_paid:total, payment_id:paymentId, people:allPeople}, regIds);
     },
     modal:{ondismiss:function(){btn.innerHTML='Pay Now <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';btn.disabled=false;}}
   };
@@ -577,25 +667,43 @@ window.initiatePayment = function(){
   rzp.open();
 };
 
-function showSuccess(data, regId){
+function showSuccess(data, regIds){
   document.getElementById('mainContent').style.display='none';
   document.querySelector('.back-link').style.display='none';
   document.getElementById('posterHero').style.display='none';
+
+  const people = data.people || [{name:data.name, phone:data.phone}];
+  const idsArr = Array.isArray(regIds) ? regIds : [regIds];
+
   document.getElementById('successDetails').innerHTML=`
-    <div class="success-row"><span>Name</span><span>${data.name}</span></div>
     <div class="success-row"><span>Workshop</span><span>${data.workshop}</span></div>
     <div class="success-row"><span>Package</span><span>${data.package}</span></div>
-    <div class="success-row"><span>Date(s)</span><span>${data.slots}</span></div>
+    <div class="success-row"><span>Slot(s)</span><span>${data.slots}</span></div>
     <div class="success-row"><span>Amount paid</span><span>₹${data.amount_paid.toLocaleString('en-IN')}</span></div>
     <div class="success-row"><span>Payment ID</span><span style="font-size:0.72rem">${data.payment_id}</span></div>`;
 
-  // Generate QR code
-  if(regId){
-    const qrVal = 'THS-REG-' + regId;
-    document.getElementById('qrSection').style.display = 'block';
-    document.getElementById('qrRegId').textContent = qrVal;
-    generateQR('qrCanvas', qrVal);
-  }
+  // QR codes per person
+  const qrSection = document.getElementById('qrSection');
+  qrSection.style.display = 'block';
+  qrSection.innerHTML = `
+    <p style="font-size:0.65rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-muted);margin-bottom:1rem;text-align:center">Entry QR Code${people.length>1?'s':''}</p>
+    <div style="display:flex;flex-wrap:wrap;gap:1.5rem;justify-content:center">
+      ${people.map((p,i)=>`
+        <div style="text-align:center">
+          <div style="background:#fff;padding:1rem;display:inline-block;border-radius:4px" id="qr-success-${i}"></div>
+          <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.4rem;font-weight:500">${p.name}</p>
+          <p style="font-size:0.6rem;color:var(--text-muted);font-family:monospace">THS-REG-${idsArr[i]||data.payment_id}</p>
+        </div>`).join('')}
+    </div>
+    <p style="font-size:0.72rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6">Screenshot these QR codes — each person shows their own at the entry gate.</p>`;
+
+  // Generate QRs after DOM update
+  setTimeout(()=>{
+    people.forEach((_,i)=>{
+      const el = document.getElementById('qr-success-'+i);
+      if(el && window.QRCode) new QRCode(el,{text:'THS-REG-'+(idsArr[i]||data.payment_id),width:160,height:160,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.H});
+    });
+  }, 100);
 
   document.getElementById('successScreen').classList.add('show');
   window.scrollTo({top:0,behavior:'smooth'});
