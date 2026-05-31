@@ -1800,16 +1800,32 @@ window.renderCheckinsView = function(){
       `<button class="filter-tab ${checkinSlot===s.id?'active':''}" onclick="selectCheckinSlot('${s.id}')">Slot ${i+1} · ${s.date}</button>`
     ).join('');
 
-  // Filter by slot
+  // Filter by slot — match by slot date exactly
   let filtered = wsRegs;
   if(checkinSlot!=='all'){
     const slot = slots.find(s=>s.id===checkinSlot);
-    if(slot) filtered = wsRegs.filter(r=>(r.slots||'').includes(slot.date));
+    if(slot){
+      // Student must have booked this specific slot
+      // slots field format: "Saturday 7 Jun · 11am | Sunday 8 Jun · 3pm"
+      // We split by | and check if any part contains the slot date
+      filtered = wsRegs.filter(r=>{
+        const studentSlots = (r.slots||'').split('|').map(s=>s.trim());
+        return studentSlots.some(s=>s.includes(slot.date));
+      });
+    }
   }
 
-  // Get song for a registration
+  // Get song for a registration — use the specific slot's song
   const getSong = (r) => {
-    if(checkinSlot==='all') return r.song || getSongForReg(r);
+    if(checkinSlot==='all'){
+      // Show songs from all their booked slots
+      const bookedDates = (r.slots||'').split('|').map(s=>s.trim());
+      const songs = slots
+        .filter(s=>bookedDates.some(d=>d.includes(s.date)))
+        .map(s=>s.song)
+        .filter(Boolean);
+      return songs.length ? songs.join(' / ') : '—';
+    }
     const slot = slots.find(s=>s.id===checkinSlot);
     return slot?.song || '—';
   };
