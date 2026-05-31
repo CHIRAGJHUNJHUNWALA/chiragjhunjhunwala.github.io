@@ -83,6 +83,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .checkin-btn{margin:0 1.25rem 1.25rem;width:calc(100% - 2.5rem);background:var(--green);color:#fff;border:none;padding:0.85rem;font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:background 0.2s;display:flex;align-items:center;justify-content:center;gap:0.5rem}
 .checkin-btn:hover{opacity:0.85}
 .checkin-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.5}
+#checkInBtn{display:block;width:calc(100% - 2.5rem);margin:0 1.25rem 1.25rem;background:var(--green);color:#fff;border:none;padding:1rem;font-family:'Syne',sans-serif;font-size:0.88rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:opacity 0.2s}
+#checkInBtn:hover{opacity:0.85}
+#checkInBtn:disabled{opacity:0.5;cursor:not-allowed}
 
 /* HISTORY */
 .history-wrap{background:var(--bg2);border:1px solid var(--border)}
@@ -308,6 +311,18 @@ async function processReg(id, data){
   const checkedIn = data.checkedIn || false;
   const checkedAt = data.checkedInAt || null;
 
+  // Fetch song from workshop slots
+  try {
+    const wsSnap = await getDocs(collection(db,'workshops'));
+    const ws     = wsSnap.docs.map(d=>d.data()).find(w=>w.artist===data.workshop);
+    if(ws && ws.slots){
+      // Find the slot that matches the booking
+      const slotStr = data.slots||'';
+      const match   = ws.slots.find(s=>slotStr.includes(s.date));
+      if(match && match.song) data.song = match.song;
+    }
+  } catch(e){}
+
   if(checkedIn){
     showResult('used','⚠','Already Checked In',
       `Checked in at ${checkedAt||'earlier'}`,
@@ -317,37 +332,77 @@ async function processReg(id, data){
     return;
   }
 
-  // Mark as checked in
-  await updateDoc(doc(db,'registrations',id),{
-    checkedIn: true,
-    checkedInAt: new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
-  });
-
-  showResult('valid','✓','Welcome!', 'Check-in successful', data, id);
-  addHistory(data.name||'Unknown', 'valid');
-  if(navigator.vibrate) navigator.vibrate(200);
+  showResult('pending','👤','Student Found', 'Verify details and tap Check In', data, id);
+  if(navigator.vibrate) navigator.vibrate(100);
 }
+
+window.doCheckIn = async function(id, name){
+  const btn = document.getElementById('checkInBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Checking in…';
+  try {
+    const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    await updateDoc(doc(db,'registrations',id),{
+      checkedIn: true,
+      checkedInAt: time,
+    });
+    // Update result card to confirmed
+    document.getElementById('resultArea').innerHTML = `
+      <div class="result-card valid">
+        <div class="result-header">
+          <div class="result-icon valid">✓</div>
+          <div>
+            <p class="result-title" style="color:var(--green)">Checked In!</p>
+            <p class="result-sub">${name} — checked in at ${time}</p>
+          </div>
+        </div>
+      </div>`;
+    addHistory(name, 'valid');
+    if(navigator.vibrate) navigator.vibrate(300);
+  } catch(e){
+    btn.disabled = false;
+    btn.innerHTML = '✓ Mark as Checked In';
+    alert('Failed to check in. Try again.');
+  }
+};
 
 function showResult(type, icon, title, sub, data, regId){
   const resultArea = document.getElementById('resultArea');
-  const bodyHTML   = data ? `
+
+  // Get song from workshop slots if available
+  let song = '—';
+  if(data && data.slots){
+    const slotStr = data.slots;
+    // song is stored per slot in workshop, but we show whatever's in registration
+    song = data.song || '—';
+  }
+
+  const bodyHTML = data ? `
     <div class="result-body">
-      <div class="result-item"><strong>Name</strong><span>${data.name||'—'}</span></div>
+      <div class="result-item"><strong>Name</strong><span style="font-size:1rem;color:var(--text)">${data.name||'—'}</span></div>
       <div class="result-item"><strong>Workshop</strong><span>${data.workshop||'—'}</span></div>
       <div class="result-item"><strong>Package</strong><span>${data.package||'—'}</span></div>
       <div class="result-item"><strong>Slot</strong><span style="font-size:0.78rem">${(data.slots||'—').replace(' | ',' / ')}</span></div>
+      <div class="result-item"><strong>Song</strong><span style="color:var(--yellow)">♪ ${data.song||'—'}</span></div>
+      <div class="result-item"><strong>Amount</strong><span style="color:var(--yellow)">₹${parseFloat(data.amount_paid||0).toLocaleString('en-IN')}</span></div>
     </div>` : '';
 
+  const checkInBtn = (type==='pending' && regId) ? `
+    <button id="checkInBtn" onclick="doCheckIn('${regId}','${(data?.name||'').replace(/'/g,"\\'")}')">
+      ✓ Mark as Checked In
+    </button>` : '';
+
   resultArea.innerHTML = `
-    <div class="result-card ${type}">
+    <div class="result-card ${type==='pending'?'valid':type}">
       <div class="result-header">
-        <div class="result-icon ${type}">${icon}</div>
+        <div class="result-icon ${type==='pending'?'valid':type}">${icon}</div>
         <div>
-          <p class="result-title" style="color:${type==='valid'?'var(--green)':type==='used'?'var(--orange)':'#e57373'}">${title}</p>
+          <p class="result-title" style="color:${type==='used'?'var(--orange)':type==='invalid'?'#e57373':'var(--green)'}">${title}</p>
           <p class="result-sub">${sub}</p>
         </div>
       </div>
       ${bodyHTML}
+      ${checkInBtn}
     </div>`;
 }
 

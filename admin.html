@@ -268,6 +268,9 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="nav-item" onclick="showView('workshops')">
         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>All Workshops
       </div>
+      <div class="nav-item" onclick="showView('checkins')">
+        <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Check-ins
+      </div>
       <div class="nav-section-title">Regular Batches</div>
       <div class="nav-item" onclick="showView('batches')">
         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>All Batches
@@ -455,6 +458,37 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         </div>
         <table><thead><tr><th>Name</th><th>Phone</th><th>Workshop</th><th>Package</th><th>Slot</th><th>Song</th><th>Amount</th><th>Type</th><th>Payment ID</th><th>Time</th><th></th></tr></thead>
         <tbody id="regTable"></tbody></table>
+      </div>
+    </div>
+
+    <!-- CHECK-INS -->
+    <div class="view" id="view-checkins">
+      <div class="page-header">
+        <div><h1 class="page-title">Check-ins</h1><p class="page-sub">Live entry tracking per workshop and slot</p></div>
+        <button class="btn btn-outline" onclick="renderCheckinsView()">
+          <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Refresh
+        </button>
+      </div>
+      <div class="filter-tabs" id="checkinWorkshopTabs"></div>
+      <div class="filter-tabs" id="checkinSlotTabs" style="margin-top:-0.75rem"></div>
+      <div class="stats-grid" id="checkinStats" style="margin-bottom:1.5rem"></div>
+      <!-- Checked in -->
+      <div style="padding:0.6rem 1rem;background:rgba(92,184,122,0.08);border:1px solid rgba(92,184,122,0.2);border-bottom:none;display:flex;align-items:center;gap:0.6rem">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block"></span>
+        <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);font-family:'Syne',sans-serif" id="checkedInLabel">Checked In</span>
+      </div>
+      <div class="table-wrap" style="margin-bottom:1rem">
+        <table><thead><tr><th>Name</th><th>Phone</th><th>Package</th><th>Slot</th><th>Song</th><th>Amount</th><th>Checked In At</th></tr></thead>
+        <tbody id="checkedInTable"></tbody></table>
+      </div>
+      <!-- Not arrived -->
+      <div style="padding:0.6rem 1rem;background:rgba(245,230,66,0.06);border:1px solid rgba(245,230,66,0.2);border-bottom:none;display:flex;align-items:center;gap:0.6rem;margin-top:1rem">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--yellow);display:inline-block"></span>
+        <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--yellow);font-family:'Syne',sans-serif" id="notArrivedLabel">Not Arrived Yet</span>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Name</th><th>Phone</th><th>Package</th><th>Slot</th><th>Song</th><th>Amount</th><th>Booked On</th><th></th></tr></thead>
+        <tbody id="notArrivedTable"></tbody></table>
       </div>
     </div>
 
@@ -749,6 +783,7 @@ function listenRegistrations(){
       renderRegTable();
       renderPayTable();
       updateRegBadge();
+      if(document.getElementById('view-checkins')?.classList.contains('active')) renderCheckinsView();
       resolve();
     });
   });
@@ -765,7 +800,8 @@ window.showView = function(id){
     if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+id+"'")) n.classList.add('active');
   });
   if(id==='abouteditor') loadAboutContent();
-  if(id==='batches') renderBatchesView();
+  if(id==='batches')     renderBatchesView();
+  if(id==='checkins')    renderCheckinsView();
 };
 
 /* ══════════════════════════════════════
@@ -1720,6 +1756,113 @@ function renderBatchesView(){
 window.filterAdminBatch = function(id, el){
   currentAdminBatch = id;
   renderBatchesView();
+};
+
+/* ══════════════════════════════════════
+   CHECK-INS VIEW
+══════════════════════════════════════ */
+let checkinWorkshop = null;
+let checkinSlot     = 'all';
+
+window.renderCheckinsView = function(){
+  const activeWorkshops = workshops.filter(w=>w.status==='active'||w.status==='full'||w.status==='completed');
+  if(!activeWorkshops.length){
+    document.getElementById('checkinWorkshopTabs').innerHTML = '<p style="font-size:0.82rem;color:var(--muted)">No workshops found.</p>';
+    return;
+  }
+  if(!checkinWorkshop) checkinWorkshop = activeWorkshops[0].id;
+
+  // Workshop tabs
+  document.getElementById('checkinWorkshopTabs').innerHTML = activeWorkshops.map(w=>
+    `<button class="filter-tab ${checkinWorkshop===w.id?'active':''}" onclick="selectCheckinWorkshop('${w.id}')">${w.artist}</button>`
+  ).join('');
+
+  const ws    = workshops.find(w=>w.id===checkinWorkshop);
+  const slots = ws?.slots||[];
+  const wsRegs = registrations.filter(r=>r.workshop===ws?.artist);
+
+  // Slot tabs
+  document.getElementById('checkinSlotTabs').innerHTML =
+    `<button class="filter-tab ${checkinSlot==='all'?'active':''}" onclick="selectCheckinSlot('all')">All Slots</button>`
+    + slots.map((s,i)=>
+      `<button class="filter-tab ${checkinSlot===s.id?'active':''}" onclick="selectCheckinSlot('${s.id}')">Slot ${i+1} · ${s.date}</button>`
+    ).join('');
+
+  // Filter by slot
+  let filtered = wsRegs;
+  if(checkinSlot!=='all'){
+    const slot = slots.find(s=>s.id===checkinSlot);
+    if(slot) filtered = wsRegs.filter(r=>(r.slots||'').includes(slot.date));
+  }
+
+  // Get song for a registration
+  const getSong = (r) => {
+    if(checkinSlot==='all') return r.song || getSongForReg(r);
+    const slot = slots.find(s=>s.id===checkinSlot);
+    return slot?.song || '—';
+  };
+
+  const checkedIn   = filtered.filter(r=>r.checkedIn);
+  const notArrived  = filtered.filter(r=>!r.checkedIn);
+  const total       = filtered.length;
+  const pct         = total>0 ? Math.round(checkedIn.length/total*100) : 0;
+
+  // Stats
+  document.getElementById('checkinStats').innerHTML = `
+    <div class="stat-card"><p class="stat-label">Total Registered</p><p class="stat-val">${total}</p></div>
+    <div class="stat-card"><p class="stat-label">Checked In</p><p class="stat-val green">${checkedIn.length}</p></div>
+    <div class="stat-card"><p class="stat-label">Not Arrived</p><p class="stat-val yellow">${notArrived.length}</p></div>
+    <div class="stat-card"><p class="stat-label">Entry Rate</p><p class="stat-val" style="color:var(--red)">${pct}%</p></div>
+  `;
+
+  document.getElementById('checkedInLabel').textContent  = `Checked In · ${checkedIn.length}`;
+  document.getElementById('notArrivedLabel').textContent = `Not Arrived Yet · ${notArrived.length}`;
+
+  const rowChecked = r => `<tr>
+    <td style="color:var(--text);font-weight:500">${r.name||'—'}</td>
+    <td>${r.phone||'—'}</td>
+    <td>${r.package||'—'}</td>
+    <td style="font-size:0.75rem">${(r.slots||'—').replace(' | ',' / ')}</td>
+    <td style="color:var(--yellow);font-size:0.78rem">♪ ${getSong(r)}</td>
+    <td style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
+    <td style="color:var(--green);font-size:0.78rem">✓ ${r.checkedInAt||'—'}</td>
+  </tr>`;
+
+  const rowPending = r => `<tr>
+    <td style="color:var(--text)">${r.name||'—'}</td>
+    <td>${r.phone||'—'}</td>
+    <td>${r.package||'—'}</td>
+    <td style="font-size:0.75rem">${(r.slots||'—').replace(' | ',' / ')}</td>
+    <td style="color:var(--yellow);font-size:0.78rem">♪ ${getSong(r)}</td>
+    <td style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
+    <td style="font-size:0.72rem;color:var(--muted)">${r.timestamp||'—'}</td>
+    <td><button class="btn btn-outline btn-sm" style="color:var(--green);border-color:rgba(92,184,122,0.3)" onclick="adminCheckIn('${r.id}','${(r.name||'').replace(/'/g,"\\'")}')">✓ Check In</button></td>
+  </tr>`;
+
+  document.getElementById('checkedInTable').innerHTML  = checkedIn.length
+    ? checkedIn.map(rowChecked).join('')
+    : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem">No one checked in yet</td></tr>';
+
+  document.getElementById('notArrivedTable').innerHTML = notArrived.length
+    ? notArrived.map(rowPending).join('')
+    : '<tr><td colspan="8" style="text-align:center;color:var(--green);padding:2rem">Everyone has checked in! 🎉</td></tr>';
+};
+
+window.selectCheckinWorkshop = function(id){
+  checkinWorkshop = id;
+  checkinSlot     = 'all';
+  renderCheckinsView();
+};
+
+window.selectCheckinSlot = function(id){
+  checkinSlot = id;
+  renderCheckinsView();
+};
+
+window.adminCheckIn = async function(regId, name){
+  const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  await setDoc(doc(db,'registrations',regId), {checkedIn:true, checkedInAt:time}, {merge:true});
+  showToast(`${name} checked in ✓`);
 };
 
 window.exportBatchCSV = function(){
