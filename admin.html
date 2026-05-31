@@ -408,6 +408,14 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <div class="view" id="view-batches">
       <div class="page-header">
         <div><h1 class="page-title">Regular Batches</h1><p class="page-sub">Overview of all ongoing batches and their students</p></div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+          <button class="btn btn-outline" onclick="notifyAllExpired()" style="border-color:rgba(232,134,58,0.4);color:var(--orange)">
+            <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Notify All Expired
+          </button>
+          <button class="btn btn-outline btn-sm" onclick="exportBatchCSV()">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV
+          </button>
+        </div>
       </div>
 
       <!-- Batch summary cards -->
@@ -435,12 +443,14 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
 
       <!-- Inactive students -->
-      <div style="padding:0.6rem 1rem;background:rgba(229,115,115,0.06);border:1px solid rgba(229,115,115,0.2);border-bottom:none;display:flex;align-items:center;gap:0.6rem;margin-top:1rem">
-        <span style="width:8px;height:8px;border-radius:50%;background:#e57373;display:inline-block"></span>
-        <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#e57373;font-family:'Syne',sans-serif" id="inactiveCountLabel">Inactive Students</span>
+      <div style="padding:0.6rem 1rem;background:rgba(229,115,115,0.06);border:1px solid rgba(229,115,115,0.2);border-bottom:none;display:flex;align-items:center;justify-content:space-between;gap:0.6rem;margin-top:1rem;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:0.6rem">
+          <span style="width:8px;height:8px;border-radius:50%;background:#e57373;display:inline-block"></span>
+          <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#e57373;font-family:'Syne',sans-serif" id="inactiveCountLabel">Expired / Inactive</span>
+        </div>
       </div>
       <div class="table-wrap">
-        <table><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Trainer</th><th>Subscription</th><th>Fee</th><th>Payment</th><th>Joined</th><th>Expiry</th><th>Notes</th></tr></thead>
+        <table><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Trainer</th><th>Subscription</th><th>Fee</th><th>Payment</th><th>Joined</th><th>Expiry</th><th>Notes</th><th></th></tr></thead>
         <tbody id="inactiveBatchStudents"></tbody></table>
       </div>
     </div>
@@ -2168,13 +2178,13 @@ function renderBatchesView(){
   document.getElementById('activeCountLabel').textContent   = `Active Students · ${activeData.length}`;
   document.getElementById('inactiveCountLabel').textContent = `Expired / Inactive · ${inactiveData.length}`;
 
-  const rowHTML = s => {
+  const rowHTML = (s, showNotify=false) => {
     const b    = BATCHES_CONFIG.find(x=>x.id===s.batchId);
     const left = getBatchDaysLeft(s);
     const expiryColor = left<=0?'#e57373':left<=3?'var(--orange)':'var(--muted)';
     const expiryText  = left<=0?'Expired':left<=3?`⚡ ${left}d left`:getBatchExpiry(s);
     return `<tr>
-      <td style="color:var(--text)">${s.name||'—'}</td>
+      <td style="color:var(--text);font-weight:500">${s.name||'—'}</td>
       <td>${s.phone||'—'}</td>
       <td style="font-size:0.75rem">${b?.name||s.batchId} · ${b?.time||''}</td>
       <td style="font-size:0.75rem;color:var(--mid)">${s.artistName||b?.trainer||'—'}</td>
@@ -2184,21 +2194,83 @@ function renderBatchesView(){
       <td style="font-size:0.75rem;color:var(--muted)">${s.joinDate||'—'}</td>
       <td style="font-size:0.75rem;color:${expiryColor};font-weight:${left<=3&&left>0?'600':'300'}">${expiryText}</td>
       <td style="font-size:0.75rem;color:var(--muted);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.notes||'—'}</td>
+      <td>${showNotify?`<button class="btn btn-sm" style="background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.3);color:#25d366;font-size:0.65rem;white-space:nowrap" onclick="notifyStudent('${s.id}')">
+        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> Notify
+      </button>`:''}</td>
     </tr>`;
   };
 
   document.getElementById('activeBatchStudents').innerHTML   = activeData.length
-    ? activeData.map(rowHTML).join('')
-    : '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:2rem">No active students</td></tr>';
+    ? activeData.map(s=>rowHTML(s,false)).join('')
+    : '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:2rem">No active students</td></tr>';
 
   document.getElementById('inactiveBatchStudents').innerHTML = inactiveData.length
-    ? inactiveData.map(rowHTML).join('')
-    : '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:2rem">No expired students</td></tr>';
+    ? inactiveData.map(s=>rowHTML(s,true)).join('')
+    : '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:2rem">No expired students</td></tr>';
 }
 
 window.filterAdminBatch = function(id, el){
   currentAdminBatch = id;
   renderBatchesView();
+};
+
+/* ══════════════════════════════════════
+   WHATSAPP NOTIFICATIONS
+══════════════════════════════════════ */
+function buildWAMessage(s){
+  const b    = BATCHES_CONFIG.find(x=>x.id===s.batchId);
+  const name = s.name||'there';
+  const batch = b?.name||'your batch';
+  const time  = b?.time||'';
+  const expiry = getBatchExpiry(s);
+  const sub   = s.subscription||'Monthly';
+  const fee   = s.fee||0;
+  return `Hi ${name}! 👋
+
+Your *${sub}* subscription for *${batch}* (${time}) at *The Happening Space* has expired on ${expiry}.
+
+We'd love to have you back on the floor! 🎶
+
+To renew your subscription (₹${fee}), please contact us:
+📞 *+91 90579 75755*
+
+See you soon!
+— The Happening Space Team`;
+}
+
+window.notifyStudent = function(id){
+  const s = batchStudents.find(x=>x.id===id);
+  if(!s||!s.phone){ showToast('No phone number found','error'); return; }
+  const phone = s.phone.replace(/\D/g,'');
+  const num   = phone.length===10 ? '91'+phone : phone;
+  const msg   = encodeURIComponent(buildWAMessage(s));
+  window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
+};
+
+window.notifyAllExpired = function(){
+  let data = [...batchStudents];
+  if(currentAdminBatch!=='all') data = data.filter(s=>s.batchId===currentAdminBatch);
+  const expired = data.filter(s=>!isBatchStudentActive(s));
+
+  if(!expired.length){
+    showToast('No expired students to notify!');
+    return;
+  }
+
+  // Confirm before opening multiple tabs
+  if(!confirm(`This will open WhatsApp for ${expired.length} expired student${expired.length!==1?'s':''}. Continue?`)) return;
+
+  expired.forEach((s, i)=>{
+    setTimeout(()=>{
+      const phone = (s.phone||'').replace(/\D/g,'');
+      const num   = phone.length===10 ? '91'+phone : phone;
+      if(!num) return;
+      const msg = encodeURIComponent(buildWAMessage(s));
+      window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
+    }, i * 800); // stagger to avoid popup blocker
+  });
+
+  showToast(`Opening WhatsApp for ${expired.length} students…`);
 };
 
 /* ══════════════════════════════════════
