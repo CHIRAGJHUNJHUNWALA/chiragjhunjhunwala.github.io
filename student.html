@@ -565,7 +565,9 @@ function renderWorkshops(regs){
   const sorted = [...regs].sort((a,b)=>(b.timestamp||'').localeCompare(a.timestamp||''));
 
   for(const [i,r] of sorted.entries()){
-    const qrVal = 'THS-REG-' + r.id;
+    const qrVal     = 'THS-REG-' + r.id;
+    const checkedIn = r.checkedIn || false;
+    const checkedAt = r.checkedInAt || '';
     html += `
       <div class="booking-card">
         <div class="booking-card-header">
@@ -573,7 +575,7 @@ function renderWorkshops(regs){
             <p class="booking-artist">${r.workshop||'—'}</p>
             <p class="booking-style">${r.style||'Workshop'}</p>
           </div>
-          <span class="pill pill-green">Confirmed</span>
+          <span class="pill ${checkedIn?'pill-green':'pill-blue'}">${checkedIn?'✓ Checked In':'Confirmed'}</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:start">
           <div class="booking-body">
@@ -581,10 +583,18 @@ function renderWorkshops(regs){
             <div class="info-item"><strong>Date & Slot</strong><span style="font-size:0.82rem">${(r.slots||'—').replace(' | ','<br>')}</span></div>
             <div class="info-item"><strong>Amount Paid</strong><span style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</span></div>
             <div class="info-item"><strong>Booked On</strong><span style="font-size:0.78rem">${r.timestamp||'—'}</span></div>
+            ${checkedIn?`<div class="info-item"><strong>Checked In At</strong><span style="color:var(--green)">${checkedAt}</span></div>`:''}
           </div>
-          <div style="padding:1.25rem 1.25rem 0 0;text-align:center">
-            <div style="background:#fff;padding:8px;display:inline-block;border-radius:4px" id="qr-${i}"></div>
-            <p style="font-size:0.6rem;color:var(--text-muted);margin-top:0.4rem;letter-spacing:0.05em">Show at entry</p>
+          <div style="padding:1.25rem 1.25rem 0 0;text-align:center;position:relative">
+            <div style="background:#fff;padding:8px;display:inline-block;border-radius:4px;position:relative" id="qr-wrap-${i}">
+              <div id="qr-${i}"></div>
+              ${checkedIn?`<div style="position:absolute;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;border-radius:4px">
+                <div style="border:3px solid #e57373;padding:4px 8px;transform:rotate(-15deg)">
+                  <p style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#e57373;letter-spacing:0.1em;line-height:1">USED</p>
+                </div>
+              </div>`:''}
+            </div>
+            <p style="font-size:0.6rem;color:${checkedIn?'#e57373':'var(--text-muted)'};margin-top:0.4rem;letter-spacing:0.05em">${checkedIn?'Already used':'Show at entry'}</p>
           </div>
         </div>
         <div class="booking-pid">ID: ${qrVal}</div>

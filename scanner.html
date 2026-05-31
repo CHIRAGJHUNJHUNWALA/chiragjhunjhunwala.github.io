@@ -133,6 +133,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
     <div class="scanner-controls">
       <button class="scan-btn scan-btn-start" id="startBtn" onclick="startScanner()">▶ Start Camera</button>
       <button class="scan-btn scan-btn-stop" id="stopBtn" onclick="stopScanner()" style="display:none">■ Stop</button>
+      <button class="scan-btn" id="scanNextBtn" onclick="scanNext()" style="display:none;background:var(--green);color:#fff">▶ Scan Next Person</button>
     </div>
   </div>
 
@@ -209,10 +210,11 @@ window.startScanner = function(){
   const reader = document.getElementById('reader');
   reader.innerHTML = '';
   html5QrCode = new Html5Qrcode('reader');
-  document.getElementById('startBtn').style.display = 'none';
-  document.getElementById('stopBtn').style.display  = 'inline-block';
-  document.getElementById('scanStatus').textContent  = 'Starting…';
-  document.getElementById('scanStatus').className    = 'scanner-status status-scanning';
+  document.getElementById('startBtn').style.display   = 'none';
+  document.getElementById('stopBtn').style.display    = 'inline-block';
+  document.getElementById('scanNextBtn').style.display = 'none';
+  document.getElementById('scanStatus').textContent   = 'Starting…';
+  document.getElementById('scanStatus').className     = 'scanner-status status-scanning';
 
   html5QrCode.start(
     { facingMode:'environment' },
@@ -220,12 +222,17 @@ window.startScanner = function(){
     async (text) => {
       if(isScanning) return;
       isScanning = true;
+      // Pause camera immediately after scan
+      html5QrCode.pause();
+      document.getElementById('scanStatus').textContent = 'Paused — review result';
+      document.getElementById('scanStatus').className   = 'scanner-status status-off';
+      document.getElementById('scanNextBtn').style.display = 'inline-block';
+      document.getElementById('stopBtn').style.display    = 'none';
       await processCode(text);
-      setTimeout(()=>{ isScanning=false; }, 2000);
     },
     () => {}
   ).then(()=>{
-    document.getElementById('scanStatus').textContent = 'Scanning…';
+    document.getElementById('scanStatus').textContent = 'Ready — point at QR';
     document.getElementById('scanStatus').className   = 'scanner-status status-scanning';
   }).catch(()=>{
     document.getElementById('scanStatus').textContent = 'Camera error';
@@ -234,13 +241,28 @@ window.startScanner = function(){
   });
 };
 
+window.scanNext = function(){
+  // Resume scanning for next person
+  if(html5QrCode){
+    html5QrCode.resume();
+    isScanning = false;
+    document.getElementById('scanStatus').textContent    = 'Ready — point at QR';
+    document.getElementById('scanStatus').className      = 'scanner-status status-scanning';
+    document.getElementById('scanNextBtn').style.display = 'none';
+    document.getElementById('stopBtn').style.display     = 'inline-block';
+    document.getElementById('resultArea').innerHTML      = '';
+  }
+};
+
 window.stopScanner = function(){
   if(html5QrCode) html5QrCode.stop().catch(()=>{});
-  document.getElementById('startBtn').style.display = 'inline-block';
-  document.getElementById('stopBtn').style.display  = 'none';
-  document.getElementById('scanStatus').textContent  = 'Off';
-  document.getElementById('scanStatus').className    = 'scanner-status status-off';
-  document.getElementById('reader').innerHTML = '';
+  isScanning = false;
+  document.getElementById('startBtn').style.display    = 'inline-block';
+  document.getElementById('stopBtn').style.display     = 'none';
+  document.getElementById('scanNextBtn').style.display = 'none';
+  document.getElementById('scanStatus').textContent    = 'Off';
+  document.getElementById('scanStatus').className      = 'scanner-status status-off';
+  document.getElementById('reader').innerHTML          = '';
 };
 
 window.manualLookup = async function(){
