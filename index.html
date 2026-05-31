@@ -255,6 +255,7 @@ footer{background:var(--off-black);border-top:1px solid var(--border);padding:4r
       <li><a href="studio-booking.html"><span>Studio Booking</span><span class="link-num">04</span></a></li>
       <li><a href="about.html"><span>About Us</span><span class="link-num">05</span></a></li>
       <li><a href="contact.html"><span>Contact Us</span><span class="link-num">06</span></a></li>
+      <li><a href="student.html" style="color:var(--red)"><span>My Account</span><span class="link-num">07</span></a></li>
       <li><a href="admin.html" style="opacity:0.4;font-size:clamp(1rem,3vw,1.8rem)"><span>Admin Login</span><span class="link-num" style="font-size:0.6rem">07</span></a></li>
       <li><a href="artist-panel.html" style="opacity:0.4;font-size:clamp(1rem,3vw,1.8rem)"><span>Artist Panel</span><span class="link-num" style="font-size:0.6rem">08</span></a></li>
     </ul>
@@ -433,23 +434,23 @@ footer{background:var(--off-black);border-top:1px solid var(--border);padding:4r
 <section class="info-section">
   <div class="info-inner">
     <div class="info-visual">
-      <div class="info-big-num">10+</div>
+      <div class="info-big-num" id="home-stat3">10+</div>
       <div class="info-stats">
         <div class="stat-item">
-          <div class="stat-num">150+</div>
-          <div class="stat-label">Students weekly</div>
+          <div class="stat-num" id="home-stat1">150+</div>
+          <div class="stat-label">Students Taught</div>
         </div>
         <div class="stat-item">
-          <div class="stat-num">6+</div>
-          <div class="stat-label">Artists hosted</div>
+          <div class="stat-num" id="home-stat2">1000+</div>
+          <div class="stat-label">Workshops Completed</div>
         </div>
         <div class="stat-item">
-          <div class="stat-num">4+</div>
-          <div class="stat-label">Batch styles</div>
+          <div class="stat-num" id="home-stat3b">10+</div>
+          <div class="stat-label">Artists Hosted</div>
         </div>
         <div class="stat-item">
           <div class="stat-num">1</div>
-          <div class="stat-label">Community</div>
+          <div class="stat-label" id="home-stat4">Community</div>
         </div>
       </div>
     </div>
@@ -597,7 +598,7 @@ document.querySelectorAll('.batch-card,.stat-item,.info-feature').forEach(el=>{
 <!-- FIREBASE — load workshops dynamically -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFirestore, collection, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCvGMYRUhDAr4r2zoTbnRJ3PiCwhCWxLFs",
@@ -610,6 +611,22 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
+
+// Load About Us stats from Firebase
+async function loadAboutStats(){
+  try {
+    const d = await getDoc(doc(db,'settings','about'));
+    if(!d.exists()) return;
+    const data = d.data();
+    const setText = (id,val) => { const el=document.getElementById(id); if(el&&val) el.textContent=val; };
+    setText('home-stat1',  data.stat1);      // Students Taught
+    setText('home-stat2',  data.stat2);      // Workshops Completed
+    setText('home-stat3',  data.stat3);      // Artists Hosted (big num)
+    setText('home-stat3b', data.stat3);      // Artists Hosted (grid)
+    setText('home-stat4',  data.stat4label); // Community
+  } catch(e){}
+}
+loadAboutStats();
 
 async function loadWorkshops() {
   const grid = document.getElementById('workshopsGrid');

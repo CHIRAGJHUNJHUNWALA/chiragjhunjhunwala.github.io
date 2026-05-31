@@ -193,6 +193,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
       <li><a href="studio-booking.html"><span>Studio Booking</span><span class="link-num">04</span></a></li>
       <li><a href="about.html"><span>About Us</span><span class="link-num">05</span></a></li>
       <li><a href="contact.html"><span>Contact Us</span><span class="link-num">06</span></a></li>
+      <li><a href="student.html" style="color:var(--red)"><span>My Account</span><span class="link-num">07</span></a></li>
       <li><a href="admin.html" style="opacity:0.4;font-size:clamp(1rem,3vw,1.8rem)"><span>Admin Login</span><span class="link-num" style="font-size:0.6rem">07</span></a></li>
       <li><a href="artist-panel.html" style="opacity:0.4;font-size:clamp(1rem,3vw,1.8rem)"><span>Artist Panel</span><span class="link-num" style="font-size:0.6rem">08</span></a></li>
     </ul>
@@ -234,16 +235,16 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
 <div class="stats-section">
   <div class="stats-inner">
     <div class="stat-item fade-up">
-      <p class="stat-num" id="ab-stat1">1000+</p>
+      <p class="stat-num" id="ab-stat1">150+</p>
+      <p class="stat-label">Students Taught</p>
+    </div>
+    <div class="stat-item fade-up">
+      <p class="stat-num" id="ab-stat2">1000+</p>
       <p class="stat-label">Workshops Completed</p>
     </div>
     <div class="stat-item fade-up">
-      <p class="stat-num" id="ab-stat2">5</p>
-      <p class="stat-label">Regular Batches</p>
-    </div>
-    <div class="stat-item fade-up">
-      <p class="stat-num" id="ab-stat3">150+</p>
-      <p class="stat-label">Students Taught</p>
+      <p class="stat-num" id="ab-stat3">10+</p>
+      <p class="stat-label">Artists Hosted</p>
     </div>
     <div class="stat-item fade-up">
       <p class="stat-num">1</p>
@@ -405,9 +406,9 @@ async function loadAbout(){
     setText('ab-f1bio',  data.f1bio);
     setText('ab-f2name', data.f2name);
     setText('ab-f2bio',  data.f2bio);
-    setText('ab-stat1',  data.stat1);
-    setText('ab-stat2',  data.stat2);
-    setText('ab-stat3',  data.stat3);
+    setText('ab-stat1',  data.stat1);   // Students Taught
+    setText('ab-stat2',  data.stat2);   // Workshops Completed
+    setText('ab-stat3',  data.stat3);   // Artists Hosted
     setText('ab-stat4label', data.stat4label);
     (data.believes||[]).forEach((b,i)=>{
       setText('bel-title-'+i, b.title);
