@@ -148,8 +148,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .att-name{color:var(--text);font-weight:500}
 .att-phone{color:var(--muted);font-size:0.75rem;margin-top:0.1rem}
 .att-days{display:flex;gap:0.35rem}
-.att-day-btn{width:32px;height:32px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1px}
-.att-day-btn span{font-size:0.5rem;letter-spacing:0.05em}
+.att-day-btn{width:40px;height:52px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:0.6rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1px}
+.att-day-btn span:first-child{font-size:0.55rem;letter-spacing:0.08em;text-transform:uppercase}
+.att-day-btn span:nth-child(2){font-size:0.75rem;font-weight:700;color:var(--text-mid)}
+.att-day-btn span:last-child{font-size:0.75rem}
 .att-day-btn.present{background:var(--green);border-color:var(--green);color:#fff}
 .att-day-btn.absent{background:rgba(229,115,115,0.15);border-color:#e57373;color:#e57373}
 
@@ -463,11 +465,13 @@ async function initApp(){
   document.getElementById('dashWelcome').textContent       = 'Hey, ' + currentArtist.name.split(' ')[0] + '!';
   document.getElementById('dashDate').textContent          = new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
-  // Set week picker to current week Monday
-  const now   = new Date();
-  const mon   = new Date(now);
-  mon.setDate(now.getDate() - (now.getDay()===0 ? 6 : now.getDay()-1));
-  document.getElementById('weekStart').value = mon.toISOString().split('T')[0];
+  // Set week picker to current week's Monday (local time)
+  const now     = new Date();
+  const dow     = now.getDay(); // 0=Sun,1=Mon,...6=Sat
+  const toMon   = dow===0 ? -6 : 1-dow;
+  const mon     = new Date(now);
+  mon.setDate(now.getDate() + toMon);
+  document.getElementById('weekStart').value = mon.toLocaleDateString('en-CA'); // YYYY-MM-DD
 
   buildBatchFilterTabs();
   buildAttBatchTabs();
@@ -763,29 +767,48 @@ window.changeWeek = function(dir){
 window.loadWeekAttendance = async function(){
   const startStr = document.getElementById('weekStart').value;
   if(!startStr) return;
-  const start  = new Date(startStr);
-  const days   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const dates  = Array.from({length:7},(_,i)=>{
-    const d = new Date(start); d.setDate(start.getDate()+i); return d;
+
+  // Parse date as LOCAL time (not UTC) to avoid timezone shift
+  const [yr, mo, dy] = startStr.split('-').map(Number);
+  const start = new Date(yr, mo-1, dy); // local midnight
+
+  // Snap to Monday of this week (in case picker gives a non-Monday)
+  const dayOfWeek = start.getDay(); // 0=Sun,1=Mon,...6=Sat
+  const daysToMon = dayOfWeek===0 ? -6 : 1-dayOfWeek;
+  start.setDate(start.getDate() + daysToMon);
+
+  // Update picker to show the actual Monday
+  const monStr = start.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+  document.getElementById('weekStart').value = monStr;
+
+  // Generate Mon to Sun dates
+  const weekDates = Array.from({length:7}, (_,i)=>{
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    return d;
   });
 
-  // Week label
-  const opts = {day:'numeric',month:'short'};
-  document.getElementById('weekLabel').textContent =
-    dates[0].toLocaleDateString('en-IN',opts) + ' – ' + dates[6].toLocaleDateString('en-IN',opts);
+  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
-  // Render day headers — highlight Mon/Tue/Wed
-  document.getElementById('weekDays').innerHTML = days.map((d,i)=>`
-    <div class="week-day ${[0,1,2].includes(i)?'active-day':''}">
+  // Week label
+  const opts = {day:'numeric', month:'short'};
+  document.getElementById('weekLabel').textContent =
+    weekDates[0].toLocaleDateString('en-IN',opts) +
+    ' – ' +
+    weekDates[6].toLocaleDateString('en-IN',opts);
+
+  // Render day headers — Mon/Tue/Wed are class days
+  document.getElementById('weekDays').innerHTML = dayNames.map((d,i)=>`
+    <div class="week-day ${i<=2?'active-day':''}">
       <p class="week-day-name">${d}</p>
-      <p class="week-day-date">${dates[i].getDate()}</p>
+      <p class="week-day-date">${weekDates[i].getDate()}</p>
     </div>`).join('');
 
   // Load saved attendance from Firebase
-  const weekKey  = startStr.replace(/-/g,'');
-  const attRef   = doc(db,'attendance',`${currentArtist.user}_${currentAttBatch}_${weekKey}`);
-  const attSnap  = await getDoc(attRef);
-  attendance     = attSnap.exists() ? attSnap.data().records||{} : {};
+  const weekKey = start.toLocaleDateString('en-CA').replace(/-/g,'');
+  const attRef  = doc(db,'attendance',`${currentArtist.user}_${currentAttBatch}_${weekKey}`);
+  const attSnap = await getDoc(attRef);
+  attendance    = attSnap.exists() ? attSnap.data().records||{} : {};
 
   // Get batch students
   const batchStudents = students.filter(s=>s.batchId===currentAttBatch);
@@ -800,14 +823,15 @@ window.loadWeekAttendance = async function(){
           <p class="att-phone">${s.phone}</p>
         </div>
         <div class="att-days">
-          ${days.map((d,i)=>{
-            const dateKey = dates[i].toISOString().split('T')[0];
+          ${dayNames.map((d,i)=>{
+            const dateKey = weekDates[i].toLocaleDateString('en-CA'); // YYYY-MM-DD
             const status  = (attendance[s.id]||{})[dateKey]||'';
-            const isClass = [0,1,2].includes(i);
-            if(!isClass) return `<div class="att-day-btn" style="opacity:0.2;cursor:default"><span>${d}</span></div>`;
-            return `<button class="att-day-btn ${status}" onclick="toggleAtt('${s.id}','${dateKey}',this)" title="${dates[i].toLocaleDateString('en-IN')}">
+            const isClass = i<=2; // Mon, Tue, Wed only
+            if(!isClass) return `<div class="att-day-btn" style="opacity:0.18;cursor:default;font-size:0.6rem;color:var(--muted)">${d}</div>`;
+            return `<button class="att-day-btn ${status}" onclick="toggleAtt('${s.id}','${dateKey}',this)" title="${weekDates[i].toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short'})}">
               <span>${d}</span>
-              <span>${status==='present'?'✓':status==='absent'?'✗':''}</span>
+              <span>${weekDates[i].getDate()}</span>
+              <span>${status==='present'?'✓':status==='absent'?'✗':'·'}</span>
             </button>`;
           }).join('')}
         </div>
@@ -827,7 +851,9 @@ window.toggleAtt = function(studentId, dateKey, btn){
 window.saveAttendance = async function(){
   const startStr = document.getElementById('weekStart').value;
   if(!startStr||!currentAttBatch){ showToast('Select a batch and week first','error'); return; }
-  const weekKey = startStr.replace(/-/g,'');
+  const [yr,mo,dy] = startStr.split('-').map(Number);
+  const start = new Date(yr, mo-1, dy);
+  const weekKey = start.toLocaleDateString('en-CA').replace(/-/g,'');
   await setDoc(doc(db,'attendance',`${currentArtist.user}_${currentAttBatch}_${weekKey}`),{
     artistId: currentArtist.user,
     batchId:  currentAttBatch,
