@@ -580,7 +580,7 @@ function renderWorkshops(regs){
         <div style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:start">
           <div class="booking-body">
             <div class="info-item"><strong>Package</strong><span>${r.package||'—'}</span></div>
-            <div class="info-item"><strong>Date & Slot</strong><span style="font-size:0.82rem">${(r.slots||'—').replace(' | ','<br>')}</span></div>
+            <div class="info-item"><strong>Slot / Song</strong><span style="font-size:0.82rem;color:var(--yellow)">${(r.slots||'—')}</span></div>
             <div class="info-item"><strong>Amount Paid</strong><span style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</span></div>
             <div class="info-item"><strong>Booked On</strong><span style="font-size:0.78rem">${r.timestamp||'—'}</span></div>
             ${checkedIn?`<div class="info-item"><strong>Checked In At</strong><span style="color:var(--green)">${checkedAt}</span></div>`:''}

@@ -341,7 +341,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="ws-grid" id="dashWorkshops"></div>
       <div class="section-bar" style="margin-top:1rem"><span class="section-bar-title" id="recentRegTitle">Recent Registrations</span><button class="btn btn-outline btn-sm" onclick="showView('registrations')">View All</button></div>
       <div class="table-wrap">
-        <table><thead><tr><th>Name</th><th>Phone</th><th>Workshop</th><th>Package</th><th>Slot</th><th>Song</th><th>Amount</th><th>Type</th><th>Time</th></tr></thead>
+        <table><thead><tr><th>Name</th><th>Phone</th><th>Workshop</th><th>Package</th><th>Slot / Song</th><th>Amount</th><th>Type</th><th>Time</th></tr></thead>
         <tbody id="dashRecentReg"></tbody></table>
       </div>
     </div>
@@ -459,7 +459,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           <span class="table-title">Student Registrations</span>
           <input class="table-search" placeholder="Search name or phone…" oninput="searchRegs(this.value)">
         </div>
-        <table><thead><tr><th>Name</th><th>Phone</th><th>Workshop</th><th>Package</th><th>Slot</th><th>Song</th><th>Amount</th><th>Type</th><th>Payment ID</th><th>Time</th><th></th></tr></thead>
+        <table><thead><tr><th>Name</th><th>Phone</th><th>Workshop</th><th>Package</th><th>Slot / Song</th><th>Amount</th><th>Type</th><th>Payment ID</th><th>Time</th><th></th></tr></thead>
         <tbody id="regTable"></tbody></table>
       </div>
     </div>
@@ -490,7 +490,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);font-family:'Syne',sans-serif" id="checkedInLabel">Checked In</span>
       </div>
       <div class="table-wrap" style="margin-bottom:1rem;overflow-x:auto">
-        <table><thead><tr><th>Name</th><th>Phone</th><th>Package</th><th>Slot</th><th>Song</th><th>Amount</th><th>Checked In At</th></tr></thead>
+        <table><thead><tr><th>Name</th><th>Phone</th><th>Package</th><th>Slot / Song</th><th>Amount</th><th>Checked In At</th></tr></thead>
         <tbody id="checkedInTable"></tbody></table>
       </div>
       <!-- Not arrived -->
@@ -499,7 +499,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--yellow);font-family:'Syne',sans-serif" id="notArrivedLabel">Not Arrived Yet</span>
       </div>
       <div class="table-wrap" style="overflow-x:auto">
-        <table><thead><tr><th>Name</th><th>Phone</th><th>Package</th><th>Slot</th><th>Song</th><th>Amount</th><th>Booked On</th><th></th></tr></thead>
+        <table><thead><tr><th>Name</th><th>Phone</th><th>Package</th><th>Slot / Song</th><th>Amount</th><th>Booked On</th><th></th></tr></thead>
         <tbody id="notArrivedTable"></tbody></table>
       </div>
     </div>
@@ -948,8 +948,7 @@ function renderDashboard(){
         <td>${r.phone||'—'}</td>
         <td>${r.workshop||'—'}</td>
         <td>${r.package||'—'}</td>
-        <td style="font-size:0.75rem">${r.slots||'—'}</td>
-        <td style="font-size:0.75rem;color:var(--yellow)">${getSongForReg(r)}</td>
+        <td style="font-size:0.75rem;color:var(--yellow)">♪ ${getSongForReg(r)} · ${r.slots||'—'}</td>
         <td style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
         <td>${payTypePill(r.payment_type)}</td>
         <td style="font-size:0.72rem;color:var(--muted)">${r.timestamp||'—'}</td>
@@ -1123,9 +1122,8 @@ window.openWsDetail = function(id){
       <p style="font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;font-family:'Syne',sans-serif;font-weight:600">Class Details</p>
       ${slots.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:0.65rem 0.85rem;background:var(--bg3);border:1px solid var(--border);margin-bottom:0.4rem;font-size:0.82rem">
         <div>
-          <span style="color:var(--text)">${s.date}</span>
-          <span style="color:var(--muted);margin-left:0.5rem">${s.time}</span>
-          ${s.song?`<span style="color:var(--yellow);margin-left:0.5rem;font-size:0.72rem">♪ ${s.song}</span>`:''}
+          <span style="color:var(--text)">${s.song ? '♪ '+s.song : '—'}</span>
+          <span style="color:var(--muted);margin-left:0.5rem;font-size:0.75rem">${s.time}</span>
         </div>
         <span style="font-size:0.7rem;color:var(--muted)">${s.spots||0} left</span>
       </div>`).join('')}
@@ -1398,8 +1396,8 @@ window.openSpotsModal = function(id){
     <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1.25rem">${w.artist}</p>
     ${(w.slots||[]).map((s,i)=>`
       <div style="margin-bottom:1rem;background:var(--bg3);border:1px solid var(--border);padding:1rem">
-        <p style="font-size:0.82rem;font-weight:500;color:var(--text);margin-bottom:0.15rem">${s.date}</p>
-        <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.75rem">${s.time}${s.song?' · ♪ '+s.song:''}</p>
+        <p style="font-size:0.82rem;font-weight:500;color:var(--text);margin-bottom:0.15rem">${s.song ? '♪ '+s.song : '—'}</p>
+        <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.75rem">${s.time}</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
           <div class="form-group"><label>Total Spots</label><input type="number" id="totalSpots_${i}" value="${s.totalSpots||20}" min="1"></div>
           <div class="form-group"><label>Spots Remaining</label><input type="number" id="remSpots_${i}" value="${s.spots||0}" min="0"></div>
@@ -1465,7 +1463,7 @@ window.openManualStudent = function(wsId){
   pkgSel.innerHTML = (w.packages||[]).map(p=>`<option value="${p.name}">₹${p.price} — ${p.name}</option>`).join('');
 
   const slotSel = document.getElementById('manualSlot');
-  slotSel.innerHTML = (w.slots||[]).map(s=>`<option value="${s.id}">${s.date} · ${s.time}</option>`).join('');
+  slotSel.innerHTML = (w.slots||[]).map(s=>`<option value="${s.id}">${s.song?'♪ '+s.song+' · ':''} ${s.time}</option>`).join('');
 
   openModal('manualModal');
 };
@@ -1487,7 +1485,7 @@ window.saveManualStudent = async function(){
     workshop:     w.artist,
     style:        w.style||'',
     package:      pkg,
-    slots:        slot ? slot.date+' · '+slot.time : '—',
+    slots:        slot ? (slot.song?'♪ '+slot.song+' · ':'')+slot.time : '—',
     amount_paid:  amount,
     payment_type: payType,
     payment_id:   'MANUAL-'+Date.now(),
@@ -1518,6 +1516,17 @@ function renderRegTable(){
     (r.name||'').toLowerCase().includes(regSearchQ.toLowerCase()) ||
     (r.phone||'').includes(regSearchQ)
   );
+  // Build slot display: song · time per slot
+  function getSlotDisplay(r){
+    const ws = workshops.find(x=>x.artist===r.workshop);
+    const rawSlots = (r.slots||'').split('|').map(s=>s.trim());
+    if(!ws||!ws.slots) return rawSlots.join(' | ');
+    return rawSlots.map(rs=>{
+      const match = ws.slots.find(s=>rs.includes(s.date)||rs.includes(s.time));
+      return match ? (match.song?'♪ '+match.song+' · ':'')+match.time : rs;
+    }).join(' | ');
+  }
+
   tbody.innerHTML = data.length
     ? data.map(r=>{
         const ws = workshops.find(x=>x.artist===r.workshop);
@@ -1529,8 +1538,7 @@ function renderRegTable(){
           <td>${r.phone||'—'}</td>
           <td style="${deleted?'color:var(--red)':''}">${r.workshop||'—'}</td>
           <td>${r.package||'—'}</td>
-          <td style="font-size:0.75rem">${r.slots||'—'}</td>
-          <td style="font-size:0.75rem;color:var(--yellow)">${getSongForReg(r)}</td>
+          <td style="font-size:0.75rem;color:var(--yellow)">${getSlotDisplay(r)}</td>
           <td style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
           <td>${payTypePill(r.payment_type)}</td>
           <td style="font-size:0.72rem;color:var(--muted)">${r.payment_id||'—'}</td>
@@ -1540,7 +1548,7 @@ function renderRegTable(){
           </button></td>
         </tr>`;
       }).join('')
-    : '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:3rem">No registrations found</td></tr>';
+    : '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:3rem">No registrations found</td></tr>';
 }
 
 window.filterRegs = function(f,el){
@@ -1797,7 +1805,7 @@ window.renderCheckinsView = function(){
   document.getElementById('checkinSlotTabs').innerHTML =
     `<button class="filter-tab ${checkinSlot==='all'?'active':''}" onclick="selectCheckinSlot('all')">All Slots</button>`
     + slots.map((s,i)=>
-      `<button class="filter-tab ${checkinSlot===s.id?'active':''}" onclick="selectCheckinSlot('${s.id}')">Slot ${i+1} · ${s.date}</button>`
+      `<button class="filter-tab ${checkinSlot===s.id?'active':''}" onclick="selectCheckinSlot('${s.id}')">${s.song?'♪ '+s.song:('Slot '+(i+1))} · ${s.time}</button>`
     ).join('');
 
   // Filter by slot — match by slot date exactly
@@ -1850,8 +1858,7 @@ window.renderCheckinsView = function(){
     <td style="color:var(--text);font-weight:500">${r.name||'—'}</td>
     <td>${r.phone||'—'}</td>
     <td>${r.package||'—'}</td>
-    <td style="font-size:0.75rem">${(r.slots||'—').replace(' | ',' / ')}</td>
-    <td style="color:var(--yellow);font-size:0.78rem">♪ ${getSong(r)}</td>
+    <td style="font-size:0.75rem;color:var(--yellow)">♪ ${getSong(r)} · ${(r.slots||'—').replace(' | ',' / ')}</td>
     <td style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
     <td style="color:var(--green);font-size:0.78rem">✓ ${r.checkedInAt||'—'}</td>
   </tr>`;
@@ -1860,8 +1867,7 @@ window.renderCheckinsView = function(){
     <td style="color:var(--text)">${r.name||'—'}</td>
     <td>${r.phone||'—'}</td>
     <td>${r.package||'—'}</td>
-    <td style="font-size:0.75rem">${(r.slots||'—').replace(' | ',' / ')}</td>
-    <td style="color:var(--yellow);font-size:0.78rem">♪ ${getSong(r)}</td>
+    <td style="font-size:0.75rem;color:var(--yellow)">♪ ${getSong(r)} · ${(r.slots||'—').replace(' | ',' / ')}</td>
     <td style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
     <td style="font-size:0.72rem;color:var(--muted)">${r.timestamp||'—'}</td>
     <td><button class="btn btn-outline btn-sm" style="color:var(--green);border-color:rgba(92,184,122,0.3)" onclick="adminCheckIn('${r.id}','${(r.name||'').replace(/'/g,"\\'")}')">✓ Check In</button></td>
