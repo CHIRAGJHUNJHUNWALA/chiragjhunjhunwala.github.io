@@ -508,9 +508,14 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <div class="view" id="view-payments">
       <div class="page-header">
         <div><h1 class="page-title">All Payments</h1><p class="page-sub">Revenue from workshops and regular batches</p></div>
-        <button class="btn btn-outline" onclick="exportAllPaymentsCSV()">
-          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV
-        </button>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-outline" onclick="exportAllPaymentsCSV()">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV
+          </button>
+          <button class="btn btn-red" onclick="openMonthlyReport()">
+            <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Monthly Report
+          </button>
+        </div>
       </div>
 
       <!-- Summary stats -->
@@ -543,6 +548,33 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- MONTHLY REPORT MODAL -->
+<div class="modal-backdrop" id="reportModal" style="align-items:flex-start;padding:0">
+  <div class="modal" style="max-width:100%;width:100%;max-height:100vh;margin:0;border-radius:0;border:none">
+    <div class="modal-head" style="padding:1rem 1.5rem">
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+        <h2 class="modal-title">Monthly Report</h2>
+        <select id="reportMonth" onchange="generateReport()" style="background:var(--bg3);border:1px solid var(--border2);padding:0.4rem 0.75rem;color:var(--text);font-family:'Syne',sans-serif;font-size:0.78rem;outline:none">
+          <option value="0">January</option><option value="1">February</option><option value="2">March</option>
+          <option value="3">April</option><option value="4">May</option><option value="5">June</option>
+          <option value="6">July</option><option value="7">August</option><option value="8">September</option>
+          <option value="9">October</option><option value="10">November</option><option value="11">December</option>
+        </select>
+        <select id="reportYear" onchange="generateReport()" style="background:var(--bg3);border:1px solid var(--border2);padding:0.4rem 0.75rem;color:var(--text);font-family:'Syne',sans-serif;font-size:0.78rem;outline:none">
+          <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:0.6rem">
+        <button class="btn btn-red" onclick="printReport()">
+          <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print / Save PDF
+        </button>
+        <button class="modal-close" onclick="closeModal('reportModal')" style="margin-left:0.5rem">✕</button>
+      </div>
+    </div>
+    <div id="reportContent" style="padding:1.5rem;overflow-y:auto;max-height:calc(100vh - 80px)"></div>
   </div>
 </div>
 
@@ -1749,6 +1781,283 @@ function getSlotDisplayForReg(r){
     return match ? (match.song?'♪ '+match.song+' · ':'')+match.time : rs;
   }).join(' / ');
 }
+
+/* ══════════════════════════════════════
+   MONTHLY REPORT
+══════════════════════════════════════ */
+window.openMonthlyReport = function(){
+  const now = new Date();
+  document.getElementById('reportMonth').value = now.getMonth();
+  document.getElementById('reportYear').value  = now.getFullYear();
+  openModal('reportModal');
+  generateReport();
+};
+
+window.generateReport = function(){
+  const m    = parseInt(document.getElementById('reportMonth').value);
+  const y    = parseInt(document.getElementById('reportYear').value);
+  const from = new Date(y, m, 1);
+  const to   = new Date(y, m+1, 0, 23, 59, 59);
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthLabel = monthNames[m] + ' ' + y;
+
+  // Filter workshops by dateFrom in this month
+  const monthWorkshops = workshops.filter(w=>{
+    if(!w.dateFrom) return false;
+    const d = new Date(w.dateFrom);
+    return d >= from && d <= to;
+  });
+
+  // Filter registrations by workshop dateFrom OR timestamp
+  const monthRegs = registrations.filter(r=>{
+    const ws = workshops.find(x=>x.artist===r.workshop);
+    if(ws && ws.dateFrom){
+      const d = new Date(ws.dateFrom);
+      return d >= from && d <= to;
+    }
+    const ts = r.timestamp||'';
+    if(!ts) return false;
+    try{ const d=new Date(ts); return d>=from&&d<=to; }catch(e){ return false; }
+  });
+
+  // Filter batch students active in this month
+  const monthBatchStudents = batchStudents.filter(s=>{
+    if(!s.joinDate) return false;
+    const joined = new Date(s.joinDate);
+    const days   = s.subscription==='Weekly'?7:28;
+    const expiry = new Date(joined); expiry.setDate(joined.getDate()+days);
+    return joined<=to && expiry>=from;
+  });
+
+  // Revenue
+  const wsRevenue    = monthRegs.reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
+  const batchRevenue = monthBatchStudents.reduce((s,x)=>s+parseFloat(x.fee||0),0);
+  const totalRevenue = wsRevenue + batchRevenue;
+  const wsOnline     = monthRegs.filter(r=>r.payment_type==='Online').length;
+  const wsCash       = monthRegs.filter(r=>r.payment_type!=='Online').length;
+  const batchOnline  = monthBatchStudents.filter(s=>s.payMode==='Online'||s.payMode==='UPI').length;
+  const batchCash    = monthBatchStudents.filter(s=>s.payMode==='Cash').length;
+
+  // Workshop performance ranking
+  const wsPerf = monthWorkshops.map(w=>{
+    const regs    = monthRegs.filter(r=>r.artist===w.artist||r.workshop===w.artist);
+    const revenue = regs.reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
+    const slots   = w.slots||[];
+    const totalSpots = slots.reduce((s,sl)=>s+(parseInt(sl.totalSpots)||0),0);
+    const filled  = regs.reduce((s,r)=>{
+      const count=(r.slots||'').split('|').length; return s+count;
+    },0);
+    const fillPct = totalSpots>0?Math.round(filled/totalSpots*100):0;
+    return {name:w.artist, style:w.style||'', regs:regs.length, revenue, totalSpots, filled, fillPct,
+            dateFrom:w.dateFrom, dateTo:w.dateTo, checkedIn:regs.filter(r=>r.checkedIn===true).length};
+  }).sort((a,b)=>b.revenue-a.revenue);
+
+  // Batch breakdown
+  const batchBreakdown = BATCHES_CONFIG.map(b=>{
+    const students = monthBatchStudents.filter(s=>s.batchId===b.id);
+    const active   = students.filter(s=>isBatchStudentActive(s)).length;
+    const revenue  = students.reduce((s,x)=>s+parseFloat(x.fee||0),0);
+    return {...b, count:students.length, active, revenue};
+  }).filter(b=>b.count>0);
+
+  // Trainer breakdown
+  const trainerMap = {};
+  monthBatchStudents.forEach(s=>{
+    const key = s.artistName||'Unknown';
+    if(!trainerMap[key]) trainerMap[key]={name:key,students:0,revenue:0};
+    trainerMap[key].students++;
+    trainerMap[key].revenue += parseFloat(s.fee||0);
+  });
+  const trainers = Object.values(trainerMap).sort((a,b)=>b.revenue-a.revenue);
+
+  const now = new Date();
+  document.getElementById('reportContent').innerHTML = `
+    <div id="printReport" style="font-family:'DM Sans',sans-serif;max-width:900px;margin:0 auto;color:var(--text)">
+
+      <!-- HEADER -->
+      <div style="border-bottom:2px solid var(--red);padding-bottom:1.25rem;margin-bottom:2rem;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+        <div>
+          <p style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--red);margin-bottom:0.3rem">The Happening Space</p>
+          <h1 style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;letter-spacing:0.04em;line-height:1;color:var(--text)">Monthly Report</h1>
+          <p style="font-size:1.1rem;color:var(--text-muted);font-weight:300">${monthLabel}</p>
+        </div>
+        <div style="text-align:right;font-size:0.75rem;color:var(--muted)">
+          <p>Generated: ${now.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}</p>
+          <p>311 – International Wealth Center, VIP Road, Surat</p>
+        </div>
+      </div>
+
+      <!-- REVENUE OVERVIEW -->
+      <div style="margin-bottom:2rem">
+        <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--red);margin-bottom:0.85rem;font-family:'Syne',sans-serif;font-weight:700">Revenue Overview</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem">
+          ${[
+            {label:'Total Revenue',    val:'₹'+totalRevenue.toLocaleString('en-IN'), color:'var(--green)'},
+            {label:'Workshop Revenue', val:'₹'+wsRevenue.toLocaleString('en-IN'),    color:'var(--red)'},
+            {label:'Batch Revenue',    val:'₹'+batchRevenue.toLocaleString('en-IN'), color:'var(--green)'},
+            {label:'Workshop Students',val:monthRegs.length,                         color:'var(--text)'},
+            {label:'Batch Students',   val:monthBatchStudents.length,                color:'var(--text)'},
+            {label:'Workshops Held',   val:monthWorkshops.length,                    color:'var(--text)'},
+          ].map(s=>`<div style="background:var(--bg2);border:1px solid var(--border);padding:1rem 1.25rem">
+            <p style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">${s.label}</p>
+            <p style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:0.04em;color:${s.color};line-height:1">${s.val}</p>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- PAYMENT MODES -->
+      <div style="margin-bottom:2rem;display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+        <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem">
+          <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--red);margin-bottom:1rem;font-family:'Syne',sans-serif;font-weight:700">Workshop Payments</p>
+          <div style="display:flex;gap:1.5rem">
+            <div><p style="font-size:0.65rem;color:var(--muted)">Online</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--green)">${wsOnline}</p></div>
+            <div><p style="font-size:0.65rem;color:var(--muted)">Cash</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--yellow)">${wsCash}</p></div>
+            <div><p style="font-size:0.65rem;color:var(--muted)">Ratio</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--text)">${monthRegs.length?Math.round(wsOnline/monthRegs.length*100):0}% Online</p></div>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem">
+          <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--green);margin-bottom:1rem;font-family:'Syne',sans-serif;font-weight:700">Batch Payments</p>
+          <div style="display:flex;gap:1.5rem">
+            <div><p style="font-size:0.65rem;color:var(--muted)">Online</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--green)">${batchOnline}</p></div>
+            <div><p style="font-size:0.65rem;color:var(--muted)">Cash</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--yellow)">${batchCash}</p></div>
+            <div><p style="font-size:0.65rem;color:var(--muted)">Ratio</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--text)">${monthBatchStudents.length?Math.round(batchOnline/monthBatchStudents.length*100):0}% Online</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WORKSHOP PERFORMANCE -->
+      ${wsPerf.length ? `
+      <div style="margin-bottom:2rem">
+        <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--red);margin-bottom:0.85rem;font-family:'Syne',sans-serif;font-weight:700">Workshop Performance Ranking</p>
+        <div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden">
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr style="background:var(--bg3)">
+              <th style="text-align:left;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">#</th>
+              <th style="text-align:left;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">Artist</th>
+              <th style="text-align:left;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">Style</th>
+              <th style="text-align:left;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">Date</th>
+              <th style="text-align:center;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">Registrations</th>
+              <th style="text-align:center;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">Spots Filled</th>
+              <th style="text-align:center;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">Checked In</th>
+              <th style="text-align:center;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">Fill %</th>
+              <th style="text-align:right;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">Revenue</th>
+            </tr></thead>
+            <tbody>
+              ${wsPerf.map((w,i)=>`<tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:0.75rem 1rem;font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:${i===0?'var(--yellow)':i===1?'rgba(200,200,200,0.6)':i===2?'rgba(180,140,80,0.7)':'var(--muted)'}">${i+1}</td>
+                <td style="padding:0.75rem 1rem;font-weight:500;color:var(--text)">${w.name}</td>
+                <td style="padding:0.75rem 1rem;font-size:0.78rem;color:var(--muted)">${w.style}</td>
+                <td style="padding:0.75rem 1rem;font-size:0.75rem;color:var(--muted)">${w.dateFrom||'—'}${w.dateTo&&w.dateTo!==w.dateFrom?' → '+w.dateTo:''}</td>
+                <td style="padding:0.75rem 1rem;text-align:center;font-weight:600">${w.regs}</td>
+                <td style="padding:0.75rem 1rem;text-align:center;font-size:0.82rem">${w.filled}/${w.totalSpots}</td>
+                <td style="padding:0.75rem 1rem;text-align:center;color:var(--green)">${w.checkedIn}</td>
+                <td style="padding:0.75rem 1rem;text-align:center">
+                  <span style="font-size:0.75rem;font-weight:700;color:${w.fillPct>=80?'var(--green)':w.fillPct>=50?'var(--yellow)':'#e57373'}">${w.fillPct}%</span>
+                </td>
+                <td style="padding:0.75rem 1rem;text-align:right;color:var(--yellow);font-weight:600">₹${w.revenue.toLocaleString('en-IN')}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>` : `<div style="background:var(--bg2);border:1px solid var(--border);padding:1.5rem;margin-bottom:2rem;text-align:center;color:var(--muted);font-size:0.85rem">No workshops in ${monthLabel}</div>`}
+
+      <!-- REGULAR BATCHES -->
+      ${batchBreakdown.length ? `
+      <div style="margin-bottom:2rem">
+        <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--green);margin-bottom:0.85rem;font-family:'Syne',sans-serif;font-weight:700">Regular Batches</p>
+        <div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden;margin-bottom:1rem">
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr style="background:var(--bg3)">
+              ${['Batch','Time','Trainer','Total Students','Active','Fee Collected'].map(h=>`<th style="text-align:left;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">${h}</th>`).join('')}
+            </tr></thead>
+            <tbody>
+              ${batchBreakdown.map(b=>`<tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:0.75rem 1rem;font-weight:500;color:var(--text)">${b.name}</td>
+                <td style="padding:0.75rem 1rem;font-size:0.78rem;color:var(--muted)">${b.time}</td>
+                <td style="padding:0.75rem 1rem;font-size:0.78rem;color:var(--muted)">${b.trainer}</td>
+                <td style="padding:0.75rem 1rem;text-align:left;font-weight:600">${b.count}</td>
+                <td style="padding:0.75rem 1rem;text-align:left;color:var(--green);font-weight:600">${b.active}</td>
+                <td style="padding:0.75rem 1rem;text-align:left;color:var(--yellow);font-weight:600">₹${b.revenue.toLocaleString('en-IN')}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>` : ''}
+
+      <!-- TRAINER PERFORMANCE -->
+      ${trainers.length ? `
+      <div style="margin-bottom:2rem">
+        <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--green);margin-bottom:0.85rem;font-family:'Syne',sans-serif;font-weight:700">Trainer Performance</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem">
+          ${trainers.map(t=>`<div style="background:var(--bg2);border:1px solid var(--border);padding:1rem 1.25rem">
+            <p style="font-size:0.75rem;font-weight:600;color:var(--text);margin-bottom:0.75rem">${t.name}</p>
+            <div style="display:flex;gap:1.5rem">
+              <div><p style="font-size:0.6rem;color:var(--muted)">Students</p><p style="font-size:1.5rem;font-family:'Bebas Neue',sans-serif;color:var(--text)">${t.students}</p></div>
+              <div><p style="font-size:0.6rem;color:var(--muted)">Revenue</p><p style="font-size:1.5rem;font-family:'Bebas Neue',sans-serif;color:var(--yellow)">₹${t.revenue.toLocaleString('en-IN')}</p></div>
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>` : ''}
+
+      <!-- REGISTRATION LIST -->
+      ${monthRegs.length ? `
+      <div style="margin-bottom:2rem">
+        <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--red);margin-bottom:0.85rem;font-family:'Syne',sans-serif;font-weight:700">Workshop Registrations (${monthRegs.length})</p>
+        <div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden">
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr style="background:var(--bg3)">
+              ${['#','Name','Phone','Workshop','Package','Slot/Song','Amount','Type','Checked In'].map(h=>`<th style="text-align:left;padding:0.5rem 0.85rem;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">${h}</th>`).join('')}
+            </tr></thead>
+            <tbody>
+              ${monthRegs.map((r,i)=>`<tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:0.6rem 0.85rem;font-size:0.72rem;color:var(--muted)">${i+1}</td>
+                <td style="padding:0.6rem 0.85rem;font-weight:500;color:var(--text)">${r.name||'—'}</td>
+                <td style="padding:0.6rem 0.85rem;font-size:0.75rem">${r.phone||'—'}</td>
+                <td style="padding:0.6rem 0.85rem;font-size:0.78rem">${r.workshop||'—'}</td>
+                <td style="padding:0.6rem 0.85rem;font-size:0.78rem">${r.package||'—'}</td>
+                <td style="padding:0.6rem 0.85rem;font-size:0.72rem;color:var(--yellow)">${getSlotDisplayForReg(r)}</td>
+                <td style="padding:0.6rem 0.85rem;color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
+                <td style="padding:0.6rem 0.85rem">${payTypePill(r.payment_type)}</td>
+                <td style="padding:0.6rem 0.85rem;font-size:0.72rem;color:${r.checkedIn?'var(--green)':'var(--muted)'}">${r.checkedIn?'✓ '+r.checkedInAt:'—'}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>` : ''}
+
+      <!-- FOOTER -->
+      <div style="border-top:1px solid var(--border);padding-top:1rem;display:flex;justify-content:space-between;font-size:0.7rem;color:var(--muted);flex-wrap:wrap;gap:0.5rem">
+        <span>The Happening Space · thehappeningspace.in</span>
+        <span>Report for ${monthLabel} · Generated ${now.toLocaleDateString('en-IN')}</span>
+      </div>
+    </div>`;
+};
+
+window.printReport = function(){
+  const content = document.getElementById('printReport')?.innerHTML;
+  if(!content) return;
+  const win = window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head>
+    <title>THS Monthly Report</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      :root{--red:#bc1f2e;--green:#5cb87a;--yellow:#c8a800;--text:#111;--muted:#666;--bg2:#f8f8f6;--bg3:#f0f0ee;--border:rgba(0,0,0,0.1);--red-dim:rgba(188,31,46,0.08)}
+      body{font-family:'DM Sans',sans-serif;font-weight:300;background:#fff;color:#111;padding:2.5cm;font-size:10pt}
+      h1{font-family:'Bebas Neue',sans-serif}
+      p{line-height:1.5}
+      table{width:100%;border-collapse:collapse}
+      th,td{padding:0.4rem 0.75rem;font-size:8.5pt}
+      @media print{
+        body{padding:1.5cm}
+        button{display:none!important}
+        @page{size:A4;margin:1.5cm}
+      }
+    </style>
+  </head><body>${content}<br><br><p style="text-align:center;font-size:8pt;color:#999">Press Ctrl+P (or Cmd+P) to print or save as PDF</p></body></html>`);
+  win.document.close();
+  setTimeout(()=>win.print(), 800);
+};
 
 window.exportAllPaymentsCSV = function(){
   const wsRows = registrations.map(r=>[
