@@ -268,6 +268,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="nav-item" onclick="showView('workshops')">
         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>All Workshops
       </div>
+      <div class="nav-item" onclick="showView('registrations')">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Registrations <span class="badge" id="regBadge">0</span>
+      </div>
       <div class="nav-item" onclick="showView('checkins')">
         <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Check-ins
       </div>
@@ -275,17 +279,13 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="nav-item" onclick="showView('batches')">
         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>All Batches
       </div>
+      <div class="nav-section-title">Finance</div>
+      <div class="nav-item" onclick="showView('payments')">
+        <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>All Payments
+      </div>
       <div class="nav-section-title">Content</div>
       <div class="nav-item" onclick="showView('abouteditor')">
         <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit About Us
-      </div>
-      <div class="nav-section-title">Students</div>
-      <div class="nav-item" onclick="showView('registrations')">
-        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        Registrations <span class="badge" id="regBadge">0</span>
-      </div>
-      <div class="nav-item" onclick="showView('payments')">
-        <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Payments
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -506,15 +506,40 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 
     <!-- PAYMENTS -->
     <div class="view" id="view-payments">
-      <div class="page-header"><div><h1 class="page-title">Payments</h1><p class="page-sub">Revenue tracking</p></div></div>
-      <div class="stats-grid" id="paymentStats"></div>
-      <div class="table-wrap">
-        <div class="table-header">
-          <span class="table-title">All Transactions</span>
-          <input class="table-search" placeholder="Search payment ID…" oninput="searchPayments(this.value)">
+      <div class="page-header">
+        <div><h1 class="page-title">All Payments</h1><p class="page-sub">Revenue from workshops and regular batches</p></div>
+        <button class="btn btn-outline" onclick="exportAllPaymentsCSV()">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV
+        </button>
+      </div>
+
+      <!-- Summary stats -->
+      <div class="stats-grid" id="paymentStats" style="margin-bottom:2rem"></div>
+
+      <!-- WORKSHOP PAYMENTS -->
+      <div style="padding:0.6rem 1rem;background:var(--red-dim);border:1px solid rgba(188,31,46,0.25);border-bottom:none;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem">
+        <div style="display:flex;align-items:center;gap:0.6rem">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block"></span>
+          <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--red);font-family:'Syne',sans-serif" id="wsPayLabel">Workshop Payments</span>
         </div>
-        <table><thead><tr><th>Payment ID</th><th>Name</th><th>Workshop</th><th>Amount</th><th>Type</th><th>Date</th></tr></thead>
-        <tbody id="payTable"></tbody></table>
+        <input class="table-search" style="width:200px" placeholder="Search name / ID…" oninput="searchPayments(this.value)">
+      </div>
+      <div class="table-wrap" style="margin-bottom:2rem">
+        <table><thead><tr><th>Name</th><th>Phone</th><th>Workshop</th><th>Package</th><th>Slot / Song</th><th>Amount</th><th>Type</th><th>Payment ID</th><th>Date</th></tr></thead>
+        <tbody id="wsPayTable"></tbody></table>
+      </div>
+
+      <!-- BATCH PAYMENTS -->
+      <div style="padding:0.6rem 1rem;background:rgba(106,175,126,0.08);border:1px solid rgba(106,175,126,0.25);border-bottom:none;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem">
+        <div style="display:flex;align-items:center;gap:0.6rem">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block"></span>
+          <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);font-family:'Syne',sans-serif" id="batchPayLabel">Regular Batch Payments</span>
+        </div>
+        <input class="table-search" style="width:200px" placeholder="Search name…" oninput="searchBatchPayments(this.value)">
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Trainer</th><th>Subscription</th><th>Fee Paid</th><th>Mode</th><th>Join Date</th></tr></thead>
+        <tbody id="batchPayTable"></tbody></table>
       </div>
     </div>
 
@@ -814,6 +839,7 @@ window.showView = function(id){
   if(id==='abouteditor') loadAboutContent();
   if(id==='batches')     renderBatchesView();
   if(id==='checkins')    renderCheckinsView();
+  if(id==='payments')    renderAllPayments();
 };
 
 /* ══════════════════════════════════════
@@ -1636,34 +1662,112 @@ window.deleteRegistration = async function(regId, regName){
 /* ══════════════════════════════════════
    PAYMENTS
 ══════════════════════════════════════ */
+let wsPaySearch    = '';
+let batchPaySearch = '';
+
 function renderPayTable(search=''){
-  let data   = [...registrations];
-  if(search) data = data.filter(r=>(r.payment_id||'').toLowerCase().includes(search.toLowerCase()));
-  const rev  = registrations.reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
-  const avg  = registrations.length ? Math.round(rev/registrations.length) : 0;
-  const online = registrations.filter(r=>!r.payment_type||r.payment_type==='Online').length;
-  const manual = registrations.filter(r=>r.payment_type&&r.payment_type!=='Online').length;
-
-  document.getElementById('paymentStats').innerHTML = `
-    <div class="stat-card"><p class="stat-label">Total Revenue</p><p class="stat-val green">₹${rev.toLocaleString('en-IN')}</p></div>
-    <div class="stat-card"><p class="stat-label">Transactions</p><p class="stat-val">${registrations.length}</p></div>
-    <div class="stat-card"><p class="stat-label">Avg. Transaction</p><p class="stat-val yellow">₹${avg.toLocaleString('en-IN')}</p></div>
-    <div class="stat-card"><p class="stat-label">Online / Manual</p><p class="stat-val">${online}<span style="font-size:1rem;color:var(--muted)"> / ${manual}</span></p></div>
-  `;
-
-  document.getElementById('payTable').innerHTML = data.length
-    ? data.map(r=>`<tr>
-        <td style="font-family:monospace;font-size:0.75rem;color:var(--muted)">${r.payment_id||'—'}</td>
-        <td style="color:var(--text)">${r.name||'—'}</td>
-        <td>${r.workshop||'—'}</td>
-        <td style="color:var(--yellow);font-weight:500">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
-        <td>${payTypePill(r.payment_type)}</td>
-        <td style="font-size:0.75rem;color:var(--muted)">${r.timestamp||'—'}</td>
-      </tr>`).join('')
-    : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:3rem">No payments yet</td></tr>';
+  wsPaySearch = search;
+  renderAllPayments();
 }
 
-window.searchPayments = function(q){ renderPayTable(q); };
+window.searchPayments      = function(q){ wsPaySearch=q;    renderAllPayments(); };
+window.searchBatchPayments = function(q){ batchPaySearch=q; renderAllPayments(); };
+
+function renderAllPayments(){
+  // Workshop payments
+  let wsData = [...registrations];
+  if(wsPaySearch) wsData = wsData.filter(r=>
+    (r.name||'').toLowerCase().includes(wsPaySearch.toLowerCase()) ||
+    (r.payment_id||'').toLowerCase().includes(wsPaySearch.toLowerCase())
+  );
+
+  // Batch payments
+  let batchData = [...batchStudents].filter(s=>parseFloat(s.fee||0)>0);
+  if(batchPaySearch) batchData = batchData.filter(s=>
+    (s.name||'').toLowerCase().includes(batchPaySearch.toLowerCase())
+  );
+
+  // Stats
+  const wsRev     = registrations.reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
+  const batchRev  = batchStudents.reduce((s,x)=>s+parseFloat(x.fee||0),0);
+  const totalRev  = wsRev + batchRev;
+  const online    = registrations.filter(r=>r.payment_type==='Online').length;
+  const cash      = registrations.filter(r=>r.payment_type!=='Online').length;
+  const batchCash = batchStudents.filter(s=>s.payMode==='Cash').length;
+  const batchOnline = batchStudents.filter(s=>s.payMode==='Online').length;
+
+  document.getElementById('paymentStats').innerHTML = `
+    <div class="stat-card"><p class="stat-label">Total Revenue</p><p class="stat-val green">₹${totalRev.toLocaleString('en-IN')}</p></div>
+    <div class="stat-card"><p class="stat-label">Workshop Revenue</p><p class="stat-val red">₹${wsRev.toLocaleString('en-IN')}</p><p class="stat-meta">${registrations.length} registrations</p></div>
+    <div class="stat-card"><p class="stat-label">Batch Revenue</p><p class="stat-val" style="color:var(--green)">₹${batchRev.toLocaleString('en-IN')}</p><p class="stat-meta">${batchStudents.length} students</p></div>
+    <div class="stat-card"><p class="stat-label">Online / Cash (Workshops)</p><p class="stat-val">${online}<span style="font-size:1rem;color:var(--muted)"> / ${cash}</span></p></div>
+    <div class="stat-card"><p class="stat-label">Online / Cash (Batches)</p><p class="stat-val">${batchOnline}<span style="font-size:1rem;color:var(--muted)"> / ${batchCash}</span></p></div>
+  `;
+
+  document.getElementById('wsPayLabel').textContent    = `Workshop Payments · ${wsData.length}`;
+  document.getElementById('batchPayLabel').textContent = `Regular Batch Payments · ${batchData.length}`;
+
+  // Workshop payments table
+  document.getElementById('wsPayTable').innerHTML = wsData.length
+    ? wsData.map(r=>`<tr>
+        <td style="color:var(--text);font-weight:500">${r.name||'—'}</td>
+        <td style="font-size:0.78rem">${r.phone||'—'}</td>
+        <td>${r.workshop||'—'}</td>
+        <td>${r.package||'—'}</td>
+        <td style="font-size:0.75rem;color:var(--yellow)">${getSlotDisplayForReg(r)}</td>
+        <td style="color:var(--yellow);font-weight:500">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
+        <td>${payTypePill(r.payment_type)}</td>
+        <td style="font-family:monospace;font-size:0.7rem;color:var(--muted)">${r.payment_id||'—'}</td>
+        <td style="font-size:0.72rem;color:var(--muted)">${r.timestamp||'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:2rem">No workshop payments yet</td></tr>';
+
+  // Batch payments table
+  document.getElementById('batchPayTable').innerHTML = batchData.length
+    ? batchData.map(s=>{
+        const b = BATCHES_CONFIG.find(x=>x.id===s.batchId);
+        return `<tr>
+          <td style="color:var(--text);font-weight:500">${s.name||'—'}</td>
+          <td style="font-size:0.78rem">${s.phone||'—'}</td>
+          <td style="font-size:0.78rem">${b?.name||s.batchId} · ${b?.time||''}</td>
+          <td style="font-size:0.78rem;color:var(--mid)">${s.artistName||b?.trainer||'—'}</td>
+          <td><span class="pill ${s.subscription==='Monthly'?'pill-blue':'pill-yellow'}">${s.subscription||'—'}</span></td>
+          <td style="color:var(--green);font-weight:500">₹${parseFloat(s.fee||0).toLocaleString('en-IN')}</td>
+          <td><span class="pill ${s.payMode==='Cash'?'pill-yellow':'pill-green'}">${s.payMode||'—'}</span></td>
+          <td style="font-size:0.72rem;color:var(--muted)">${s.joinDate||'—'}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem">No batch payments yet</td></tr>';
+}
+
+function getSlotDisplayForReg(r){
+  const ws = workshops.find(x=>x.artist===r.workshop);
+  const rawSlots = (r.slots||'—').split('|').map(s=>s.trim());
+  if(!ws||!ws.slots) return rawSlots.join(' / ');
+  return rawSlots.map(rs=>{
+    const match = ws.slots.find(s=>rs.includes(s.date)||rs.includes(s.time)||rs.includes(s.song||'__'));
+    return match ? (match.song?'♪ '+match.song+' · ':'')+match.time : rs;
+  }).join(' / ');
+}
+
+window.exportAllPaymentsCSV = function(){
+  const wsRows = registrations.map(r=>[
+    'Workshop', r.name||'', r.phone||'', r.workshop||'', r.package||'',
+    r.slots||'', r.amount_paid||0, r.payment_type||'', r.payment_id||'', r.timestamp||''
+  ]);
+  const batchRows = batchStudents.map(s=>{
+    const b = BATCHES_CONFIG.find(x=>x.id===s.batchId);
+    return ['Batch', s.name||'', s.phone||'', b?.name||s.batchId, s.subscription||'',
+      '', s.fee||0, s.payMode||'', '', s.joinDate||''];
+  });
+  const headers = ['Type','Name','Phone','Workshop/Batch','Package/Subscription','Slot','Amount','Payment Mode','Payment ID','Date'];
+  const csv = [headers,...wsRows,...batchRows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download = 'ths-payments-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  showToast('Payments CSV downloaded!');
+};
 
 /* ══════════════════════════════════════
    REGULAR BATCHES — admin view
@@ -1683,9 +1787,8 @@ function listenBatchStudents(){
   onSnapshot(collection(db,'batchStudents'), snap => {
     batchStudents = snap.docs.map(d=>({id:d.id,...d.data()}));
     batchStudents.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-    if(document.getElementById('view-batches').classList.contains('active')){
-      renderBatchesView();
-    }
+    if(document.getElementById('view-batches')?.classList.contains('active')) renderBatchesView();
+    if(document.getElementById('view-payments')?.classList.contains('active')) renderAllPayments();
   });
 }
 
