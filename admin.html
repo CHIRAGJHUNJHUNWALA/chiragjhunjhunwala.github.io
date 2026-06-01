@@ -725,7 +725,13 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
       <div class="form-row">
         <div class="form-group"><label>Booking Date From *</label><input type="date" id="rentalDateFrom" style="color-scheme:dark" onchange="updateRentalBookingText()"></div>
-        <div class="form-group"><label>Booking Date To <span style="font-weight:300;color:var(--muted);font-size:0.75em">(if multi-day)</span></label><input type="date" id="rentalDateTo" style="color-scheme:dark" onchange="updateRentalBookingText()"></div>
+        <div class="form-group">
+          <label>Booking Date To <span style="font-weight:300;color:var(--muted);font-size:0.75em">(if multi-day)</span></label>
+          <div style="display:flex;gap:0.4rem">
+            <input type="date" id="rentalDateTo" style="color-scheme:dark;flex:1" onchange="updateRentalBookingText()">
+            <button type="button" onclick="clearRentalDateTo()" title="Clear end date" style="background:var(--bg3);border:1px solid var(--border2);color:var(--muted);padding:0 0.6rem;cursor:pointer;font-size:0.9rem;transition:all 0.2s;flex-shrink:0" onmouseover="this.style.color='#e57373';this.style.borderColor='rgba(229,115,115,0.4)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border2)'">✕</button>
+          </div>
+        </div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Start Time *</label><input type="time" id="rentalTimeFrom" style="color-scheme:dark" onchange="updateRentalBookingText()"></div>
@@ -2865,49 +2871,61 @@ window.openAddRental=function(){
   openModal('rentalModal');
 };
 
+window.clearRentalDateTo = function(){
+  document.getElementById('rentalDateTo').value = '';
+  updateRentalBookingText();
+};
+
 window.updateRentalBookingText = function(){
   const dateFrom = document.getElementById('rentalDateFrom').value;
   const dateTo   = document.getElementById('rentalDateTo').value;
   const timeFrom = document.getElementById('rentalTimeFrom').value;
   const timeTo   = document.getElementById('rentalTimeTo').value;
 
-  // Format booking summary
+  const fmtTime = t => {
+    if(!t) return '';
+    const [h,m] = t.split(':').map(Number);
+    const ampm = h>=12?'PM':'AM';
+    return (h>12?h-12:h||12)+(m?':'+String(m).padStart(2,'0'):'')+ampm;
+  };
+
+  const fmtDate = d => {
+    if(!d) return '';
+    return new Date(d+'T00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short'}).toUpperCase();
+  };
+
+  // Build booking summary
   let summary = '';
   if(dateFrom){
-    const df = new Date(dateFrom+'T00:00');
-    const fromStr = df.toLocaleDateString('en-IN',{day:'numeric',month:'short'}).toUpperCase();
-    if(dateTo && dateTo!==dateFrom){
-      const dt = new Date(dateTo+'T00:00');
-      const toStr = dt.toLocaleDateString('en-IN',{day:'numeric',month:'short'}).toUpperCase();
-      summary = `${fromStr} - ${toStr}`;
+    if(dateTo && dateTo !== dateFrom){
+      summary = `${fmtDate(dateFrom)} - ${fmtDate(dateTo)}`;
     } else {
-      summary = fromStr;
+      summary = fmtDate(dateFrom);
     }
     if(timeFrom && timeTo){
-      const fmtTime = t => {
-        const [h,m] = t.split(':').map(Number);
-        const ampm = h>=12?'PM':'AM';
-        return (h>12?h-12:h||12)+(m?':'+String(m).padStart(2,'0'):'')+ampm;
-      };
       summary += ` : ${fmtTime(timeFrom)}-${fmtTime(timeTo)}`;
     }
   }
   document.getElementById('rentalBooking').value = summary;
 
-  // Auto-calculate hours
-  if(timeFrom && timeTo && dateFrom){
-    const start = new Date(dateFrom+'T'+timeFrom);
-    const end   = new Date((dateTo||dateFrom)+'T'+timeTo);
-    let diffHrs = (end - start) / (1000*60*60);
-    if(dateTo && dateTo!==dateFrom){
-      // Multi-day: count days × hours per day
-      const days = Math.round((new Date(dateTo)-new Date(dateFrom))/(1000*60*60*24))+1;
-      const [fh,fm] = timeFrom.split(':').map(Number);
-      const [th,tm] = timeTo.split(':').map(Number);
-      const hrsPerDay = (th+tm/60) - (fh+fm/60);
-      diffHrs = days * hrsPerDay;
+  // Calculate hours
+  if(timeFrom && timeTo){
+    const [fh,fm] = timeFrom.split(':').map(Number);
+    const [th,tm] = timeTo.split(':').map(Number);
+    const hrsPerDay = (th + tm/60) - (fh + fm/60);
+
+    if(hrsPerDay > 0){
+      if(dateTo && dateTo !== dateFrom){
+        // Multi-day: count total days × hours per day
+        const start = new Date(dateFrom+'T00:00');
+        const end   = new Date(dateTo+'T00:00');
+        const days  = Math.round((end - start) / (1000*60*60*24)) + 1;
+        document.getElementById('rentalHours').value = Math.round(days * hrsPerDay * 10) / 10;
+      } else {
+        // Single day: just time difference
+        document.getElementById('rentalHours').value = Math.round(hrsPerDay * 10) / 10;
+      }
     }
-    if(diffHrs>0) document.getElementById('rentalHours').value = Math.round(diffHrs*10)/10;
   }
 };
 
