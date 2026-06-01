@@ -279,6 +279,13 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="nav-item" onclick="showView('batches')">
         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>All Batches
       </div>
+      <div class="nav-section-title">Studio Rental</div>
+      <div class="nav-item" onclick="showView('schedule')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Schedule
+      </div>
+      <div class="nav-item" onclick="showView('rentals')">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Rental Payments
+      </div>
       <div class="nav-section-title">Finance</div>
       <div class="nav-item" onclick="showView('payments')">
         <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>All Payments
@@ -514,6 +521,67 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
     </div>
 
+    <!-- STUDIO SCHEDULE -->
+    <div class="view" id="view-schedule">
+      <div class="page-header">
+        <div><h1 class="page-title">Studio Schedule</h1><p class="page-sub">All bookings across the studio</p></div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
+          <div style="display:flex;gap:0.5rem;align-items:center">
+            <input type="date" id="scheduleDate" style="background:var(--bg3);border:1px solid var(--border2);padding:0.5rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none;color-scheme:dark" onchange="renderSchedule()">
+          </div>
+          <button class="btn btn-red" onclick="openAddSchedule()">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Booking
+          </button>
+        </div>
+      </div>
+      <!-- Week nav -->
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="changeScheduleWeek(-1)">← Prev Week</button>
+        <span id="scheduleWeekLabel" style="font-size:0.82rem;color:var(--text-mid)"></span>
+        <button class="btn btn-ghost btn-sm" onclick="changeScheduleWeek(1)">Next Week →</button>
+        <button class="btn btn-outline btn-sm" onclick="goScheduleToday()">Today</button>
+      </div>
+      <!-- Day tabs -->
+      <div class="filter-tabs" id="scheduleDayTabs" style="flex-wrap:wrap;margin-bottom:1.5rem"></div>
+      <!-- Schedule grid -->
+      <div id="scheduleGrid"></div>
+    </div>
+
+    <!-- RENTAL PAYMENTS -->
+    <div class="view" id="view-rentals">
+      <div class="page-header">
+        <div><h1 class="page-title">Rental Payments</h1><p class="page-sub">Studio rental client payments</p></div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+          <button class="btn btn-outline" onclick="exportRentalsCSV()">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV
+          </button>
+          <button class="btn btn-red" onclick="openAddRental()">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Rental
+          </button>
+        </div>
+      </div>
+      <!-- Stats -->
+      <div class="stats-grid" id="rentalStats" style="margin-bottom:1.5rem"></div>
+      <!-- Filter tabs -->
+      <div class="filter-tabs" id="rentalFilterTabs">
+        <button class="filter-tab active" onclick="filterRentals('all',this)">All</button>
+        <button class="filter-tab" onclick="filterRentals('cash',this)">Cash</button>
+        <button class="filter-tab" onclick="filterRentals('online',this)">Online</button>
+        <button class="filter-tab" onclick="filterRentals('pending',this)">Pending</button>
+      </div>
+      <!-- Table -->
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">Rental Records</span>
+          <input class="table-search" placeholder="Search name or purpose…" oninput="searchRentals(this.value)">
+        </div>
+        <table>
+          <thead><tr><th>Name / Brand</th><th>Purpose</th><th>Booking</th><th>Hours</th><th>Amount</th><th>Payment</th><th>Handled By</th><th>Remarks</th><th></th></tr></thead>
+          <tbody id="rentalsTable"></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- PAYMENTS -->
     <div class="view" id="view-payments">
       <div class="page-header">
@@ -585,6 +653,99 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
     </div>
     <div id="reportContent" style="padding:1.5rem;overflow-y:auto;max-height:calc(100vh - 80px)"></div>
+  </div>
+</div>
+
+<!-- ADD SCHEDULE MODAL -->
+<div class="modal-backdrop" id="scheduleModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-head">
+      <h2 class="modal-title" id="scheduleModalTitle">Add Booking</h2>
+      <button class="modal-close" onclick="closeModal('scheduleModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="scheduleEditId">
+      <div class="form-row">
+        <div class="form-group"><label>Date *</label><input type="date" id="schDate" style="color-scheme:dark"></div>
+        <div class="form-group"><label>Day</label><input type="text" id="schDay" placeholder="Auto-filled" readonly style="background:var(--bg3);opacity:0.6"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Start Time *</label><input type="time" id="schTimeFrom" style="color-scheme:dark"></div>
+        <div class="form-group"><label>End Time *</label><input type="time" id="schTimeTo" style="color-scheme:dark"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Category</label>
+          <select id="schCategory">
+            <option value="Dance Workshop">Dance Workshop</option>
+            <option value="Studio Rental">Studio Rental</option>
+            <option value="Shoot">Shoot</option>
+            <option value="Event">Event</option>
+            <option value="Meditation">Meditation</option>
+            <option value="Regulars">Regulars</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Artist / Client *</label><input type="text" id="schArtist" placeholder="Name or Brand"></div>
+      </div>
+      <div class="form-row full">
+        <div class="form-group"><label>Remarks</label><input type="text" id="schRemarks" placeholder="Any notes…"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('scheduleModal')">Cancel</button>
+      <button class="btn btn-red" onclick="saveScheduleEntry()">Save Booking</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD RENTAL MODAL -->
+<div class="modal-backdrop" id="rentalModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head">
+      <h2 class="modal-title" id="rentalModalTitle">Add Rental</h2>
+      <button class="modal-close" onclick="closeModal('rentalModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="rentalEditId">
+      <div class="form-row">
+        <div class="form-group"><label>Name / Brand *</label><input type="text" id="rentalName" placeholder="e.g. Sonia Gandhi"></div>
+        <div class="form-group"><label>Purpose *</label>
+          <select id="rentalPurpose">
+            <option value="Shoot">Shoot</option>
+            <option value="Dance Workshop">Dance Workshop</option>
+            <option value="Event">Event</option>
+            <option value="Birthday Kirtan">Birthday Kirtan</option>
+            <option value="Meditation">Meditation</option>
+            <option value="Summer Camp">Summer Camp</option>
+            <option value="Movie Screening">Movie Screening</option>
+            <option value="Regulars">Regulars</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Booking Date(s) *</label><input type="text" id="rentalBooking" placeholder="e.g. 4 MAY : 6-10PM or 18-26 MAY : 11-12PM"></div>
+        <div class="form-group"><label>Total Hours</label><input type="number" id="rentalHours" placeholder="e.g. 5" min="0" step="0.5"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Amount ₹ *</label><input type="number" id="rentalAmount" placeholder="0"></div>
+        <div class="form-group"><label>Payment Mode</label>
+          <select id="rentalPayMode">
+            <option value="Cash">Cash</option>
+            <option value="Online">Online / UPI</option>
+            <option value="Pending">Pending</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Handled By</label><input type="text" id="rentalHandledBy" placeholder="e.g. Govind"></div>
+        <div class="form-group"><label>Remarks</label><input type="text" id="rentalRemarks" placeholder="e.g. 9000 received"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('rentalModal')">Cancel</button>
+      <button class="btn btn-red" onclick="saveRental()">Save Rental</button>
+    </div>
   </div>
 </div>
 
@@ -836,6 +997,8 @@ async function initApp(){
   showToast('Loading data…');
   await Promise.all([listenWorkshops(), listenRegistrations()]);
   listenBatchStudents();
+  listenSchedule();
+  listenRentals();
 }
 
 /* ══════════════════════════════════════
@@ -885,6 +1048,8 @@ window.showView = function(id){
   if(id==='batches')     renderBatchesView();
   if(id==='checkins')    renderCheckinsView();
   if(id==='payments')    renderAllPayments();
+  if(id==='schedule')  { goScheduleToday(); }
+  if(id==='rentals')     renderRentals();
 };
 
 /* ══════════════════════════════════════
@@ -2492,6 +2657,233 @@ function initAboutEditor(data){
       <div class="form-group"><label>Text</label><textarea id="bel-text-${i}" style="min-height:70px">${b.text||''}</textarea></div>
     </div>`).join('');
 }
+
+/* ══════════════════════════════════════
+   STUDIO SCHEDULE
+══════════════════════════════════════ */
+let scheduleEntries  = [];
+let scheduleWeekStart = null;
+let scheduleDayIdx   = 0;
+
+function listenSchedule(){
+  onSnapshot(collection(db,'studioSchedule'), snap=>{
+    scheduleEntries = snap.docs.map(d=>({id:d.id,...d.data()}));
+    scheduleEntries.sort((a,b)=>(a.date+a.timeFrom).localeCompare(b.date+b.timeFrom));
+    if(document.getElementById('view-schedule')?.classList.contains('active')) renderSchedule();
+  });
+}
+
+window.goScheduleToday = function(){
+  const now = new Date();
+  const dow = now.getDay(); const toMon = dow===0?-6:1-dow;
+  const mon = new Date(now); mon.setDate(now.getDate()+toMon);
+  scheduleWeekStart = mon;
+  scheduleDayIdx = dow===0?6:dow-1;
+  document.getElementById('scheduleDate').value = now.toLocaleDateString('en-CA');
+  renderSchedule();
+};
+
+window.changeScheduleWeek = function(dir){
+  if(!scheduleWeekStart){ scheduleWeekStart=new Date(); }
+  scheduleWeekStart = new Date(scheduleWeekStart);
+  scheduleWeekStart.setDate(scheduleWeekStart.getDate()+(dir*7));
+  renderSchedule();
+};
+
+window.renderSchedule = function(){
+  const dateVal = document.getElementById('scheduleDate')?.value;
+  if(dateVal && !scheduleWeekStart){
+    const [y,m,d] = dateVal.split('-').map(Number);
+    const dt = new Date(y,m-1,d); const dow=dt.getDay(); const toMon=dow===0?-6:1-dow;
+    scheduleWeekStart=new Date(dt); scheduleWeekStart.setDate(dt.getDate()+toMon);
+    scheduleDayIdx=dow===0?6:dow-1;
+  }
+  if(!scheduleWeekStart){
+    const now=new Date(); const dow=now.getDay(); const toMon=dow===0?-6:1-dow;
+    scheduleWeekStart=new Date(now); scheduleWeekStart.setDate(now.getDate()+toMon); scheduleDayIdx=dow===0?6:dow-1;
+  }
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const weekDates=Array.from({length:7},(_,i)=>{const d=new Date(scheduleWeekStart);d.setDate(scheduleWeekStart.getDate()+i);return d;});
+  const opts={day:'numeric',month:'short'};
+  document.getElementById('scheduleWeekLabel').textContent=weekDates[0].toLocaleDateString('en-IN',opts)+' – '+weekDates[6].toLocaleDateString('en-IN',{...opts,year:'numeric'});
+  document.getElementById('scheduleDayTabs').innerHTML=days.map((d,i)=>{
+    const dateStr=weekDates[i].toLocaleDateString('en-CA');
+    const count=scheduleEntries.filter(e=>e.date===dateStr).length;
+    return `<button class="filter-tab ${i===scheduleDayIdx?'active':''}" onclick="selectScheduleDay(${i})">${d} ${weekDates[i].getDate()} ${count?`<span style="background:var(--red);color:#fff;border-radius:10px;padding:0.1rem 0.4rem;font-size:0.55rem;margin-left:0.2rem">${count}</span>`:''}</button>`;
+  }).join('');
+  const selDate=weekDates[scheduleDayIdx].toLocaleDateString('en-CA');
+  const dayName=days[scheduleDayIdx]+', '+weekDates[scheduleDayIdx].toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+  const dayEntries=scheduleEntries.filter(e=>e.date===selDate);
+  const catColor={'Dance Workshop':'rgba(188,31,46,0.12)','Studio Rental':'rgba(106,176,245,0.12)','Shoot':'rgba(106,175,126,0.12)','Event':'rgba(245,230,66,0.1)','Meditation':'rgba(149,128,255,0.12)','Regulars':'rgba(232,134,58,0.12)'};
+  const catBorder={'Dance Workshop':'rgba(188,31,46,0.35)','Studio Rental':'rgba(106,176,245,0.35)','Shoot':'rgba(106,175,126,0.35)','Event':'rgba(245,230,66,0.28)','Meditation':'rgba(149,128,255,0.35)','Regulars':'rgba(232,134,58,0.35)'};
+  document.getElementById('scheduleGrid').innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
+      <p style="font-size:0.82rem;color:var(--text-mid)">${dayName}</p>
+      <button class="btn btn-outline btn-sm" onclick="openAddScheduleForDate('${selDate}')">+ Add to this day</button>
+    </div>
+    ${dayEntries.length?dayEntries.map(e=>`
+      <div style="display:grid;grid-template-columns:90px 1fr auto;gap:1rem;align-items:center;padding:0.85rem 1.25rem;background:${catColor[e.category]||'rgba(255,255,255,0.04)'};border:1px solid ${catBorder[e.category]||'var(--border)'};margin-bottom:0.5rem">
+        <div><p style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:0.04em;color:var(--text);line-height:1">${e.timeFrom||'—'}</p><p style="font-size:0.68rem;color:var(--muted)">to ${e.timeTo||'—'}</p></div>
+        <div><p style="font-weight:500;color:var(--text);font-size:0.88rem">${e.artist||'—'}</p><p style="font-size:0.72rem;color:var(--muted);margin-top:0.1rem">${e.category||'—'}${e.remarks?' · '+e.remarks:''}</p></div>
+        <div style="display:flex;gap:0.35rem">
+          <button class="btn btn-ghost btn-sm" onclick="editScheduleEntry('${e.id}')"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="btn btn-danger btn-sm" onclick="deleteScheduleEntry('${e.id}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+        </div>
+      </div>`).join('')
+    :`<div style="text-align:center;padding:3rem;color:var(--muted);font-size:0.85rem;border:1px dashed var(--border)">No bookings on this day.<br><br><button class="btn btn-outline btn-sm" onclick="openAddScheduleForDate('${selDate}')">+ Add Booking</button></div>`}`;
+};
+
+window.selectScheduleDay=function(idx){scheduleDayIdx=idx;renderSchedule();};
+
+window.openAddSchedule=function(){
+  document.getElementById('scheduleModalTitle').textContent='Add Booking';
+  ['scheduleEditId','schDate','schDay','schTimeFrom','schTimeTo','schArtist','schRemarks'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('schCategory').value='Dance Workshop';
+  openModal('scheduleModal');
+};
+
+window.openAddScheduleForDate=function(dateStr){
+  openAddSchedule();
+  document.getElementById('schDate').value=dateStr;
+  const d=new Date(dateStr+'T00:00');
+  document.getElementById('schDay').value=d.toLocaleDateString('en-IN',{weekday:'long'});
+};
+
+window.editScheduleEntry=function(id){
+  const e=scheduleEntries.find(x=>x.id===id);
+  document.getElementById('scheduleModalTitle').textContent='Edit Booking';
+  document.getElementById('scheduleEditId').value=id;
+  document.getElementById('schDate').value=e.date||'';
+  document.getElementById('schDay').value=e.day||'';
+  document.getElementById('schTimeFrom').value=e.timeFrom||'';
+  document.getElementById('schTimeTo').value=e.timeTo||'';
+  document.getElementById('schCategory').value=e.category||'Dance Workshop';
+  document.getElementById('schArtist').value=e.artist||'';
+  document.getElementById('schRemarks').value=e.remarks||'';
+  openModal('scheduleModal');
+};
+
+window.saveScheduleEntry=async function(){
+  const date=document.getElementById('schDate').value;
+  const artist=document.getElementById('schArtist').value.trim();
+  if(!date||!artist){showToast('Date and artist/client are required','error');return;}
+  const d=new Date(date+'T00:00');
+  const data={date,day:d.toLocaleDateString('en-IN',{weekday:'long'}),
+    timeFrom:document.getElementById('schTimeFrom').value,timeTo:document.getElementById('schTimeTo').value,
+    category:document.getElementById('schCategory').value,artist,remarks:document.getElementById('schRemarks').value.trim(),updatedAt:Date.now()};
+  const editId=document.getElementById('scheduleEditId').value;
+  if(editId) await setDoc(doc(db,'studioSchedule',editId),data,{merge:true});
+  else await addDoc(collection(db,'studioSchedule'),{...data,createdAt:Date.now()});
+  closeModal('scheduleModal');showToast('Booking saved ✓');
+};
+
+window.deleteScheduleEntry=async function(id){
+  if(!confirm('Delete this booking?'))return;
+  await deleteDoc(doc(db,'studioSchedule',id));showToast('Booking deleted');
+};
+
+document.addEventListener('change',e=>{
+  if(e.target.id==='schDate'&&e.target.value){
+    const d=new Date(e.target.value+'T00:00');
+    document.getElementById('schDay').value=d.toLocaleDateString('en-IN',{weekday:'long'});
+  }
+});
+
+/* ══════════════════════════════════════
+   RENTAL PAYMENTS
+══════════════════════════════════════ */
+let rentals=[],rentalFilter='all',rentalSearch='';
+
+function listenRentals(){
+  onSnapshot(collection(db,'studioRentals'),snap=>{
+    rentals=snap.docs.map(d=>({id:d.id,...d.data()}));
+    rentals.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    if(document.getElementById('view-rentals')?.classList.contains('active')) renderRentals();
+  });
+}
+
+window.filterRentals=function(f,el){rentalFilter=f;document.querySelectorAll('#rentalFilterTabs .filter-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderRentals();};
+window.searchRentals=function(q){rentalSearch=q;renderRentals();};
+
+function renderRentals(){
+  let data=[...rentals];
+  if(rentalFilter==='cash')    data=data.filter(r=>r.payMode==='Cash');
+  if(rentalFilter==='online')  data=data.filter(r=>r.payMode==='Online');
+  if(rentalFilter==='pending') data=data.filter(r=>r.payMode==='Pending');
+  if(rentalSearch) data=data.filter(r=>(r.name||'').toLowerCase().includes(rentalSearch.toLowerCase())||(r.purpose||'').toLowerCase().includes(rentalSearch.toLowerCase()));
+  const totalRev=rentals.reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const cashRev=rentals.filter(r=>r.payMode==='Cash').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const pending=rentals.filter(r=>r.payMode==='Pending').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const totalHrs=rentals.reduce((s,r)=>s+parseFloat(r.hours||0),0);
+  document.getElementById('rentalStats').innerHTML=`
+    <div class="stat-card"><p class="stat-label">Total Revenue</p><p class="stat-val green">₹${totalRev.toLocaleString('en-IN')}</p></div>
+    <div class="stat-card"><p class="stat-label">Cash Received</p><p class="stat-val yellow">₹${cashRev.toLocaleString('en-IN')}</p></div>
+    <div class="stat-card"><p class="stat-label">Pending</p><p class="stat-val" style="color:#e57373">₹${pending.toLocaleString('en-IN')}</p></div>
+    <div class="stat-card"><p class="stat-label">Total Bookings</p><p class="stat-val">${rentals.length}</p></div>
+    <div class="stat-card"><p class="stat-label">Total Hours</p><p class="stat-val">${totalHrs}</p></div>`;
+  const payPill=mode=>mode==='Cash'?`<span class="pill pill-yellow">Cash</span>`:mode==='Online'?`<span class="pill pill-green">Online</span>`:`<span class="pill" style="background:rgba(229,115,115,0.15);color:#e57373;border:1px solid rgba(229,115,115,0.3)">Pending</span>`;
+  document.getElementById('rentalsTable').innerHTML=data.length
+    ?data.map(r=>`<tr>
+      <td style="color:var(--text);font-weight:500">${r.name||'—'}</td>
+      <td style="font-size:0.78rem">${r.purpose||'—'}</td>
+      <td style="font-size:0.78rem;color:var(--text-mid)">${r.booking||'—'}</td>
+      <td style="text-align:center">${r.hours||'—'}</td>
+      <td style="color:var(--yellow);font-weight:500">₹${parseFloat(r.amount||0).toLocaleString('en-IN')}</td>
+      <td>${payPill(r.payMode)}</td>
+      <td style="font-size:0.75rem;color:var(--muted)">${r.handledBy||'—'}</td>
+      <td style="font-size:0.75rem;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.remarks||'—'}</td>
+      <td><div style="display:flex;gap:0.35rem">
+        <button class="btn btn-ghost btn-sm" onclick="editRental('${r.id}')"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRental('${r.id}','${(r.name||'').replace(/'/g,"\\'")}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+      </div></td>
+    </tr>`).join('')
+    :'<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:3rem">No rentals yet</td></tr>';
+}
+
+window.openAddRental=function(){
+  document.getElementById('rentalModalTitle').textContent='Add Rental';
+  ['rentalEditId','rentalName','rentalBooking','rentalHours','rentalAmount','rentalHandledBy','rentalRemarks'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('rentalPurpose').value='Shoot';document.getElementById('rentalPayMode').value='Cash';
+  openModal('rentalModal');
+};
+
+window.editRental=function(id){
+  const r=rentals.find(x=>x.id===id);
+  document.getElementById('rentalModalTitle').textContent='Edit Rental';
+  document.getElementById('rentalEditId').value=id;
+  document.getElementById('rentalName').value=r.name||'';document.getElementById('rentalPurpose').value=r.purpose||'Shoot';
+  document.getElementById('rentalBooking').value=r.booking||'';document.getElementById('rentalHours').value=r.hours||'';
+  document.getElementById('rentalAmount').value=r.amount||'';document.getElementById('rentalPayMode').value=r.payMode||'Cash';
+  document.getElementById('rentalHandledBy').value=r.handledBy||'';document.getElementById('rentalRemarks').value=r.remarks||'';
+  openModal('rentalModal');
+};
+
+window.saveRental=async function(){
+  const name=document.getElementById('rentalName').value.trim();
+  if(!name){showToast('Name is required','error');return;}
+  const data={name,purpose:document.getElementById('rentalPurpose').value,booking:document.getElementById('rentalBooking').value.trim(),
+    hours:parseFloat(document.getElementById('rentalHours').value)||0,amount:parseFloat(document.getElementById('rentalAmount').value)||0,
+    payMode:document.getElementById('rentalPayMode').value,handledBy:document.getElementById('rentalHandledBy').value.trim(),
+    remarks:document.getElementById('rentalRemarks').value.trim(),updatedAt:Date.now()};
+  const editId=document.getElementById('rentalEditId').value;
+  if(editId) await setDoc(doc(db,'studioRentals',editId),data,{merge:true});
+  else await addDoc(collection(db,'studioRentals'),{...data,createdAt:Date.now()});
+  closeModal('rentalModal');showToast('Rental saved ✓');
+};
+
+window.deleteRental=async function(id,name){
+  if(!confirm(`Delete rental for ${name}?`))return;
+  await deleteDoc(doc(db,'studioRentals',id));showToast('Rental deleted');
+};
+
+window.exportRentalsCSV=function(){
+  if(!rentals.length){showToast('No rentals to export','error');return;}
+  const headers=['Name/Brand','Purpose','Booking','Hours','Amount','Payment Mode','Handled By','Remarks'];
+  const rows=rentals.map(r=>[r.name||'',r.purpose||'',r.booking||'',r.hours||0,r.amount||0,r.payMode||'',r.handledBy||'',r.remarks||'']);
+  const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='ths-rentals-'+new Date().toISOString().slice(0,10)+'.csv';a.click();showToast('Rentals CSV downloaded!');
+};
 
 window.saveAboutContent = async function(){
   try {
