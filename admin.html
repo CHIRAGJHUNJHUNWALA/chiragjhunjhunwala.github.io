@@ -294,6 +294,13 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="nav-item" onclick="showView('abouteditor')">
         <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit About Us
       </div>
+      <div class="nav-section-title">Access</div>
+      <div class="nav-item" onclick="showView('artists')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Artists
+      </div>
+      <div class="nav-item" onclick="showView('settings')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>My Password
+      </div>
     </nav>
     <div class="sidebar-footer">
       <button class="logout-btn" onclick="doLogout()">
@@ -370,6 +377,40 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <button class="filter-tab" onclick="filterWorkshops('draft',this)">Drafts</button>
       </div>
       <div class="ws-grid" id="workshopGrid"></div>
+    </div>
+
+    <!-- ARTISTS -->
+    <div class="view" id="view-artists">
+      <div class="page-header">
+        <div><h1 class="page-title">Artists</h1><p class="page-sub">Manage artist logins, passwords and access</p></div>
+      </div>
+      <div id="artistRosterList"></div>
+    </div>
+
+    <!-- SETTINGS / CHANGE PASSWORD -->
+    <div class="view" id="view-settings">
+      <div class="page-header">
+        <div><h1 class="page-title">My Password</h1><p class="page-sub">Change your admin login password</p></div>
+      </div>
+      <div style="max-width:420px">
+        <div style="background:var(--bg2);border:1px solid var(--border);padding:1.5rem">
+          <p style="font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:1.25rem;font-family:'Syne',sans-serif">Logged in as: <span id="settingsCurrentUser" style="color:var(--text)">—</span></p>
+          <div class="form-group" style="margin-bottom:1rem">
+            <label>Current Password</label>
+            <input type="password" id="settingsOldPass" placeholder="Enter current password" autocomplete="current-password">
+          </div>
+          <div class="form-group" style="margin-bottom:1rem">
+            <label>New Password</label>
+            <input type="password" id="settingsNewPass" placeholder="Enter new password" autocomplete="new-password">
+          </div>
+          <div class="form-group" style="margin-bottom:1.5rem">
+            <label>Confirm New Password</label>
+            <input type="password" id="settingsConfirmPass" placeholder="Confirm new password" autocomplete="new-password">
+          </div>
+          <button class="btn btn-red" onclick="changeAdminPassword()" style="width:100%">Change Password</button>
+          <p id="settingsMsg" style="font-size:0.78rem;margin-top:0.75rem;text-align:center"></p>
+        </div>
+      </div>
     </div>
 
     <!-- ABOUT US EDITOR -->
@@ -940,13 +981,23 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
 /* ══════════════════════════════════════
-   CONFIG — CHANGE PASSWORDS HERE
+   CONFIG — passwords now stored in Firebase
+   Fallback hardcoded in case Firebase is slow
 ══════════════════════════════════════ */
-const ADMINS = [
+let ADMINS = [
   { user: 'chikki',  pass: 'happening2025' },
   { user: 'staff1',  pass: 'space2025' },
   { user: 'staff2',  pass: 'studio2025' },
 ];
+
+let ARTIST_ROSTER = [
+  { user:'divyanshisinghvi',    pass:'divyanshids2025',    name:'Divyanshi Singhvi',   role:'trainer',  blocked:false },
+  { user:'hridhaykhubchandani', pass:'khubchandanikh2026', name:'Hriday Khubchandani', role:'trainer',  blocked:false },
+  { user:'omtarphe',            pass:'omtarphe2025',       name:'Om Tarphe',           role:'workshop', blocked:false },
+  { user:'heetsamani',          pass:'heetsamani2025',     name:'Heet Samani',         role:'workshop', blocked:false },
+];
+
+let currentAdminUser = null; // tracks who is logged in
 
 const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbysvGH62COvPcA6m0J-z4Jyun1EnQwg4uPwivCdB9j86mJ5mhw3N0wANF-xlA3TB_iCEg/exec';
 
@@ -966,14 +1017,26 @@ let regSearchQ = '';
 /* ══════════════════════════════════════
    LOGIN
 ══════════════════════════════════════ */
-window.doLogin = function(){
-  const u  = document.getElementById('loginUser').value.trim();
-  const p  = document.getElementById('loginPass').value;
+async function loadPasswords(){
+  try {
+    const snap = await getDoc(doc(db,'settings','adminPasswords'));
+    if(snap.exists()) ADMINS = snap.data().admins || ADMINS;
+    const asnap = await getDoc(doc(db,'settings','artistPasswords'));
+    if(asnap.exists()) ARTIST_ROSTER = asnap.data().artists || ARTIST_ROSTER;
+  } catch(e){}
+}
+
+window.doLogin = async function(){
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  await loadPasswords();
   const ok = ADMINS.find(a => a.user===u && a.pass===p);
   if(ok){
+    currentAdminUser = u;
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appShell').style.display    = 'block';
     sessionStorage.setItem('ths_auth','1');
+    sessionStorage.setItem('ths_user', u);
     initApp();
   } else {
     document.getElementById('loginError').classList.add('show');
@@ -988,9 +1051,10 @@ window.doLogout = function(){
 };
 
 if(sessionStorage.getItem('ths_auth')==='1'){
+  currentAdminUser = sessionStorage.getItem('ths_user')||'chikki';
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appShell').style.display    = 'block';
-  document.addEventListener('DOMContentLoaded', initApp);
+  document.addEventListener('DOMContentLoaded', ()=>loadPasswords().then(()=>initApp()));
 }
 
 /* ══════════════════════════════════════
@@ -1067,6 +1131,11 @@ window.showView = function(id){
   if(id==='payments')    renderAllPayments();
   if(id==='schedule')  { goScheduleToday(); }
   if(id==='rentals')     renderRentals();
+  if(id==='artists')     renderArtistRoster();
+  if(id==='settings'){
+    document.getElementById('settingsCurrentUser').textContent = currentAdminUser||'—';
+    document.getElementById('settingsMsg').textContent='';
+  }
 };
 
 /* ══════════════════════════════════════
@@ -2066,14 +2135,26 @@ window.generateReport = function(){
     return joined<=to && expiry>=from;
   });
 
+  // Filter rentals by dateFrom in this month
+  const monthRentals = rentals.filter(r=>{
+    if(!r.dateFrom) return false;
+    const d = new Date(r.dateFrom+'T00:00');
+    return d>=from && d<=to;
+  });
+
   // Revenue
-  const wsRevenue    = monthRegs.reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
-  const batchRevenue = monthBatchStudents.reduce((s,x)=>s+parseFloat(x.fee||0),0);
-  const totalRevenue = wsRevenue + batchRevenue;
-  const wsOnline     = monthRegs.filter(r=>r.payment_type==='Online').length;
-  const wsCash       = monthRegs.filter(r=>r.payment_type!=='Online').length;
-  const batchOnline  = monthBatchStudents.filter(s=>s.payMode==='Online'||s.payMode==='UPI').length;
-  const batchCash    = monthBatchStudents.filter(s=>s.payMode==='Cash').length;
+  const wsRevenue      = monthRegs.reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
+  const batchRevenue   = monthBatchStudents.reduce((s,x)=>s+parseFloat(x.fee||0),0);
+  const rentalRevenue  = monthRentals.filter(r=>r.payMode!=='Pending').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const rentalPending  = monthRentals.filter(r=>r.payMode==='Pending').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const totalRevenue   = wsRevenue + batchRevenue + rentalRevenue;
+  const wsOnline       = monthRegs.filter(r=>r.payment_type==='Online').length;
+  const wsCash         = monthRegs.filter(r=>r.payment_type!=='Online').length;
+  const batchOnline    = monthBatchStudents.filter(s=>s.payMode==='Online'||s.payMode==='UPI').length;
+  const batchCash      = monthBatchStudents.filter(s=>s.payMode==='Cash').length;
+  const rentalCash     = monthRentals.filter(r=>r.payMode==='Cash').length;
+  const rentalOnline   = monthRentals.filter(r=>r.payMode==='Online').length;
+  const totalHours     = monthRentals.reduce((s,r)=>s+parseFloat(r.hours||0),0);
 
   // Workshop performance ranking
   const wsPerf = monthWorkshops.map(w=>{
@@ -2129,12 +2210,16 @@ window.generateReport = function(){
         <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--red);margin-bottom:0.85rem;font-family:'Syne',sans-serif;font-weight:700">Revenue Overview</p>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem">
           ${[
-            {label:'Total Revenue',    val:'₹'+totalRevenue.toLocaleString('en-IN'), color:'var(--green)'},
-            {label:'Workshop Revenue', val:'₹'+wsRevenue.toLocaleString('en-IN'),    color:'var(--red)'},
-            {label:'Batch Revenue',    val:'₹'+batchRevenue.toLocaleString('en-IN'), color:'var(--green)'},
-            {label:'Workshop Students',val:monthRegs.length,                         color:'var(--text)'},
-            {label:'Batch Students',   val:monthBatchStudents.length,                color:'var(--text)'},
-            {label:'Workshops Held',   val:monthWorkshops.length,                    color:'var(--text)'},
+            {label:'Total Revenue',    val:'₹'+totalRevenue.toLocaleString('en-IN'),  color:'var(--green)'},
+            {label:'Workshop Revenue', val:'₹'+wsRevenue.toLocaleString('en-IN'),     color:'var(--red)'},
+            {label:'Batch Revenue',    val:'₹'+batchRevenue.toLocaleString('en-IN'),  color:'var(--green)'},
+            {label:'Studio Revenue',   val:'₹'+rentalRevenue.toLocaleString('en-IN'), color:'var(--blue)'},
+            {label:'Studio Pending',   val:'₹'+rentalPending.toLocaleString('en-IN'), color:'#e57373'},
+            {label:'Workshop Students',val:monthRegs.length,                          color:'var(--text)'},
+            {label:'Batch Students',   val:monthBatchStudents.length,                 color:'var(--text)'},
+            {label:'Studio Bookings',  val:monthRentals.length,                       color:'var(--text)'},
+            {label:'Studio Hours',     val:totalHours,                                color:'var(--text)'},
+            {label:'Workshops Held',   val:monthWorkshops.length,                     color:'var(--text)'},
           ].map(s=>`<div style="background:var(--bg2);border:1px solid var(--border);padding:1rem 1.25rem">
             <p style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">${s.label}</p>
             <p style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:0.04em;color:${s.color};line-height:1">${s.val}</p>
@@ -2143,13 +2228,13 @@ window.generateReport = function(){
       </div>
 
       <!-- PAYMENT MODES -->
-      <div style="margin-bottom:2rem;display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+      <div style="margin-bottom:2rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem">
         <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem">
           <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--red);margin-bottom:1rem;font-family:'Syne',sans-serif;font-weight:700">Workshop Payments</p>
           <div style="display:flex;gap:1.5rem">
             <div><p style="font-size:0.65rem;color:var(--muted)">Online</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--green)">${wsOnline}</p></div>
             <div><p style="font-size:0.65rem;color:var(--muted)">Cash</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--yellow)">${wsCash}</p></div>
-            <div><p style="font-size:0.65rem;color:var(--muted)">Ratio</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--text)">${monthRegs.length?Math.round(wsOnline/monthRegs.length*100):0}% Online</p></div>
+            <div><p style="font-size:0.65rem;color:var(--muted)">Ratio</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--text)">${monthRegs.length?Math.round(wsOnline/monthRegs.length*100):0}%</p></div>
           </div>
         </div>
         <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem">
@@ -2157,10 +2242,43 @@ window.generateReport = function(){
           <div style="display:flex;gap:1.5rem">
             <div><p style="font-size:0.65rem;color:var(--muted)">Online</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--green)">${batchOnline}</p></div>
             <div><p style="font-size:0.65rem;color:var(--muted)">Cash</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--yellow)">${batchCash}</p></div>
-            <div><p style="font-size:0.65rem;color:var(--muted)">Ratio</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--text)">${monthBatchStudents.length?Math.round(batchOnline/monthBatchStudents.length*100):0}% Online</p></div>
+            <div><p style="font-size:0.65rem;color:var(--muted)">Ratio</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--text)">${monthBatchStudents.length?Math.round(batchOnline/monthBatchStudents.length*100):0}%</p></div>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem">
+          <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue);margin-bottom:1rem;font-family:'Syne',sans-serif;font-weight:700">Studio Payments</p>
+          <div style="display:flex;gap:1.5rem">
+            <div><p style="font-size:0.65rem;color:var(--muted)">Cash</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--yellow)">${rentalCash}</p></div>
+            <div><p style="font-size:0.65rem;color:var(--muted)">Online</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--green)">${rentalOnline}</p></div>
+            <div><p style="font-size:0.65rem;color:var(--muted)">Pending</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:#e57373">${monthRentals.filter(r=>r.payMode==='Pending').length}</p></div>
           </div>
         </div>
       </div>
+
+      <!-- STUDIO RENTALS -->
+      ${monthRentals.length ? `
+      <div style="margin-bottom:2rem">
+        <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue);margin-bottom:0.85rem;font-family:'Syne',sans-serif;font-weight:700">Studio Rentals (${monthRentals.length}) · ${totalHours} hrs · ₹${rentalRevenue.toLocaleString('en-IN')} collected${rentalPending?` · ₹${rentalPending.toLocaleString('en-IN')} pending`:''}</p>
+        <div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden">
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr style="background:var(--bg3)">
+              ${['Name/Brand','Purpose','Booking','Hrs','Amount','Payment','Handled By','Remarks'].map(h=>`<th style="text-align:left;padding:0.5rem 0.85rem;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">${h}</th>`).join('')}
+            </tr></thead>
+            <tbody>
+              ${monthRentals.map(r=>`<tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:0.6rem 0.85rem;font-weight:500;color:var(--text)">${r.name||'—'}</td>
+                <td style="padding:0.6rem 0.85rem;font-size:0.78rem">${r.purpose||'—'}</td>
+                <td style="padding:0.6rem 0.85rem;font-size:0.75rem;color:var(--muted)">${r.booking||'—'}</td>
+                <td style="padding:0.6rem 0.85rem;text-align:center">${r.hours||'—'}</td>
+                <td style="padding:0.6rem 0.85rem;color:${r.payMode==='Pending'?'#e57373':'var(--yellow)'}">₹${parseFloat(r.amount||0).toLocaleString('en-IN')}</td>
+                <td style="padding:0.6rem 0.85rem"><span style="font-size:0.65rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:2px;background:${r.payMode==='Cash'?'rgba(245,230,66,0.15)':r.payMode==='Online'?'rgba(92,184,122,0.15)':'rgba(229,115,115,0.15)'};color:${r.payMode==='Cash'?'var(--yellow)':r.payMode==='Online'?'var(--green)':'#e57373'}">${r.payMode}</span></td>
+                <td style="padding:0.6rem 0.85rem;font-size:0.75rem;color:var(--muted)">${r.handledBy||'—'}</td>
+                <td style="padding:0.6rem 0.85rem;font-size:0.72rem;color:var(--muted)">${r.remarks||'—'}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>` : ''}
 
       <!-- WORKSHOP PERFORMANCE -->
       ${wsPerf.length ? `
@@ -3027,6 +3145,85 @@ window.exportRentalsCSV=function(){
   const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download='ths-rentals-'+new Date().toISOString().slice(0,10)+'.csv';a.click();showToast('Rentals CSV downloaded!');
+};
+
+/* ══════════════════════════════════════
+   SETTINGS — CHANGE ADMIN PASSWORD
+══════════════════════════════════════ */
+window.changeAdminPassword = async function(){
+  const oldPass = document.getElementById('settingsOldPass').value;
+  const newPass = document.getElementById('settingsNewPass').value;
+  const confirm = document.getElementById('settingsConfirmPass').value;
+  const msg     = document.getElementById('settingsMsg');
+
+  const me = ADMINS.find(a=>a.user===currentAdminUser);
+  if(!me||me.pass!==oldPass){
+    msg.style.color='#e57373'; msg.textContent='Current password is incorrect.'; return;
+  }
+  if(!newPass||newPass.length<6){
+    msg.style.color='#e57373'; msg.textContent='New password must be at least 6 characters.'; return;
+  }
+  if(newPass!==confirm){
+    msg.style.color='#e57373'; msg.textContent='Passwords do not match.'; return;
+  }
+  me.pass = newPass;
+  await setDoc(doc(db,'settings','adminPasswords'),{admins:ADMINS},{merge:true});
+  msg.style.color='var(--green)'; msg.textContent='Password changed ✓';
+  ['settingsOldPass','settingsNewPass','settingsConfirmPass'].forEach(id=>document.getElementById(id).value='');
+};
+
+/* ══════════════════════════════════════
+   ARTIST MANAGEMENT
+══════════════════════════════════════ */
+function renderArtistRoster(){
+  document.getElementById('artistRosterList').innerHTML = ARTIST_ROSTER.map((a,i)=>`
+    <div style="background:var(--bg2);border:1px solid ${a.blocked?'rgba(229,115,115,0.3)':'var(--border)'};padding:1.25rem;margin-bottom:0.75rem;display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:start;${a.blocked?'opacity:0.6':''}">
+      <div>
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;flex-wrap:wrap">
+          <p style="font-weight:600;color:var(--text)">${a.name}</p>
+          <span class="pill ${a.role==='trainer'?'pill-blue':'pill-yellow'}" style="font-size:0.6rem">${a.role==='trainer'?'Batch Trainer':'Workshop Artist'}</span>
+          ${a.blocked?`<span class="pill" style="background:rgba(229,115,115,0.15);color:#e57373;border:1px solid rgba(229,115,115,0.3);font-size:0.6rem">BLOCKED</span>`:''}
+        </div>
+        <p style="font-size:0.75rem;color:var(--muted);margin-bottom:0.6rem">Username: <span style="color:var(--text);font-family:monospace">${a.user}</span></p>
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem">
+          <span style="font-size:0.75rem;color:var(--muted)">Password:</span>
+          <span id="apass-${i}" style="font-family:monospace;font-size:0.78rem;color:var(--text)">••••••••</span>
+          <button onclick="toggleArtistPassView(${i},'${a.pass}')" style="font-size:0.6rem;color:var(--muted);background:none;border:1px solid var(--border);padding:0.15rem 0.4rem;cursor:pointer;font-family:'Syne',sans-serif">Show</button>
+        </div>
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+          <input type="password" id="anewpass-${i}" placeholder="Set new password" autocomplete="new-password"
+            style="background:var(--bg3);border:1px solid var(--border2);padding:0.4rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.78rem;outline:none;width:180px">
+          <button onclick="changeArtistPassword(${i})" class="btn btn-outline btn-sm">Update</button>
+        </div>
+      </div>
+      <button onclick="toggleArtistBlock(${i})" class="btn btn-sm" style="${a.blocked?'background:rgba(92,184,122,0.12);border:1px solid rgba(92,184,122,0.35);color:var(--green)':'background:rgba(229,115,115,0.1);border:1px solid rgba(229,115,115,0.35);color:#e57373'}">
+        ${a.blocked?'✓ Unblock':'⊘ Block'}
+      </button>
+    </div>`).join('');
+}
+
+window.toggleArtistPassView = function(i,pass){
+  const el=document.getElementById('apass-'+i);
+  const btn=el.nextElementSibling;
+  if(el.textContent==='••••••••'){el.textContent=pass;btn.textContent='Hide';}
+  else{el.textContent='••••••••';btn.textContent='Show';}
+};
+
+window.changeArtistPassword = async function(i){
+  const newPass=document.getElementById('anewpass-'+i).value.trim();
+  if(!newPass||newPass.length<6){showToast('Min 6 characters required','error');return;}
+  ARTIST_ROSTER[i].pass=newPass;
+  await setDoc(doc(db,'settings','artistPasswords'),{artists:ARTIST_ROSTER},{merge:true});
+  document.getElementById('anewpass-'+i).value='';
+  showToast(`${ARTIST_ROSTER[i].name}'s password updated ✓`);
+  renderArtistRoster();
+};
+
+window.toggleArtistBlock = async function(i){
+  ARTIST_ROSTER[i].blocked=!ARTIST_ROSTER[i].blocked;
+  await setDoc(doc(db,'settings','artistPasswords'),{artists:ARTIST_ROSTER},{merge:true});
+  showToast(`${ARTIST_ROSTER[i].name} ${ARTIST_ROSTER[i].blocked?'blocked 🔒':'unblocked ✓'}`);
+  renderArtistRoster();
 };
 
 window.saveAboutContent = async function(){
