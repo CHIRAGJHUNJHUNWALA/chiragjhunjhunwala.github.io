@@ -681,11 +681,14 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <div class="form-group"><label>WhatsApp Number *</label><input type="tel" id="manualPhone" placeholder="+91 98765 43210"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>Package</label><select id="manualPackage"></select></div>
-        <div class="form-group"><label>Class Slot</label><select id="manualSlot"></select></div>
+        <div class="form-group"><label>Package</label><select id="manualPackage" onchange="updateManualSlots()"></select></div>
+        <div class="form-group"><label>Amount Paid ₹</label><input type="number" id="manualAmount" placeholder="0"></div>
+      </div>
+      <div class="form-group" style="margin-bottom:1rem">
+        <label id="manualSlotLabel">Class Slot</label>
+        <div id="manualSlotList" style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.5rem"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>Amount Paid ₹</label><input type="number" id="manualAmount" placeholder="0"></div>
         <div class="form-group"><label>Payment Type</label>
           <select id="manualPayType">
             <option value="Cash">Cash</option>
@@ -1538,13 +1541,42 @@ window.openManualStudent = function(wsId){
   document.getElementById('manualPhone').value  = '';
   document.getElementById('manualAmount').value = '';
 
-  const pkgSel  = document.getElementById('manualPackage');
-  pkgSel.innerHTML = (w.packages||[]).map(p=>`<option value="${p.name}">₹${p.price} — ${p.name}</option>`).join('');
+  const pkgSel = document.getElementById('manualPackage');
+  pkgSel.innerHTML = (w.packages||[]).map(p=>
+    `<option value="${p.name}" data-slots="${p.slotsAllowed||1}" data-price="${p.price||0}">₹${p.price} — ${p.name} (${p.slotsAllowed||1} slot${(p.slotsAllowed||1)>1?'s':''})</option>`
+  ).join('');
 
-  const slotSel = document.getElementById('manualSlot');
-  slotSel.innerHTML = (w.slots||[]).map(s=>`<option value="${s.id}">${s.song?'♪ '+s.song+' · ':''} ${s.time}</option>`).join('');
-
+  updateManualSlots();
   openModal('manualModal');
+};
+
+window.updateManualSlots = function(){
+  const w       = workshops.find(x=>x.id===manualWsId);
+  const pkgSel  = document.getElementById('manualPackage');
+  const selOpt  = pkgSel.options[pkgSel.selectedIndex];
+  const allowed = parseInt(selOpt?.dataset?.slots||1);
+  const slots   = w?.slots||[];
+
+  document.getElementById('manualSlotLabel').textContent =
+    allowed===1 ? 'Select Slot' : `Select ${allowed} Slots`;
+
+  document.getElementById('manualSlotList').innerHTML = slots.map(s=>`
+    <label style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.75rem;background:var(--bg3);border:1px solid var(--border);cursor:pointer">
+      <input type="checkbox" class="manual-slot-check" value="${s.id}" data-date="${s.date}" data-time="${s.time}" data-song="${s.song||''}"
+        onchange="limitManualSlots(${allowed})"
+        style="accent-color:var(--red);width:15px;height:15px;cursor:pointer">
+      <span style="font-size:0.82rem;color:var(--text)">${s.song?'♪ '+s.song+' · ':''}<span style="color:var(--muted)">${s.time}</span></span>
+      <span style="font-size:0.7rem;color:var(--muted);margin-left:auto">${s.date}</span>
+    </label>`).join('');
+};
+
+window.limitManualSlots = function(max){
+  const checks = document.querySelectorAll('.manual-slot-check:checked');
+  if(checks.length > max){
+    // Uncheck the last one checked
+    event.target.checked = false;
+    showToast(`This package allows ${max} slot${max>1?'s':''} only`,'error');
+  }
 };
 
 window.saveManualStudent = async function(){
@@ -1553,18 +1585,25 @@ window.saveManualStudent = async function(){
   if(!name||!phone){ showToast('Name and phone are required','error'); return; }
 
   const w       = workshops.find(x=>x.id===manualWsId);
-  const slotId  = document.getElementById('manualSlot').value;
-  const slot    = (w.slots||[]).find(s=>s.id===slotId);
   const pkg     = document.getElementById('manualPackage').value;
   const amount  = parseFloat(document.getElementById('manualAmount').value)||0;
   const payType = document.getElementById('manualPayType').value;
+
+  // Get selected slots
+  const checkedBoxes = document.querySelectorAll('.manual-slot-check:checked');
+  if(!checkedBoxes.length){ showToast('Please select at least one slot','error'); return; }
+
+  const selectedSlots = Array.from(checkedBoxes).map(cb=>{
+    const s = (w.slots||[]).find(sl=>sl.id===cb.value);
+    return s ? (s.song?'♪ '+s.song+' · ':'')+s.time : cb.value;
+  });
 
   const reg = {
     name, phone,
     workshop:     w.artist,
     style:        w.style||'',
     package:      pkg,
-    slots:        slot ? (slot.song?'♪ '+slot.song+' · ':'')+slot.time : '—',
+    slots:        selectedSlots.join(' | '),
     amount_paid:  amount,
     payment_type: payType,
     payment_id:   'MANUAL-'+Date.now(),
@@ -1573,15 +1612,16 @@ window.saveManualStudent = async function(){
 
   await addDoc(collection(db,'registrations'), reg);
 
-  // Also decrease spots
-  if(slot){
+  // Decrease spots for each selected slot
+  const slotIds = Array.from(checkedBoxes).map(cb=>cb.value);
+  slotIds.forEach(slotId=>{
     const idx = w.slots.findIndex(s=>s.id===slotId);
     if(idx>-1 && w.slots[idx].spots>0) w.slots[idx].spots--;
-    await setDoc(doc(db,'workshops',manualWsId), w);
-  }
+  });
+  await setDoc(doc(db,'workshops',manualWsId), w);
 
   closeModal('manualModal');
-  showToast('Student added manually ✓');
+  showToast(`${name} added manually ✓`);
 };
 
 /* ══════════════════════════════════════
