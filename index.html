@@ -52,6 +52,15 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
 /* full-screen overlay */
 .nav-overlay{position:fixed;inset:0;z-index:250;background:rgba(10,10,10,0.97);display:flex;flex-direction:column;justify-content:center;padding:4rem 3rem;opacity:0;pointer-events:none;transition:opacity 0.4s ease;backdrop-filter:blur(20px)}
 .nav-overlay.open{opacity:1;pointer-events:all}
+.nav-overlay.open .nav-overlay-links li:nth-child(1){transform:translateY(0);opacity:1;transition-delay:0.08s}
+.nav-overlay.open .nav-overlay-links li:nth-child(2){transform:translateY(0);opacity:1;transition-delay:0.13s}
+.nav-overlay.open .nav-overlay-links li:nth-child(3){transform:translateY(0);opacity:1;transition-delay:0.18s}
+.nav-overlay.open .nav-overlay-links li:nth-child(4){transform:translateY(0);opacity:1;transition-delay:0.23s}
+.nav-overlay.open .nav-overlay-links li:nth-child(5){transform:translateY(0);opacity:1;transition-delay:0.28s}
+.nav-overlay.open .nav-overlay-links li:nth-child(6){transform:translateY(0);opacity:1;transition-delay:0.33s}
+.nav-overlay.open .nav-overlay-links li:nth-child(7){transform:translateY(0);opacity:1;transition-delay:0.38s}
+.nav-overlay.open .nav-overlay-links li:nth-child(8){transform:translateY(0);opacity:1;transition-delay:0.43s}
+.nav-overlay.open .nav-overlay-links li:nth-child(9){transform:translateY(0);opacity:1;transition-delay:0.48s}
 .nav-overlay-inner{max-width:700px}
 .nav-overlay-label{font-size:0.65rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--text-muted);margin-bottom:2.5rem;display:flex;align-items:center;gap:0.75rem}
 .nav-overlay-label::before{content:'';width:24px;height:1px;background:var(--text-muted)}
@@ -69,14 +78,6 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
 
 /* stagger animation for links */
 .nav-overlay-links li{transform:translateY(20px);opacity:0;transition:transform 0.4s ease,opacity 0.4s ease}
-.nav-overlay.open .nav-overlay-links li:nth-child(1){transform:translateY(0);opacity:1;transition-delay:0.08s}
-.nav-overlay.open .nav-overlay-links li:nth-child(2){transform:translateY(0);opacity:1;transition-delay:0.13s}
-.nav-overlay.open .nav-overlay-links li:nth-child(3){transform:translateY(0);opacity:1;transition-delay:0.18s}
-.nav-overlay.open .nav-overlay-links li:nth-child(4){transform:translateY(0);opacity:1;transition-delay:0.23s}
-.nav-overlay.open .nav-overlay-links li:nth-child(5){transform:translateY(0);opacity:1;transition-delay:0.28s}
-.nav-overlay.open .nav-overlay-links li:nth-child(6){transform:translateY(0);opacity:1;transition-delay:0.33s}
-.nav-overlay.open .nav-overlay-links li:nth-child(7){transform:translateY(0);opacity:1;transition-delay:0.38s}
-.nav-overlay.open .nav-overlay-links li:nth-child(8){transform:translateY(0);opacity:1;transition-delay:0.43s}
 
 /* ── HERO ── */
 .hero{min-height:100vh;display:flex;flex-direction:column;justify-content:flex-end;padding:0 2rem 5rem;position:relative;overflow:hidden}
@@ -249,15 +250,15 @@ footer{background:var(--off-black);border-top:1px solid var(--border);padding:4r
   <div class="nav-overlay-inner">
     <button onclick="toggleMenu()" style="position:absolute;top:1.5rem;right:1.5rem;background:none;border:1px solid rgba(255,255,255,0.15);color:var(--text);width:44px;height:44px;font-size:1.3rem;line-height:1;transition:border-color 0.2s,color 0.2s;pointer-events:all" onmouseover="this.style.borderColor='#bc1f2e';this.style.color='#bc1f2e'" onmouseout="this.style.borderColor='rgba(255,255,255,0.15)';this.style.color='var(--text)'">✕</button><p class="nav-overlay-label">Menu</p>
     <ul class="nav-overlay-links">
-      <li><a href="index.html" class="active"><span>Home</span><span class="link-num">01</span></a></li>
+      <li><a href="index.html"><span>Home</span><span class="link-num">01</span></a></li>
       <li><a href="workshops.html"><span>Workshops</span><span class="link-num">02</span></a></li>
       <li><a href="batches.html"><span>Regular Batches</span><span class="link-num">03</span></a></li>
       <li><a href="studio-booking.html"><span>Studio Booking</span><span class="link-num">04</span></a></li>
       <li><a href="about.html"><span>About Us</span><span class="link-num">05</span></a></li>
       <li><a href="contact.html"><span>Contact Us</span><span class="link-num">06</span></a></li>
-      <li><a href="student.html" style="color:var(--red)"><span>My Account</span><span class="link-num">07</span></a></li>
-      <li><a href="admin.html" style="opacity:0.4;font-size:clamp(1rem,3vw,1.8rem)"><span>Admin Login</span><span class="link-num" style="font-size:0.6rem">07</span></a></li>
-      <li><a href="artist-panel.html" style="opacity:0.4;font-size:clamp(1rem,3vw,1.8rem)"><span>Artist Panel</span><span class="link-num" style="font-size:0.6rem">08</span></a></li>
+      <li><a href="student.html" style="color:var(--red)"><span>Student Login</span><span class="link-num">07</span></a></li>
+      <li><a href="admin.html" style="opacity:0.4;font-size:clamp(1rem,3vw,1.8rem)"><span>Admin Login</span><span class="link-num" style="font-size:0.6rem">08</span></a></li>
+      <li><a href="artist-panel.html" style="opacity:0.4;font-size:clamp(1rem,3vw,1.8rem)"><span>Artist Login</span><span class="link-num" style="font-size:0.6rem">09</span></a></li>
     </ul>
     <div class="nav-overlay-bottom">
       <address class="nav-overlay-address">
