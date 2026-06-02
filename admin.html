@@ -723,10 +723,13 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="form-group" style="margin-bottom:1rem">
         <label>Days of Week *</label>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem">
-          ${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d,i)=>`
-            <label style="display:flex;align-items:center;gap:0.35rem;padding:0.4rem 0.75rem;background:var(--bg3);border:1px solid var(--border);cursor:pointer;font-size:0.78rem">
-              <input type="checkbox" class="reg-day-check" value="${i===6?0:i+1}"> ${d}
-            </label>`).join('')}
+          <label style="display:flex;align-items:center;gap:0.35rem;padding:0.4rem 0.75rem;background:var(--bg3);border:1px solid var(--border);cursor:pointer;font-size:0.78rem"><input type="checkbox" class="reg-day-check" value="1"> Mon</label>
+          <label style="display:flex;align-items:center;gap:0.35rem;padding:0.4rem 0.75rem;background:var(--bg3);border:1px solid var(--border);cursor:pointer;font-size:0.78rem"><input type="checkbox" class="reg-day-check" value="2"> Tue</label>
+          <label style="display:flex;align-items:center;gap:0.35rem;padding:0.4rem 0.75rem;background:var(--bg3);border:1px solid var(--border);cursor:pointer;font-size:0.78rem"><input type="checkbox" class="reg-day-check" value="3"> Wed</label>
+          <label style="display:flex;align-items:center;gap:0.35rem;padding:0.4rem 0.75rem;background:var(--bg3);border:1px solid var(--border);cursor:pointer;font-size:0.78rem"><input type="checkbox" class="reg-day-check" value="4"> Thu</label>
+          <label style="display:flex;align-items:center;gap:0.35rem;padding:0.4rem 0.75rem;background:var(--bg3);border:1px solid var(--border);cursor:pointer;font-size:0.78rem"><input type="checkbox" class="reg-day-check" value="5"> Fri</label>
+          <label style="display:flex;align-items:center;gap:0.35rem;padding:0.4rem 0.75rem;background:var(--bg3);border:1px solid var(--border);cursor:pointer;font-size:0.78rem"><input type="checkbox" class="reg-day-check" value="6"> Sat</label>
+          <label style="display:flex;align-items:center;gap:0.35rem;padding:0.4rem 0.75rem;background:var(--bg3);border:1px solid var(--border);cursor:pointer;font-size:0.78rem"><input type="checkbox" class="reg-day-check" value="0"> Sun</label>
         </div>
       </div>
       <div class="form-group">
@@ -3503,7 +3506,17 @@ function printSlot(wsId, slotId){
   if(!slot){ alert('Slot not found.'); return; }
 
   const slotRegs = regs
-    .filter(r => r.workshop===w.artist && (r.slots||'').includes(slot.date))
+    .filter(r => {
+      if(r.workshop !== w.artist) return false;
+      const rSlots = (r.slots||'').toLowerCase();
+      // Match by date (old format) OR song (new format) OR time
+      if(slot.date && rSlots.includes(slot.date.toLowerCase())) return true;
+      if(slot.song && rSlots.includes(slot.song.toLowerCase())) return true;
+      if(slot.time && rSlots.includes(slot.time.toLowerCase())) return true;
+      // Also match stripped time (remove spaces)
+      if(slot.time && rSlots.replace(/\s/g,'').includes(slot.time.replace(/\s/g,'').toLowerCase())) return true;
+      return false;
+    })
     .sort((a,b)=>(a.name||'').localeCompare(b.name||''));
 
   const PER_PAGE = 25;
