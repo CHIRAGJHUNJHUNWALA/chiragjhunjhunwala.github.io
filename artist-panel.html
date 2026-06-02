@@ -606,20 +606,31 @@ let myWorkshops     = [];
 let myRegistrations = [];
 
 function listenWorkshopStats(){
-  // Listen to workshops matching this artist's ID
   onSnapshot(collection(db,'workshops'), snap => {
     myWorkshops = snap.docs
       .map(d=>({id:d.id,...d.data()}))
       .filter(w=>w.artistId===currentArtist.artistId || w.artist===currentArtist.name);
+    // Re-filter registrations whenever workshops update
+    const names = myWorkshops.map(w=>w.artist);
+    myRegistrations = myRegistrations.filter(r=>
+      names.includes(r.workshop) || r.workshop===currentArtist.name
+    );
     renderWsStats();
   });
 
-  // Listen to registrations for this artist's workshops
   onSnapshot(collection(db,'registrations'), snap => {
+    // Build names from latest workshops
     const names = myWorkshops.map(w=>w.artist);
+    // Include registrations matching any of this artist's workshop names OR artist name directly
     myRegistrations = snap.docs
       .map(d=>({id:d.id,...d.data()}))
-      .filter(r=>names.includes(r.workshop)||r.workshop===currentArtist.name);
+      .filter(r=>{
+        if(r.workshop===currentArtist.name) return true;
+        if(names.length && names.includes(r.workshop)) return true;
+        // Also check by artistId stored on registration
+        const ws = myWorkshops.find(w=>w.artist===r.workshop);
+        return ws && (ws.artistId===currentArtist.artistId);
+      });
     renderWsStats();
   });
 }
@@ -690,14 +701,19 @@ function renderWsStats(){
           <p style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;font-family:'Syne',sans-serif;font-weight:600">Slots</p>
           <div style="display:flex;flex-direction:column;gap:0.4rem">
             ${slots.map(s=>{
-              const slotRegs = regs.filter(r=>(r.slots||'').includes(s.date));
+              // Match registrations that contain this slot's date or time
+              const slotRegs = regs.filter(r=>{
+                const rSlots = (r.slots||'');
+                return rSlots.includes(s.date) || rSlots.includes(s.time) || (s.song && rSlots.includes(s.song));
+              });
               const slotUsed = slotRegs.length;
-              const slotPct  = s.totalSpots>0?Math.round(slotUsed/s.totalSpots*100):0;
+              const slotTotal = parseInt(s.totalSpots||s.spots||0);
+              const slotPct  = slotTotal>0?Math.round(slotUsed/slotTotal*100):0;
               return `<div style="display:flex;align-items:center;gap:0.75rem">
                 <div style="flex:1;min-width:0">
                   <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem">
-                    <span style="font-size:0.75rem;color:var(--text)">${s.song?'♪ '+s.song+' · ':''} ${s.time}</span>
-                    <span style="font-size:0.72rem;color:var(--muted)">${slotUsed}/${s.totalSpots} spots</span>
+                    <span style="font-size:0.75rem;color:var(--text)">${s.song?'♪ '+s.song+' · ':''}<span style="color:var(--muted)">${s.time}</span></span>
+                    <span style="font-size:0.72rem;color:var(--muted)">${slotUsed}/${slotTotal} spots · ${s.date}</span>
                   </div>
                   <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden">
                     <div style="height:100%;width:${slotPct}%;background:${slotPct>=80?'var(--green)':slotPct>=50?'var(--yellow)':'var(--red)'};border-radius:2px"></div>
