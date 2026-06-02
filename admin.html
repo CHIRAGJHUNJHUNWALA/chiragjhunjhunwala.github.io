@@ -742,6 +742,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('regularsModal')">Cancel</button>
+      <button class="btn btn-danger btn-sm" id="deleteRegularBtn" style="display:none" onclick="deleteRegularEntry()">Delete This Entry</button>
       <button class="btn btn-red" onclick="saveRegulars()" id="saveRegularsBtn">Add to Schedule</button>
     </div>
   </div>
@@ -1320,7 +1321,7 @@ function renderDashboard(){
         <td>${r.phone||'—'}</td>
         <td>${r.workshop||'—'}</td>
         <td>${r.package||'—'}</td>
-        <td style="font-size:0.75rem;color:var(--yellow)">♪ ${getSongForReg(r)} · ${r.slots||'—'}</td>
+        <td style="font-size:0.75rem;color:var(--yellow)">${getSongForReg(r)}</td>
         <td style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
         <td>${payTypePill(r.payment_type)}</td>
         <td style="font-size:0.72rem;color:var(--muted)">${r.timestamp||'—'}</td>
@@ -1940,8 +1941,13 @@ function renderRegTable(){
   function getSlotDisplay(r){
     const ws = workshops.find(x=>x.artist===r.workshop);
     const rawSlots = (r.slots||'').split('|').map(s=>s.trim());
-    if(!ws||!ws.slots) return rawSlots.join(' | ');
+    if(!ws||!ws.slots){
+      // Raw slots already have ♪ prefix from new format — return as is
+      return rawSlots.join(' | ');
+    }
     return rawSlots.map(rs=>{
+      // If already formatted with ♪ just return it
+      if(rs.startsWith('♪')) return rs;
       const match = ws.slots.find(s=>rs.includes(s.date)||rs.includes(s.time));
       return match ? (match.song?'♪ '+match.song+' · ':'')+match.time : rs;
     }).join(' | ');
@@ -1993,10 +1999,19 @@ function updateRegBadge(){
 
 // Find song for a registration by matching workshop + slot date
 function getSongForReg(r){
+  const rSlots = (r.slots||'');
+  // Already in ♪ song · time format
+  if(rSlots.includes('♪')){
+    const songs = rSlots.split('|').map(s=>s.trim()).map(s=>{
+      const m = s.match(/♪\s*([^·]+)/);
+      return m ? m[1].trim() : '';
+    }).filter(Boolean);
+    return songs.length ? '♪ '+songs.join(' / ') : '—';
+  }
   const w = workshops.find(x=>x.artist===r.workshop);
   if(!w) return '—';
   const slot = (w.slots||[]).find(s=>(r.slots||'').includes(s.date));
-  return slot?.song || '—';
+  return slot?.song ? '♪ '+slot.song : '—';
 }
 
 /* ══════════════════════════════════════
@@ -2133,6 +2148,7 @@ function getSlotDisplayForReg(r){
   const rawSlots = (r.slots||'—').split('|').map(s=>s.trim());
   if(!ws||!ws.slots) return rawSlots.join(' / ');
   return rawSlots.map(rs=>{
+    if(rs.startsWith('♪')) return rs; // already formatted
     const match = ws.slots.find(s=>rs.includes(s.date)||rs.includes(s.time)||rs.includes(s.song||'__'));
     return match ? (match.song?'♪ '+match.song+' · ':'')+match.time : rs;
   }).join(' / ');
@@ -2745,17 +2761,22 @@ window.renderCheckinsView = function(){
 
   // Get song for a registration — use the specific slot's song
   const getSong = (r) => {
+    // If slots already in ♪ song · time format, extract song
+    const rSlots = (r.slots||'');
+    if(rSlots.includes('♪')){
+      const songs = rSlots.split('|').map(s=>s.trim()).map(s=>{
+        const m = s.match(/♪\s*([^·]+)/);
+        return m ? m[1].trim() : '';
+      }).filter(Boolean);
+      return songs.length ? '♪ '+songs.join(' / ') : '—';
+    }
     if(checkinSlot==='all'){
-      // Show songs from all their booked slots
-      const bookedDates = (r.slots||'').split('|').map(s=>s.trim());
-      const songs = slots
-        .filter(s=>bookedDates.some(d=>d.includes(s.date)))
-        .map(s=>s.song)
-        .filter(Boolean);
-      return songs.length ? songs.join(' / ') : '—';
+      const bookedDates = rSlots.split('|').map(s=>s.trim());
+      const songs = slots.filter(s=>bookedDates.some(d=>d.includes(s.date))).map(s=>s.song).filter(Boolean);
+      return songs.length ? '♪ '+songs.join(' / ') : '—';
     }
     const slot = slots.find(s=>s.id===checkinSlot);
-    return slot?.song || '—';
+    return slot?.song ? '♪ '+slot.song : '—';
   };
 
   const checkedIn   = filtered.filter(r=>r.checkedIn===true);
@@ -2778,7 +2799,7 @@ window.renderCheckinsView = function(){
     <td style="color:var(--text);font-weight:500">${r.name||'—'}</td>
     <td>${r.phone||'—'}</td>
     <td>${r.package||'—'}</td>
-    <td style="font-size:0.75rem;color:var(--yellow)">♪ ${getSong(r)} · ${(r.slots||'—').replace(' | ',' / ')}</td>
+    <td style="font-size:0.75rem;color:var(--yellow)">${getSong(r)}</td>
     <td style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
     <td style="color:var(--green);font-size:0.78rem">✓ ${r.checkedInAt||'—'}</td>
   </tr>`;
@@ -2787,7 +2808,7 @@ window.renderCheckinsView = function(){
     <td style="color:var(--text)">${r.name||'—'}</td>
     <td>${r.phone||'—'}</td>
     <td>${r.package||'—'}</td>
-    <td style="font-size:0.75rem;color:var(--yellow)">♪ ${getSong(r)} · ${(r.slots||'—').replace(' | ',' / ')}</td>
+    <td style="font-size:0.75rem;color:var(--yellow)">${getSong(r)}</td>
     <td style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
     <td style="font-size:0.72rem;color:var(--muted)">${r.timestamp||'—'}</td>
     <td><button class="btn btn-outline btn-sm" style="color:var(--green);border-color:rgba(92,184,122,0.3)" onclick="adminCheckIn('${r.id}','${(r.name||'').replace(/'/g,"\\'")}')">✓ Check In</button></td>
@@ -2920,6 +2941,7 @@ window.toggleDay = function(btn){ btn.classList.toggle('active'); };
 window.openAddRegulars = function(editEntry=null){
   document.getElementById('regularsModal').querySelector('.modal-title').textContent = editEntry ? 'Edit Regular' : 'Add Regulars to Schedule';
   document.getElementById('saveRegularsBtn').textContent = editEntry ? 'Update' : 'Add to Schedule';
+  document.getElementById('deleteRegularBtn').style.display = editEntry ? 'inline-flex' : 'none';
   ['regName','regPurpose','regDateFrom','regDateTo','regTimeFrom','regTimeTo','regRemarks'].forEach(id=>document.getElementById(id).value='');
   document.querySelectorAll('.day-toggle').forEach(b=>b.classList.remove('active'));
   document.getElementById('regularsEditId').value = '';
@@ -3152,6 +3174,31 @@ window.saveScheduleEntry=async function(){
   if(editId) await setDoc(doc(db,'studioSchedule',editId),data,{merge:true});
   else await addDoc(collection(db,'studioSchedule'),{...data,createdAt:Date.now()});
   closeModal('scheduleModal');showToast('Booking saved ✓');
+};
+
+window.deleteRegularEntry = async function(){
+  const editId   = document.getElementById('regularsEditId').value;
+  const name     = document.getElementById('regName').value.trim();
+  const timeFrom = document.getElementById('regTimeFrom').value;
+  const timeTo   = document.getElementById('regTimeTo').value;
+  if(!editId) return;
+
+  // Find all schedule entries with same artist + timeFrom + timeTo
+  const matching = scheduleEntries.filter(e=>
+    e.artist===name && e.timeFrom===timeFrom && e.timeTo===timeTo && e.isRegular
+  );
+
+  const msg = matching.length > 1
+    ? `Delete ALL ${matching.length} schedule entries for ${name} (${fmt12(timeFrom)}–${fmt12(timeTo)})?\n\nThis removes them from the schedule and monthly reports.`
+    : `Delete this schedule entry for ${name}?`;
+
+  if(!confirm(msg)) return;
+
+  // Delete all matching entries
+  await Promise.all(matching.map(e=>deleteDoc(doc(db,'studioSchedule',e.id))));
+
+  closeModal('regularsModal');
+  showToast(`Deleted ${matching.length} entr${matching.length===1?'y':'ies'} for ${name} ✓`);
 };
 
 window.deleteScheduleEntry=async function(id){
