@@ -413,16 +413,40 @@ const ARTIST_CREDS = [
 async function doLogin(){
   const u = document.getElementById('loginUser').value.trim();
   const p = document.getElementById('loginPass').value;
-  const match = ARTIST_CREDS.find(a=>a.user===u);
 
-  if(!match || p !== match.pass){
+  // Check hardcoded list first
+  let match = ARTIST_CREDS.find(a=>a.user===u);
+
+  // If not found hardcoded, check Firebase for artists added from admin panel
+  if(!match){
+    try {
+      const mod  = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+      const mod2 = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+      const apps = mod2.getApps ? mod2.getApps() : [];
+      const fapp = apps.length ? apps[0] : mod2.initializeApp({apiKey:"AIzaSyCvGMYRUhDAr4r2zoTbnRJ3PiCwhCWxLFs",projectId:"the-happening-space",appId:"1:834905576967:web:b16776452b9111b6483ca2"});
+      const fdb  = mod.getFirestore(fapp);
+      const snap = await mod.getDoc(mod.doc(fdb,'settings','artistPasswords'));
+      if(snap.exists()){
+        const live = (snap.data().artists||[]).find(a=>a.user===u);
+        if(live) match = live;
+      }
+    } catch(e){ console.log('Firebase check failed:',e); }
+  }
+
+  if(!match){
+    document.getElementById('loginError').textContent='Incorrect username or password.';
+    document.getElementById('loginError').classList.add('show');
+    return;
+  }
+
+  if(p !== match.pass){
     document.getElementById('loginError').textContent='Incorrect username or password.';
     document.getElementById('loginError').classList.add('show');
     return;
   }
 
   // Password matches — fire event. Module will check blocked status.
-  sessionStorage.setItem('ths_artist', JSON.stringify({user:match.user, name:match.name}));
+  sessionStorage.setItem('ths_artist', JSON.stringify({user:match.user, name:match.name, role:match.role}));
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appShell').style.display    = 'block';
   document.dispatchEvent(new CustomEvent('artistLoggedIn', {detail: {...match, pass: p}}));
@@ -541,8 +565,9 @@ async function checkBlockedAndInit(user, enteredPass=null){
 }
 
 document.addEventListener('artistLoggedIn', async e => {
-  currentArtist = ARTISTS.find(a=>a.user===e.detail.user);
-  if(!currentArtist) return;
+  // Find in hardcoded ARTISTS, or build from event detail (Firebase-added artist)
+  currentArtist = ARTISTS.find(a=>a.user===e.detail.user)
+    || {user:e.detail.user, name:e.detail.name, role:e.detail.role||'trainer', batches:[], artistId:e.detail.artistId||e.detail.user};
   const ok = await checkBlockedAndInit(e.detail.user, e.detail.pass);
   if(ok) initApp();
 });
@@ -552,11 +577,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const saved = sessionStorage.getItem('ths_artist');
   if(!saved) return;
   try {
-    const s     = JSON.parse(saved);
-    const found = ARTISTS.find(a=>a.user===s.user);
-    if(!found){ sessionStorage.removeItem('ths_artist'); return; }
+    const s = JSON.parse(saved);
+    // Find in hardcoded array OR build from session data (for Firebase-added artists)
+    let found = ARTISTS.find(a=>a.user===s.user);
+    if(!found){
+      // Artist added dynamically — reconstruct from session + Firebase
+      found = {user:s.user, name:s.name, role:s.role||'trainer', batches:[], artistId:s.user};
+    }
     currentArtist = found;
-    // Check blocked BEFORE showing app
     const ok = await checkBlockedAndInit(s.user);
     if(ok){
       document.getElementById('loginScreen').style.display = 'none';
