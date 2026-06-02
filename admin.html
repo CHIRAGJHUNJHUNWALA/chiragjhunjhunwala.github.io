@@ -297,7 +297,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit About Us
       </div>
       <div class="nav-section-title">Access</div>
-      <div class="nav-item" onclick="showView('artists')">
+      <div class="nav-item master-only" onclick="showView('adminaccounts')" style="display:none">
+        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin Accounts
+      </div>
+      <div class="nav-item master-only" onclick="showView('artists')" style="display:none">
         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Artists
       </div>
       <div class="nav-item" onclick="showView('settings')">
@@ -381,10 +384,24 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="ws-grid" id="workshopGrid"></div>
     </div>
 
+    <!-- ADMIN ACCOUNTS (Master only) -->
+    <div class="view" id="view-adminaccounts">
+      <div class="page-header">
+        <div><h1 class="page-title">Admin Accounts</h1><p class="page-sub">Manage all admin logins — master access only</p></div>
+        <button class="btn btn-red" onclick="openAddAdmin()">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Admin
+        </button>
+      </div>
+      <div id="adminAccountsList"></div>
+    </div>
+
     <!-- ARTISTS -->
     <div class="view" id="view-artists">
       <div class="page-header">
         <div><h1 class="page-title">Artists</h1><p class="page-sub">Manage artist logins, passwords and access</p></div>
+        <button class="btn btn-red" onclick="openAddArtist()">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Artist
+        </button>
       </div>
       <div id="artistRosterList"></div>
     </div>
@@ -698,6 +715,65 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
     </div>
     <div id="reportContent" style="padding:1.5rem;overflow-y:auto;max-height:calc(100vh - 80px)"></div>
+  </div>
+</div>
+
+<!-- ADD ARTIST MODAL -->
+<div class="modal-backdrop" id="addArtistModal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-head">
+      <h2 class="modal-title" id="addArtistTitle">Add Artist</h2>
+      <button class="modal-close" onclick="closeModal('addArtistModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="artistEditIdx">
+      <div class="form-row">
+        <div class="form-group"><label>Full Name *</label><input type="text" id="artistNewName" placeholder="e.g. Ritu Hariyani"></div>
+        <div class="form-group"><label>Role</label>
+          <select id="artistNewRole">
+            <option value="trainer">Batch Trainer</option>
+            <option value="workshop">Workshop Artist</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Username *</label><input type="text" id="artistNewUser" placeholder="e.g. rituhariyani" autocomplete="off"></div>
+        <div class="form-group"><label>Password *</label><input type="text" id="artistNewPass" placeholder="Min 6 characters" autocomplete="new-password"></div>
+      </div>
+      <div class="form-group">
+        <label>Artist ID <span style="font-weight:300;color:var(--muted);font-size:0.75em">(for workshop linking)</span></label>
+        <input type="text" id="artistNewId" placeholder="e.g. rituhariyani">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('addArtistModal')">Cancel</button>
+      <button class="btn btn-red" onclick="saveArtistAccount()">Save Artist</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD ADMIN MODAL -->
+<div class="modal-backdrop" id="addAdminModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head">
+      <h2 class="modal-title" id="addAdminTitle">Add Admin</h2>
+      <button class="modal-close" onclick="closeModal('addAdminModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="adminEditUser">
+      <div class="form-group" style="margin-bottom:1rem">
+        <label>Username *</label>
+        <input type="text" id="adminNewUser" placeholder="e.g. govind" autocomplete="off">
+      </div>
+      <div class="form-group" style="margin-bottom:1rem">
+        <label id="adminPassLabel">Password *</label>
+        <input type="text" id="adminNewPass" placeholder="Min 6 characters" autocomplete="new-password">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('addAdminModal')">Cancel</button>
+      <button class="btn btn-red" onclick="saveAdminAccount()">Save</button>
+    </div>
   </div>
 </div>
 
@@ -1083,6 +1159,11 @@ window.doLogin = async function(){
   await loadPasswords();
   const ok = ADMINS.find(a => a.user===u && a.pass===p);
   if(ok){
+    if(ok.blocked){
+      document.getElementById('loginError').textContent = 'Your access has been blocked. Contact the master admin.';
+      document.getElementById('loginError').classList.add('show');
+      return;
+    }
     currentAdminUser = u;
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appShell').style.display    = 'block';
@@ -1112,6 +1193,12 @@ if(sessionStorage.getItem('ths_auth')==='1'){
    INIT
 ══════════════════════════════════════ */
 async function initApp(){
+  applyMasterAccess();
+  // Show master badge in sidebar if master
+  if(isMaster()){
+    const tag = document.querySelector('.sidebar-tag');
+    if(tag) tag.textContent = 'Master Admin';
+  }
   document.getElementById('dashDate').textContent =
     new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
@@ -1183,6 +1270,7 @@ window.showView = function(id){
   if(id==='schedule')  { goScheduleToday(); }
   if(id==='rentals')     renderRentals();
   if(id==='artists')     renderArtistRoster();
+  if(id==='adminaccounts') renderAdminAccounts();
   if(id==='settings'){
     document.getElementById('settingsCurrentUser').textContent = currentAdminUser||'—';
     document.getElementById('settingsMsg').textContent='';
@@ -3433,8 +3521,136 @@ window.exportRentalsCSV=function(){
   a.download='ths-rentals-'+new Date().toISOString().slice(0,10)+'.csv';a.click();showToast('Rentals CSV downloaded!');
 };
 
+const MASTER_USER = 'chikki';
+
+function isMaster(){ return currentAdminUser === MASTER_USER; }
+
+function applyMasterAccess(){
+  // Show/hide master-only nav items
+  document.querySelectorAll('.master-only').forEach(el=>{
+    el.style.display = isMaster() ? 'flex' : 'none';
+  });
+}
+
 /* ══════════════════════════════════════
-   SETTINGS — CHANGE ADMIN PASSWORD
+   ADMIN ACCOUNTS (Master only)
+══════════════════════════════════════ */
+function renderAdminAccounts(){
+  if(!isMaster()) return;
+  document.getElementById('adminAccountsList').innerHTML = ADMINS.map((a,i)=>`
+    <div style="background:var(--bg2);border:1px solid ${a.blocked?'rgba(229,115,115,0.3)':'var(--border)'};padding:1.25rem;margin-bottom:0.75rem;display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:center;${a.blocked?'opacity:0.6':''}">
+      <div>
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;flex-wrap:wrap">
+          <p style="font-weight:600;color:var(--text);font-size:0.95rem">${a.user}</p>
+          ${a.user===MASTER_USER?`<span class="pill pill-red" style="font-size:0.6rem">MASTER</span>`:'<span class="pill pill-blue" style="font-size:0.6rem">Admin</span>'}
+          ${a.blocked?`<span class="pill" style="background:rgba(229,115,115,0.15);color:#e57373;border:1px solid rgba(229,115,115,0.3);font-size:0.6rem">BLOCKED</span>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem">
+          <span style="font-size:0.75rem;color:var(--muted)">Password:</span>
+          <span id="adpass-${i}" style="font-family:monospace;font-size:0.78rem;color:var(--text)">••••••••</span>
+          <button onclick="toggleAdminPassView(${i},'${a.pass}')" style="font-size:0.6rem;color:var(--muted);background:none;border:1px solid var(--border);padding:0.15rem 0.4rem;cursor:pointer;font-family:'Syne',sans-serif">Show</button>
+        </div>
+        ${a.user!==MASTER_USER?`<div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+          <input type="text" id="adnewpass-${i}" placeholder="Set new password"
+            style="background:var(--bg3);border:1px solid var(--border2);padding:0.4rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.78rem;outline:none;width:180px">
+          <button onclick="changeAdminAccountPassword(${i})" class="btn btn-outline btn-sm">Update</button>
+        </div>`:'<p style="font-size:0.72rem;color:var(--muted)">Change your password from My Password section</p>'}
+      </div>
+      ${a.user!==MASTER_USER?`<div style="display:flex;flex-direction:column;gap:0.5rem;align-items:flex-end">
+        <button onclick="toggleAdminBlock(${i})" class="btn btn-sm" style="${a.blocked?'background:rgba(92,184,122,0.12);border:1px solid rgba(92,184,122,0.35);color:var(--green)':'background:rgba(229,115,115,0.1);border:1px solid rgba(229,115,115,0.35);color:#e57373'}">
+          ${a.blocked?'✓ Unblock':'⊘ Block'}
+        </button>
+        <button onclick="deleteAdminAccount(${i})" class="btn btn-sm" style="background:rgba(229,115,115,0.08);border:1px solid rgba(229,115,115,0.2);color:#e57373;font-size:0.6rem">
+          Delete
+        </button>
+      </div>`:'<div></div>'}
+    </div>`).join('');
+}
+
+window.toggleAdminPassView = function(i,pass){
+  const el=document.getElementById('adpass-'+i);
+  const btn=el.nextElementSibling;
+  if(el.textContent==='••••••••'){el.textContent=pass;btn.textContent='Hide';}
+  else{el.textContent='••••••••';btn.textContent='Show';}
+};
+
+window.changeAdminAccountPassword = async function(i){
+  const newPass=document.getElementById('adnewpass-'+i).value.trim();
+  if(!newPass||newPass.length<6){showToast('Min 6 characters required','error');return;}
+  ADMINS[i].pass=newPass;
+  await setDoc(doc(db,'settings','adminPasswords'),{admins:ADMINS},{merge:true});
+  document.getElementById('adnewpass-'+i).value='';
+  showToast(`${ADMINS[i].user}'s password updated ✓`);
+  renderAdminAccounts();
+};
+
+window.toggleAdminBlock = async function(i){
+  if(ADMINS[i].user===MASTER_USER){showToast('Cannot block master account','error');return;}
+  ADMINS[i].blocked=!ADMINS[i].blocked;
+  await setDoc(doc(db,'settings','adminPasswords'),{admins:ADMINS},{merge:true});
+  showToast(`${ADMINS[i].user} ${ADMINS[i].blocked?'blocked 🔒':'unblocked ✓'}`);
+  renderAdminAccounts();
+};
+
+window.deleteAdminAccount = async function(i){
+  if(ADMINS[i].user===MASTER_USER){showToast('Cannot delete master account','error');return;}
+  if(!confirm(`Delete admin account "${ADMINS[i].user}"? This cannot be undone.`))return;
+  ADMINS.splice(i,1);
+  await setDoc(doc(db,'settings','adminPasswords'),{admins:ADMINS},{merge:true});
+  showToast('Admin account deleted');
+  renderAdminAccounts();
+};
+
+window.openAddAdmin = function(){
+  document.getElementById('addAdminTitle').textContent='Add Admin';
+  document.getElementById('adminNewUser').value='';
+  document.getElementById('adminNewPass').value='';
+  document.getElementById('adminEditUser').value='';
+  openModal('addAdminModal');
+};
+
+window.saveAdminAccount = async function(){
+  const user=document.getElementById('adminNewUser').value.trim().toLowerCase().replace(/\s+/g,'');
+  const pass=document.getElementById('adminNewPass').value.trim();
+  if(!user||!pass){showToast('Username and password required','error');return;}
+  if(pass.length<6){showToast('Password must be at least 6 characters','error');return;}
+  if(ADMINS.find(a=>a.user===user)){showToast('Username already exists','error');return;}
+  ADMINS.push({user,pass,blocked:false});
+  await setDoc(doc(db,'settings','adminPasswords'),{admins:ADMINS},{merge:true});
+  closeModal('addAdminModal');
+  showToast(`Admin "${user}" added ✓`);
+  renderAdminAccounts();
+};
+
+/* ══════════════════════════════════════
+   ADD ARTIST (Master only)
+══════════════════════════════════════ */
+window.openAddArtist = function(){
+  document.getElementById('addArtistTitle').textContent='Add Artist';
+  document.getElementById('artistEditIdx').value='';
+  ['artistNewName','artistNewUser','artistNewPass','artistNewId'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('artistNewRole').value='trainer';
+  openModal('addArtistModal');
+};
+
+window.saveArtistAccount = async function(){
+  const name=document.getElementById('artistNewName').value.trim();
+  const user=document.getElementById('artistNewUser').value.trim().toLowerCase().replace(/\s+/g,'');
+  const pass=document.getElementById('artistNewPass').value.trim();
+  const role=document.getElementById('artistNewRole').value;
+  const artistId=document.getElementById('artistNewId').value.trim()||user;
+  if(!name||!user||!pass){showToast('Name, username and password required','error');return;}
+  if(pass.length<6){showToast('Password must be at least 6 characters','error');return;}
+  if(ARTIST_ROSTER.find(a=>a.user===user)){showToast('Username already exists','error');return;}
+  ARTIST_ROSTER.push({user,pass,name,role,artistId,blocked:false});
+  await setDoc(doc(db,'settings','artistPasswords'),{artists:ARTIST_ROSTER},{merge:true});
+  closeModal('addArtistModal');
+  showToast(`Artist "${name}" added ✓`);
+  renderArtistRoster();
+};
+
+/* ══════════════════════════════════════
+   LOGIN BLOCK CHECK FOR ADMINS
 ══════════════════════════════════════ */
 window.changeAdminPassword = async function(){
   const oldPass = document.getElementById('settingsOldPass').value;
