@@ -177,6 +177,8 @@ function doScannerLogin(){
     sessionStorage.setItem('ths_scanner','1');
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('app').style.display         = 'block';
+    // Trigger Firebase Auth sign-in via module
+    document.dispatchEvent(new CustomEvent('scannerLoggedIn', {detail:{pass}}));
   } else {
     document.getElementById('loginErr').classList.add('show');
   }
@@ -197,8 +199,9 @@ if(sessionStorage.getItem('ths_scanner')==='1'){
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, doc, getDoc, updateDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
-const app = initializeApp({
+const app  = initializeApp({
   apiKey:"AIzaSyCvGMYRUhDAr4r2zoTbnRJ3PiCwhCWxLFs",
   authDomain:"the-happening-space.firebaseapp.com",
   projectId:"the-happening-space",
@@ -206,7 +209,20 @@ const app = initializeApp({
   messagingSenderId:"834905576967",
   appId:"1:834905576967:web:b16776452b9111b6483ca2"
 });
-const db = getFirestore(app);
+const db   = getFirestore(app);
+const auth = getAuth(app);
+
+// Shared Firebase Auth credentials — just for Firestore token
+const FIREBASE_AUTH_SCANNER = { email:'scanner@thehappeningspace.in', pass:'THSscanner2025!' };
+
+// Sign into Firebase Auth when scanner logs in
+document.addEventListener('scannerLoggedIn', async e=>{
+  try {
+    await signInWithEmailAndPassword(auth, FIREBASE_AUTH_SCANNER.email, FIREBASE_AUTH_SCANNER.pass);
+  } catch(err){
+    console.warn('Scanner Firebase Auth token not available:', err.code);
+  }
+});
 
 /* ══ SCANNER ══ */
 window.startScanner = function(){

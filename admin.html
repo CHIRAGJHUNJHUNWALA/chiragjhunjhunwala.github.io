@@ -303,8 +303,8 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="nav-item master-only" onclick="showView('artists')" style="display:none">
         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Artists
       </div>
-      <div class="nav-item" onclick="showView('settings')">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>My Password
+      <div class="nav-item master-only" onclick="showView('settings')" style="display:none">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Account
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -406,14 +406,15 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div id="artistRosterList"></div>
     </div>
 
-    <!-- SETTINGS / CHANGE PASSWORD -->
+    <!-- SETTINGS / CHANGE PASSWORD — Master only -->
     <div class="view" id="view-settings">
       <div class="page-header">
-        <div><h1 class="page-title">My Password</h1><p class="page-sub">Change your admin login password</p></div>
+        <div><h1 class="page-title" id="settingsPageTitle">Account</h1><p class="page-sub" id="settingsPageSub">Logged in as <span id="settingsCurrentUser">—</span></p></div>
       </div>
-      <div style="max-width:420px">
+      <!-- Master sees change password form -->
+      <div id="settingsMasterView" style="display:none;max-width:420px">
         <div style="background:var(--bg2);border:1px solid var(--border);padding:1.5rem">
-          <p style="font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:1.25rem;font-family:'Syne',sans-serif">Logged in as: <span id="settingsCurrentUser" style="color:var(--text)">—</span></p>
+          <p style="font-size:0.72rem;color:var(--muted);margin-bottom:1.25rem">To change any admin or artist password, go to <strong style="color:var(--text)">Admin Accounts</strong> or <strong style="color:var(--text)">Artists</strong> sections.</p>
           <div class="form-group" style="margin-bottom:1rem">
             <label>Current Password</label>
             <input type="password" id="settingsOldPass" placeholder="Enter current password" autocomplete="current-password">
@@ -426,8 +427,17 @@ tr:hover td{background:rgba(255,255,255,0.02)}
             <label>Confirm New Password</label>
             <input type="password" id="settingsConfirmPass" placeholder="Confirm new password" autocomplete="new-password">
           </div>
-          <button class="btn btn-red" onclick="changeAdminPassword()" style="width:100%">Change Password</button>
+          <button class="btn btn-red" onclick="changeAdminPassword()" style="width:100%">Change My Password</button>
           <p id="settingsMsg" style="font-size:0.78rem;margin-top:0.75rem;text-align:center"></p>
+        </div>
+      </div>
+      <!-- Non-master sees info only -->
+      <div id="settingsStaffView" style="display:none;max-width:420px">
+        <div style="background:var(--bg2);border:1px solid var(--border);padding:1.5rem;text-align:center">
+          <svg viewBox="0 0 24 24" width="36" height="36" stroke="var(--muted)" fill="none" stroke-width="1.5" style="margin-bottom:1rem"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <p style="font-size:0.88rem;color:var(--text);margin-bottom:0.5rem;font-weight:500">Password changes are managed by the master admin.</p>
+          <p style="font-size:0.78rem;color:var(--muted);line-height:1.6">To change your password, contact <strong style="color:var(--text)">Chikki</strong> who can update it from the Admin Accounts section.</p>
+          <p style="font-size:0.72rem;color:var(--muted);margin-top:1rem">📞 +91 90579 75755</p>
         </div>
       </div>
     </div>
@@ -1091,6 +1101,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, addDoc, onSnapshot, query, orderBy, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getAuth, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 /* ══════════════════════════════════════
    FIREBASE CONFIG
@@ -1104,8 +1115,9 @@ const firebaseConfig = {
   appId: "1:834905576967:web:b16776452b9111b6483ca2"
 };
 
-const app = initializeApp(firebaseConfig);
-const db  = getFirestore(app);
+const app  = initializeApp(firebaseConfig);
+const db   = getFirestore(app);
+const auth = getAuth(app);
 
 /* ══════════════════════════════════════
    CONFIG — passwords now stored in Firebase
@@ -1153,30 +1165,46 @@ async function loadPasswords(){
   } catch(e){}
 }
 
+// Shared Firebase Auth credentials — just for Firestore token, NOT for password verification
+const FIREBASE_AUTH_ADMIN = { email:'admin@thehappeningspace.in', pass:'THSadmin2025!' };
+
 window.doLogin = async function(){
   const u = document.getElementById('loginUser').value.trim();
   const p = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+  errEl.classList.remove('show');
+
   await loadPasswords();
   const ok = ADMINS.find(a => a.user===u && a.pass===p);
-  if(ok){
-    if(ok.blocked){
-      document.getElementById('loginError').textContent = 'Your access has been blocked. Contact the master admin.';
-      document.getElementById('loginError').classList.add('show');
-      return;
-    }
-    currentAdminUser = u;
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('appShell').style.display    = 'block';
-    sessionStorage.setItem('ths_auth','1');
-    sessionStorage.setItem('ths_user', u);
-    initApp();
-  } else {
-    document.getElementById('loginError').classList.add('show');
+  if(!ok){
+    errEl.textContent = 'Incorrect username or password.';
+    errEl.classList.add('show'); return;
   }
+  if(ok.blocked){
+    errEl.textContent = 'Your access has been blocked. Contact the master admin.';
+    errEl.classList.add('show'); return;
+  }
+
+  // Sign into shared Firebase Auth account just to get Firestore token
+  try {
+    await signInWithEmailAndPassword(auth, FIREBASE_AUTH_ADMIN.email, FIREBASE_AUTH_ADMIN.pass);
+  } catch(e){
+    // Auth not set up yet — allow through, Firestore rules still open
+    console.warn('Firebase Auth token not available:', e.code);
+  }
+
+  currentAdminUser = u;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display    = 'block';
+  sessionStorage.setItem('ths_auth','1');
+  sessionStorage.setItem('ths_user', u);
+  initApp();
 };
 
-window.doLogout = function(){
+window.doLogout = async function(){
+  try { await signOut(auth); } catch(e){}
   sessionStorage.removeItem('ths_auth');
+  sessionStorage.removeItem('ths_user');
   document.getElementById('appShell').style.display    = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('loginPass').value = '';
@@ -1273,7 +1301,9 @@ window.showView = function(id){
   if(id==='adminaccounts') renderAdminAccounts();
   if(id==='settings'){
     document.getElementById('settingsCurrentUser').textContent = currentAdminUser||'—';
-    document.getElementById('settingsMsg').textContent='';
+    document.getElementById('settingsMsg') && (document.getElementById('settingsMsg').textContent='');
+    document.getElementById('settingsMasterView').style.display = isMaster()?'block':'none';
+    document.getElementById('settingsStaffView').style.display  = isMaster()?'none':'block';
   }
 };
 
@@ -3653,6 +3683,7 @@ window.saveArtistAccount = async function(){
    LOGIN BLOCK CHECK FOR ADMINS
 ══════════════════════════════════════ */
 window.changeAdminPassword = async function(){
+  if(!isMaster()){ showToast('Only master admin can change passwords','error'); return; }
   const oldPass = document.getElementById('settingsOldPass').value;
   const newPass = document.getElementById('settingsNewPass').value;
   const confirm = document.getElementById('settingsConfirmPass').value;
