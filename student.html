@@ -335,10 +335,14 @@ function switchTab(id, btn){
 
 function doLogout(){
   sessionStorage.removeItem('ths_student');
-  document.getElementById('appScreen').style.display   = 'none';
-  document.getElementById('loginScreen').style.display = 'flex';
-  document.getElementById('phoneInput').value = '';
-  document.getElementById('loginError').classList.remove('show');
+  document.getElementById('appScreen').style.display    = 'none';
+  document.getElementById('loginScreen').style.display  = 'flex';
+  document.getElementById('phoneInput').value           = '';
+  document.getElementById('stepPhone').style.display    = 'block';
+  document.getElementById('stepOtp').style.display      = 'none';
+  document.getElementById('phoneError').textContent     = '';
+  document.getElementById('otpError').textContent       = '';
+  document.getElementById('otpInput').value             = '';
 }
 </script>
 
@@ -362,14 +366,12 @@ let confirmationResult = null;
 let currentPhone       = null;
 
 // Initialize reCAPTCHA once on page load
-let recaptchaReady = false;
 document.addEventListener('DOMContentLoaded', () => {
   try {
     window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
       size: 'invisible',
       callback: () => {}
     });
-    window.recaptchaVerifier.render().then(() => { recaptchaReady = true; });
   } catch(e){ console.warn('reCAPTCHA init error:', e); }
 });
 
@@ -512,7 +514,7 @@ function showApp(phone, name, regs, batches){
 
   document.getElementById('profileInitial').textContent = name.charAt(0).toUpperCase();
   document.getElementById('profileName').textContent    = name;
-  document.getElementById('profilePhone').textContent   = '+91 ' + phone;
+  document.getElementById('profilePhone').textContent = '+91 ' + phone.replace(/^\+91/,'');
 
   renderBatches(batches, phone);
   renderWorkshops(regs);
