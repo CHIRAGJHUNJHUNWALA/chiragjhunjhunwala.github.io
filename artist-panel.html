@@ -534,14 +534,25 @@ async function checkBlockedAndInit(user, enteredPass=null){
       // Sign in with custom token from Cloud Function
       await signInWithCustomToken(auth, data.token);
 
-      // Update role from server response
-      if(currentArtist) currentArtist.role = data.role || currentArtist.role;
+      // Update currentArtist with full details from Cloud Function
+      if(currentArtist){
+        currentArtist.name     = data.name     || currentArtist.name;
+        currentArtist.role     = data.role      || currentArtist.role;
+        currentArtist.artistId = data.artistId  || currentArtist.artistId || user;
+      }
+
+      // Update session with correct name
+      sessionStorage.setItem('ths_artist', JSON.stringify({
+        user, 
+        name: data.name || currentArtist?.name || user,
+        role: data.role || currentArtist?.role || 'trainer'
+      }));
 
     } catch(e){
       console.warn('Cloud Function login error:', e);
     }
   } else {
-    // Session restore — just check blocked status
+    // Session restore — just check blocked status from Firestore
     try {
       const snap = await getDoc(doc(db,'settings','artistPasswords'));
       if(snap.exists()){
@@ -554,7 +565,11 @@ async function checkBlockedAndInit(user, enteredPass=null){
           document.getElementById('loginError').classList.add('show');
           return false;
         }
-        if(live && currentArtist) currentArtist.role = live.role || currentArtist.role;
+        if(live && currentArtist){
+          currentArtist.role     = live.role     || currentArtist.role;
+          currentArtist.name     = live.name     || currentArtist.name;
+          currentArtist.artistId = live.artistId || currentArtist.artistId;
+        }
       }
     } catch(e){}
   }
