@@ -276,7 +276,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
     </div>
     <div class="field" id="field-phone">
       <label>WhatsApp Number</label>
-      <input type="tel" id="inp-phone" placeholder="+91 98765 43210" autocomplete="tel">
+      <div style="display:flex;align-items:center">
+        <span style="padding:0.75rem 0.85rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-right:none;color:rgba(255,255,255,0.5);font-size:0.9rem;white-space:nowrap;font-family:'DM Sans',sans-serif">+91</span>
+        <input type="tel" id="inp-phone" placeholder="98765 43210" maxlength="10" autocomplete="tel" oninput="this.value=this.value.replace(/\D/g,'').slice(0,10)" style="flex:1">
+      </div>
       <p class="err">Please enter a valid 10-digit number</p>
     </div>
     <div class="field">
@@ -529,9 +532,12 @@ function renderAttendees(){
         </div>
         <div>
           <label style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:0.3rem">WhatsApp Number</label>
-          <input type="tel" placeholder="+91 98765 43210" value="${a.phone||''}"
-            oninput="attendees[${i}].phone=this.value;updateEnrollBtn()"
-            style="width:100%;background:var(--bg);border:1px solid var(--border);padding:0.55rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none">
+          <div style="display:flex;align-items:center">
+            <span style="padding:0.55rem 0.65rem;background:var(--bg2);border:1px solid var(--border);border-right:none;color:var(--muted);font-size:0.82rem;white-space:nowrap">+91</span>
+            <input type="tel" placeholder="98765 43210" value="${(a.phone||'').replace(/^\+91/,'')}" maxlength="10"
+              oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);attendees[${i}].phone='+91'+this.value;updateEnrollBtn()"
+              style="flex:1;background:var(--bg);border:1px solid var(--border);padding:0.55rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none">
+          </div>
         </div>
       </div>
     </div>`).join('');
@@ -558,10 +564,12 @@ function updateFormSummary(){
     ${people>1?`<div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.4rem">₹${base.toLocaleString('en-IN')} per person × ${people} people</div>`:''}`;
 }
 
+function normalizePhone(p){ const d=p.replace(/\D/g,''); return d.startsWith('91')&&d.length===12?'+'+d:'+91'+d.slice(-10); }
+
 function validateForm(){
   const name=document.getElementById('inp-name').value.trim();
   const phone=document.getElementById('inp-phone').value.replace(/\D/g,'');
-  return name.length>0&&phone.length>=10&&selectedPkg&&selectedSlots.length>0;
+  return name.length>0&&phone.length===10&&selectedPkg&&selectedSlots.length>0;
 }
 function updateEnrollBtn(){document.getElementById('enrollBtn').disabled=!validateForm();}
 
@@ -569,7 +577,7 @@ function updateEnrollBtn(){document.getElementById('enrollBtn').disabled=!valida
 window.openConfirmPopup = function(){
   if(!validateForm())return;
   const name     = document.getElementById('inp-name').value.trim();
-  const phone    = document.getElementById('inp-phone').value.trim();
+  const phone    = normalizePhone(document.getElementById('inp-phone').value.trim());
   const people   = getTotalPeople();
   const base     = parseInt(selectedPkg.price)||0;
   const subtotal = base * people;
@@ -594,7 +602,7 @@ window.closePopup=function(){document.getElementById('popupBackdrop').classList.
 /* PAYMENT */
 window.initiatePayment = async function(){
   const name   = document.getElementById('inp-name').value.trim();
-  const phone  = document.getElementById('inp-phone').value.trim();
+  const phone  = normalizePhone(document.getElementById('inp-phone').value.trim());
   const people = getTotalPeople();
   const base   = parseInt(selectedPkg.price)||0;
   const subtotal = base * people;
