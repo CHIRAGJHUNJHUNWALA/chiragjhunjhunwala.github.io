@@ -361,6 +361,18 @@ const auth = getAuth(app);
 let confirmationResult = null;
 let currentPhone       = null;
 
+// Initialize reCAPTCHA once on page load
+let recaptchaReady = false;
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      size: 'invisible',
+      callback: () => {}
+    });
+    window.recaptchaVerifier.render().then(() => { recaptchaReady = true; });
+  } catch(e){ console.warn('reCAPTCHA init error:', e); }
+});
+
 // ── OTP FLOW ──
 window.sendOtp = async function(){
   const phone = document.getElementById('phoneInput').value.trim();
@@ -373,19 +385,6 @@ window.sendOtp = async function(){
   btn.textContent = 'Sending…'; btn.disabled = true;
 
   try {
-    // Setup reCAPTCHA — clear any existing one first
-    if(window.recaptchaVerifier){
-      try { window.recaptchaVerifier.clear(); } catch(e){}
-      window.recaptchaVerifier = null;
-    }
-    // Clear the container
-    document.getElementById('recaptcha-container').innerHTML = '';
-
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      size: 'invisible',
-      callback: () => {}
-    });
-
     const fullPhone = '+91' + phone;
     confirmationResult = await signInWithPhoneNumber(auth, fullPhone, window.recaptchaVerifier);
     currentPhone = phone;
@@ -400,10 +399,12 @@ window.sendOtp = async function(){
     console.error('OTP send error:', e);
     errEl.textContent = 'Failed to send OTP. Please try again.';
     // Reset recaptcha on error
-    if(window.recaptchaVerifier){
+    try {
       window.recaptchaVerifier.clear();
-      window.recaptchaVerifier = null;
-    }
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible', callback: () => {}
+      });
+    } catch(re){ console.warn('reCAPTCHA reset error:', re); }
   }
 
   btn.textContent = 'Send OTP'; btn.disabled = false;
@@ -440,10 +441,7 @@ window.backToPhone = function(){
   document.getElementById('stepPhone').style.display = 'block';
   document.getElementById('otpInput').value = '';
   document.getElementById('otpError').textContent = '';
-  if(window.recaptchaVerifier){
-    window.recaptchaVerifier.clear();
-    window.recaptchaVerifier = null;
-  }
+  confirmationResult = null;
 };
 
 const BATCHES_CONFIG = {
