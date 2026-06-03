@@ -373,13 +373,18 @@ window.sendOtp = async function(){
   btn.textContent = 'Sending…'; btn.disabled = true;
 
   try {
-    // Setup reCAPTCHA
-    if(!window.recaptchaVerifier){
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-        callback: () => {}
-      });
+    // Setup reCAPTCHA — clear any existing one first
+    if(window.recaptchaVerifier){
+      try { window.recaptchaVerifier.clear(); } catch(e){}
+      window.recaptchaVerifier = null;
     }
+    // Clear the container
+    document.getElementById('recaptcha-container').innerHTML = '';
+
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      size: 'invisible',
+      callback: () => {}
+    });
 
     const fullPhone = '+91' + phone;
     confirmationResult = await signInWithPhoneNumber(auth, fullPhone, window.recaptchaVerifier);
