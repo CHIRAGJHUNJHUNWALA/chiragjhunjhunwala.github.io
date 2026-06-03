@@ -335,14 +335,7 @@ function switchTab(id, btn){
 
 function doLogout(){
   sessionStorage.removeItem('ths_student');
-  document.getElementById('appScreen').style.display    = 'none';
-  document.getElementById('loginScreen').style.display  = 'flex';
-  document.getElementById('phoneInput').value           = '';
-  document.getElementById('stepPhone').style.display    = 'block';
-  document.getElementById('stepOtp').style.display      = 'none';
-  document.getElementById('phoneError').textContent     = '';
-  document.getElementById('otpError').textContent       = '';
-  document.getElementById('otpInput').value             = '';
+  location.reload();
 }
 </script>
 
@@ -387,6 +380,13 @@ window.sendOtp = async function(){
   btn.textContent = 'Sending…'; btn.disabled = true;
 
   try {
+    // Reinitialize reCAPTCHA if cleared
+    if(!window.recaptchaVerifier){
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible',
+        callback: () => {}
+      });
+    }
     const fullPhone = '+91' + phone;
     confirmationResult = await signInWithPhoneNumber(auth, fullPhone, window.recaptchaVerifier);
     currentPhone = phone;
