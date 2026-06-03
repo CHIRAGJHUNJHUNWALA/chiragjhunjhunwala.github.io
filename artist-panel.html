@@ -237,7 +237,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <!-- WORKSHOP STATS VIEW -->
     <div class="view" id="view-wsStats">
       <div class="page-header">
-        <div><h1 class="page-title" id="dashWelcome">My Workshops</h1><p class="page-sub" id="dashDate"></p></div>
+        <div><h1 class="page-title" id="dashWelcomeWs">My Workshops</h1><p class="page-sub" id="dashDateWs"></p></div>
       </div>
       <div class="stats-grid" id="wsStatsGrid" style="margin-bottom:2rem"></div>
       <div class="section-bar"><span class="section-bar-title">My Workshops</span></div>
@@ -423,9 +423,8 @@ async function doLogin(){
 }
 
 function doLogout(){
-  signOut(auth).catch(()=>{});
   sessionStorage.removeItem('ths_artist');
-  location.reload();
+  window.location.href = window.location.href;
 }
 </script>
 
@@ -610,9 +609,19 @@ document.addEventListener('DOMContentLoaded', async () => {
    INIT
 ══════════════════════════════════════ */
 async function initApp(){
-  document.getElementById('artistDisplayName').textContent = currentArtist.name;
-  document.getElementById('dashWelcome').textContent       = 'Hey, ' + currentArtist.name.split(' ')[0] + '!';
-  document.getElementById('dashDate').textContent          = new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const name    = currentArtist.name || currentArtist.user;
+  const firstName = name.split(' ')[0];
+  const dateStr = new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  // Set all welcome elements
+  document.getElementById('artistDisplayName').textContent = name;
+  document.getElementById('dashWelcome').textContent       = 'Hey, ' + firstName + '!';
+  document.getElementById('dashDate').textContent          = dateStr;
+  // Workshop stats view headers
+  const wsWelcome = document.getElementById('dashWelcomeWs');
+  const wsDate    = document.getElementById('dashDateWs');
+  if(wsWelcome) wsWelcome.textContent = 'Hey, ' + firstName + '!';
+  if(wsDate)    wsDate.textContent    = dateStr;
 
   if(currentArtist.role === 'workshop'){
     // Show workshop artist UI, hide trainer UI
@@ -1207,6 +1216,13 @@ window.loadWeekAttendance = async function(){
 
   document.getElementById('attList').innerHTML = html || '<p style="padding:2rem;text-align:center;color:var(--muted);font-size:0.85rem">No students found</p>';
 };
+// Expose logout from module scope
+window.doLogout = function(){
+  signOut(auth).catch(()=>{});
+  sessionStorage.removeItem('ths_artist');
+  location.reload();
+};
+
 window.notifyExpiredStudent = function(id){
   const s = students.find(x=>x.id===id);
   if(!s||!s.phone){ showToast('No phone number found','error'); return; }
