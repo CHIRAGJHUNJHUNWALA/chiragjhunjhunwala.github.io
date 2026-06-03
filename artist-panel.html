@@ -432,7 +432,7 @@ function doLogout(){
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, addDoc, onSnapshot, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { getAuth, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getAuth, signInWithCustomToken, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCvGMYRUhDAr4r2zoTbnRJ3PiCwhCWxLFs",
@@ -507,25 +507,46 @@ let editingStudentId   = null;
 ══════════════════════════════════════ */
 // Check if artist is blocked or password changed in Firebase
 // Returns false if blocked, true if ok
-// Shared Firebase Auth credentials — just for Firestore token
-const FIREBASE_AUTH_ARTIST = { email:'artist@thehappeningspace.in', pass:'THSartist2025!' };
-function artistEmail(u){ return `${u}@thehappeningspace.in`; }
+const CF_BASE = 'https://asia-south1-the-happening-space.cloudfunctions.net';
 
 async function checkBlockedAndInit(user, enteredPass=null){
-  try {
-    const snap = await getDoc(doc(db,'settings','artistPasswords'));
-    if(snap.exists()){
-      const live = (snap.data().artists||[]).find(a=>a.user===user);
-      if(live){
-        if(enteredPass !== null && enteredPass !== live.pass){
-          sessionStorage.removeItem('ths_artist');
-          document.getElementById('loginScreen').style.display = 'flex';
-          document.getElementById('appShell').style.display    = 'none';
-          document.getElementById('loginError').textContent    = 'Incorrect username or password.';
-          document.getElementById('loginError').classList.add('show');
-          return false;
-        }
-        if(live.blocked){
+  if(enteredPass !== null){
+    try {
+      const res  = await fetch(`${CF_BASE}/artistLogin`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({username:user, password:enteredPass})
+      });
+      const data = await res.json();
+
+      if(!res.ok){
+        sessionStorage.removeItem('ths_artist');
+        document.getElementById('loginScreen').style.display = 'flex';
+        document.getElementById('appShell').style.display    = 'none';
+        document.getElementById('loginError').textContent    =
+          data.error==='Account blocked'
+            ? 'Your access has been blocked. Please contact admin.'
+            : 'Incorrect username or password.';
+        document.getElementById('loginError').classList.add('show');
+        return false;
+      }
+
+      // Sign in with custom token from Cloud Function
+      await signInWithCustomToken(auth, data.token);
+
+      // Update role from server response
+      if(currentArtist) currentArtist.role = data.role || currentArtist.role;
+
+    } catch(e){
+      console.warn('Cloud Function login error:', e);
+    }
+  } else {
+    // Session restore — just check blocked status
+    try {
+      const snap = await getDoc(doc(db,'settings','artistPasswords'));
+      if(snap.exists()){
+        const live = (snap.data().artists||[]).find(a=>a.user===user);
+        if(live && live.blocked){
           sessionStorage.removeItem('ths_artist');
           document.getElementById('loginScreen').style.display = 'flex';
           document.getElementById('appShell').style.display    = 'none';
@@ -533,18 +554,9 @@ async function checkBlockedAndInit(user, enteredPass=null){
           document.getElementById('loginError').classList.add('show');
           return false;
         }
-        if(currentArtist) currentArtist.role = live.role || currentArtist.role;
+        if(live && currentArtist) currentArtist.role = live.role || currentArtist.role;
       }
-    }
-  } catch(e){}
-
-  // Sign into shared Firebase Auth account just to get Firestore token
-  if(enteredPass !== null){
-    try {
-      await signInWithEmailAndPassword(auth, FIREBASE_AUTH_ARTIST.email, FIREBASE_AUTH_ARTIST.pass);
-    } catch(e){
-      console.warn('Firebase Auth token not available:', e.code);
-    }
+    } catch(e){}
   }
   return true;
 }

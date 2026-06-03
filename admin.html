@@ -1101,7 +1101,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, addDoc, onSnapshot, query, orderBy, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { getAuth, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getAuth, signInWithCustomToken, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 /* ══════════════════════════════════════
    FIREBASE CONFIG
@@ -1165,8 +1165,8 @@ async function loadPasswords(){
   } catch(e){}
 }
 
-// Shared Firebase Auth credentials — just for Firestore token, NOT for password verification
-const FIREBASE_AUTH_ADMIN = { email:'admin@thehappeningspace.in', pass:'THSadmin2025!' };
+// Cloud Function URLs — credentials never in HTML
+const CF_BASE = 'https://asia-south1-the-happening-space.cloudfunctions.net';
 
 window.doLogin = async function(){
   const u = document.getElementById('loginUser').value.trim();
@@ -1174,31 +1174,35 @@ window.doLogin = async function(){
   const errEl = document.getElementById('loginError');
   errEl.classList.remove('show');
 
-  await loadPasswords();
-  const ok = ADMINS.find(a => a.user===u && a.pass===p);
-  if(!ok){
-    errEl.textContent = 'Incorrect username or password.';
-    errEl.classList.add('show'); return;
-  }
-  if(ok.blocked){
-    errEl.textContent = 'Your access has been blocked. Contact the master admin.';
-    errEl.classList.add('show'); return;
-  }
-
-  // Sign into shared Firebase Auth account just to get Firestore token
   try {
-    await signInWithEmailAndPassword(auth, FIREBASE_AUTH_ADMIN.email, FIREBASE_AUTH_ADMIN.pass);
-  } catch(e){
-    // Auth not set up yet — allow through, Firestore rules still open
-    console.warn('Firebase Auth token not available:', e.code);
-  }
+    const res  = await fetch(`${CF_BASE}/adminLogin`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({username:u, password:p})
+    });
+    const data = await res.json();
 
-  currentAdminUser = u;
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('appShell').style.display    = 'block';
-  sessionStorage.setItem('ths_auth','1');
-  sessionStorage.setItem('ths_user', u);
-  initApp();
+    if(!res.ok){
+      errEl.textContent = data.error==='Account blocked'
+        ? 'Your access has been blocked. Contact the master admin.'
+        : 'Incorrect username or password.';
+      errEl.classList.add('show'); return;
+    }
+
+    // Sign into Firebase Auth with the custom token from Cloud Function
+    await signInWithCustomToken(auth, data.token);
+
+    currentAdminUser = data.username;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appShell').style.display    = 'block';
+    sessionStorage.setItem('ths_auth','1');
+    sessionStorage.setItem('ths_user', u);
+    initApp();
+
+  } catch(e){
+    errEl.textContent = 'Login failed. Please try again.';
+    errEl.classList.add('show');
+  }
 };
 
 window.doLogout = async function(){

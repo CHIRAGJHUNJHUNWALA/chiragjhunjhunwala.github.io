@@ -199,7 +199,7 @@ if(sessionStorage.getItem('ths_scanner')==='1'){
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, doc, getDoc, updateDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getAuth, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 const app  = initializeApp({
   apiKey:"AIzaSyCvGMYRUhDAr4r2zoTbnRJ3PiCwhCWxLFs",
@@ -212,15 +212,23 @@ const app  = initializeApp({
 const db   = getFirestore(app);
 const auth = getAuth(app);
 
-// Shared Firebase Auth credentials — just for Firestore token
-const FIREBASE_AUTH_SCANNER = { email:'scanner@thehappeningspace.in', pass:'THSscanner2025!' };
+// Cloud Function URL
+const CF_BASE = 'https://asia-south1-the-happening-space.cloudfunctions.net';
 
-// Sign into Firebase Auth when scanner logs in
+// Sign into Firebase via Cloud Function when scanner logs in
 document.addEventListener('scannerLoggedIn', async e=>{
   try {
-    await signInWithEmailAndPassword(auth, FIREBASE_AUTH_SCANNER.email, FIREBASE_AUTH_SCANNER.pass);
+    const res  = await fetch(`${CF_BASE}/scannerLogin`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({password: e.detail.pass})
+    });
+    const data = await res.json();
+    if(res.ok && data.token){
+      await signInWithCustomToken(auth, data.token);
+    }
   } catch(err){
-    console.warn('Scanner Firebase Auth token not available:', err.code);
+    console.warn('Scanner Cloud Function error:', err);
   }
 });
 
