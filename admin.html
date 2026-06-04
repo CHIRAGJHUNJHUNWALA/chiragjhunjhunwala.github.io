@@ -1279,11 +1279,12 @@ function listenRegistrations(){
     onSnapshot(collection(db,'registrations'), snap => {
       registrations = snap.docs.map(d => ({id: d.id, ...d.data()}));
       registrations.sort((a,b) => (b.timestamp||'').localeCompare(a.timestamp||''));
-      window._registrations = registrations; // expose for print
+      window._registrations = registrations;
       renderDashboard();
       renderRegTable();
       renderPayTable();
       updateRegBadge();
+      renderWorkshopGrid(); // re-render to update spots count
       if(document.getElementById('view-checkins')?.classList.contains('active')) renderCheckinsView();
       resolve();
     });
@@ -1471,7 +1472,7 @@ function wsCardHTML(w){
   const packages = w.packages||[];
   const totalSp  = slots.reduce((s,sl)=>s+(parseInt(sl.totalSpots)||0),0);
   const wsRegs   = registrations.filter(r=>r.workshop===w.artist);
-  const usedSp   = wsRegs.reduce((s,r)=>{ const count=(r.slots||'').split('|').length; return s+count; },0);
+  const usedSp   = wsRegs.reduce((s,r)=>s+(parseInt(r.people)||1),0);
   const pct      = totalSp>0 ? Math.round(usedSp/totalSp*100) : 0;
   const minPrice = packages.length ? Math.min(...packages.map(p=>parseInt(p.price)||0)) : 0;
   const statusColors = {active:'pill-green',full:'pill-red',cancelled:'pill-orange',completed:'pill-grey',draft:'pill-blue'};

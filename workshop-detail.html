@@ -469,7 +469,7 @@ function renderSlots(count){
         <p class="slot-time">${s.time}</p>
         ${s.song?`<p class="slot-song">♪ ${s.song}</p>`:''}
       </div>
-      <span class="slot-spots ${parseInt(s.spots)<=5?'low':''}">${parseInt(s.spots)<=5?'⚡ '+s.spots+' left':s.spots+' spots'}</span>
+      ${parseInt(s.spots)===0?'<span class="slot-spots none">Full</span>':''}
     </div>`).join('');
 }
 

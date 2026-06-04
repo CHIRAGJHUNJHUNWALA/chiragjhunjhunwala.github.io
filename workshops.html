@@ -299,8 +299,7 @@ function render() {
       const tot  = parseInt(s.totalSpots)||20;
       const pct  = tot > 0 ? sp/tot : 1;
       const dotCls = sp===0?'none':pct<=0.25?'low':'';
-      const spotsTxt = sp===0?'Full':sp<=5?`⚡ ${sp} left`:`${sp} spots`;
-      const spotsCls = sp===0?'none':sp<=5?'low':'';
+      const fullBadge = sp===0?'<span class="ws-slot-spots none">Full</span>':'';
       return `<div class="ws-slot">
         <div class="ws-slot-dot ${dotCls}"></div>
         <div class="ws-slot-info">
@@ -308,7 +307,7 @@ function render() {
           <span class="ws-slot-time">${s.time}</span>
           ${s.song?`<span class="ws-slot-song">♪ ${s.song}</span>`:''}
         </div>
-        <span class="ws-slot-spots ${spotsCls}">${spotsTxt}</span>
+        ${fullBadge}
       </div>`;
     }).join('');
 
