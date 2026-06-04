@@ -152,7 +152,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
 
 @media(max-width:768px){
   .ws-card{grid-template-columns:1fr}
-  .ws-poster{min-height:200px}
+  .ws-poster{min-height:260px;width:100%}
   .ws-poster-overlay{background:linear-gradient(to top,var(--card-bg) 0%,transparent 60%)}
   .ws-info{padding:1.25rem}
   *{cursor:auto!important}
@@ -174,8 +174,11 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
     <img src="logo.png" alt="THS" style="width:40px;height:40px;object-fit:cover;border-radius:4px;flex-shrink:0">
     <div class="logo-text">The <span>Happening</span><br>Space</div>
   </a>
-  <div class="hamburger" id="hamburger" onclick="toggleMenu()">
-    <span></span><span></span><span></span>
+  <div style="display:flex;align-items:center;gap:0.5rem;pointer-events:all">
+    <a href="student.html" id="studentNavBtn" title="My Account" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;background:rgba(10,10,10,0.7);backdrop-filter:blur(10px);border:1px solid var(--border);text-decoration:none;color:var(--text);transition:border-color 0.3s" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='var(--border)'"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></a>
+    <div class="hamburger" id="hamburger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </div>
   </div>
 </nav>
 <div class="nav-overlay" id="navOverlay">
@@ -209,7 +212,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
   <div class="page-hero-grid"></div>
   <div class="page-hero-content">
     <p class="page-eyebrow">The Happening Space</p>
-    <h1 class="page-title">ALL <span>WORK</span><br>SHOPS</h1>
+    <h1 class="page-title">ALL <span>WORKSHOPS</span></h1>
     <p class="page-sub">Led by the best artists in the game. Every workshop is a chance to move, learn, and connect.</p>
   </div>
 </div>
@@ -343,10 +346,7 @@ function render() {
             </div>
           </div>
           <p class="ws-desc">${w.desc||''}</p>
-          <div class="ws-bio">
-            <div class="ws-bio-avatar" style="font-size:0.75rem;letter-spacing:0.05em">${w.artist||'—'}</div>
-            <p class="ws-bio-text">${w.bio||''}</p>
-          </div>
+            <p class="ws-bio-text" style="margin-bottom:1.5rem">${w.bio||''}</p>
           <div class="ws-slots">${slotsHTML||'<p style="font-size:0.8rem;color:var(--text-muted)">Dates TBA</p>'}</div>
           <div class="ws-actions">
             ${btnHTML}

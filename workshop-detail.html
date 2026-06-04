@@ -188,8 +188,11 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
     <img src="logo.png" alt="THS" style="width:40px;height:40px;object-fit:cover;border-radius:4px;flex-shrink:0">
     <div class="logo-text">The <span>Happening</span><br>Space</div>
   </a>
-  <div class="hamburger" id="hamburger" onclick="toggleMenu()">
-    <span></span><span></span><span></span>
+  <div style="display:flex;align-items:center;gap:0.5rem;pointer-events:all">
+    <a href="student.html" id="studentNavBtn" title="My Account" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;background:rgba(10,10,10,0.7);backdrop-filter:blur(10px);border:1px solid var(--border);text-decoration:none;color:var(--text);transition:border-color 0.3s" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='var(--border)'"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></a>
+    <div class="hamburger" id="hamburger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </div>
   </div>
 </nav>
 
@@ -258,14 +261,6 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
       <span class="section-heading-pill pill-red-outline" id="slotStep">Step 2</span>
     </div>
     <div class="schedule-slots" id="slotList"></div>
-    <div class="artist-bio">
-      <p class="section-eyebrow">About the Artist</p>
-      <div class="bio-header">
-        <div class="bio-avatar" id="bioAvatar"></div>
-        <div><p class="bio-name" id="bioName"></p><p class="bio-title" id="bioTitle"></p></div>
-      </div>
-      <p class="bio-text" id="bioText"></p>
-    </div>
   </div>
   <div class="enroll-card">
     <h3 class="enroll-title">Secure Your Spot</h3>
@@ -470,6 +465,10 @@ function renderSlots(count){
         <p class="slot-date">${s.date}</p>
         <p class="slot-time">${s.time}</p>
         ${s.song?`<p class="slot-song">♪ ${s.song}</p>`:''}
+        ${s.instaLink?`<a href="${s.instaLink}" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.7rem;color:var(--red);text-decoration:none;margin-top:0.35rem;font-family:'Syne',sans-serif;font-weight:600;letter-spacing:0.06em">
+          <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+          Watch Choreography
+        </a>`:''}
       </div>
       ${parseInt(s.spots)===0?'<span class="slot-spots none">Full</span>':''}
     </div>`).join('');

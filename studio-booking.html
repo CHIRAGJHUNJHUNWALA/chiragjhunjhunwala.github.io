@@ -157,8 +157,11 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
     <img src="logo.png" alt="THS" style="width:40px;height:40px;object-fit:cover;border-radius:4px;flex-shrink:0">
     <div class="logo-text">The <span>Happening</span><br>Space</div>
   </a>
-  <div class="hamburger" id="hamburger" onclick="toggleMenu()">
-    <span></span><span></span><span></span>
+  <div style="display:flex;align-items:center;gap:0.5rem;pointer-events:all">
+    <a href="student.html" id="studentNavBtn" title="My Account" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;background:rgba(10,10,10,0.7);backdrop-filter:blur(10px);border:1px solid var(--border);text-decoration:none;color:var(--text);transition:border-color 0.3s" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='var(--border)'"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></a>
+    <div class="hamburger" id="hamburger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </div>
   </div>
 </nav>
 <div class="nav-overlay" id="navOverlay">
@@ -266,7 +269,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
 
     <!-- AMENITIES -->
     <div class="amenities-section">
-      <h2 class="pricing-heading">Ameni<span>ties</span></h2>
+      <h2 class="pricing-heading">Amenities</h2>
       <div class="amenities-grid">
         <div class="amenity-item">
           <svg viewBox="0 0 24 24"><path d="M9.5 14.5L3 21"/><path d="M12 8L9 5 4 10l3 3"/><path d="M14.5 9.5l-5 5"/><path d="M20 4l-3.5 3.5"/><path d="M16 8l-2-2 5-5 2 2-5 5z"/></svg>

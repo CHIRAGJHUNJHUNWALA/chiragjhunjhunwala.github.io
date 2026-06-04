@@ -243,6 +243,9 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 <!-- LOGIN -->
 <div id="loginScreen">
   <div class="login-box">
+    <a href="index.html" style="display:inline-flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.4);font-size:0.72rem;text-decoration:none;margin-bottom:1.5rem;font-family:'Syne',sans-serif;letter-spacing:0.08em">
+      <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>BACK TO WEBSITE
+    </a>
     <div class="login-logo">The <span>Happening</span> Space</div>
     <p class="login-sub">Admin Panel</p>
     <label class="login-label" for="loginUser">Username</label>
@@ -285,8 +288,17 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="nav-item" onclick="showView('schedule')">
         <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Schedule
       </div>
+      <div class="nav-item" onclick="showView('monthschedule')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>Monthly View
+      </div>
       <div class="nav-item" onclick="showView('rentals')">
         <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Rental Payments
+      </div>
+      <div class="nav-item" onclick="showView('staff')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Staff Management
+      </div>
+      <div class="nav-item" onclick="showView('expenses')">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Expenses
       </div>
       <div class="nav-section-title">Finance</div>
       <div class="nav-item" onclick="showView('payments')">
@@ -320,9 +332,14 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <div class="view active" id="view-dashboard">
       <div class="page-header">
         <div><h1 class="page-title">Dashboard</h1><p class="page-sub" id="dashDate"></p></div>
-        <button class="btn btn-red" onclick="showView('workshops');setTimeout(openAddWorkshop,100)">
-          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Workshop
-        </button>
+        <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap">
+          <a href="scanner.html" target="_blank" class="btn btn-outline">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M14 17h3M17 14v3"/></svg>Open Scanner
+          </a>
+          <button class="btn btn-red" onclick="showView('workshops');setTimeout(openAddWorkshop,100)">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Workshop
+          </button>
+        </div>
       </div>
 
       <!-- DATE FILTER -->
@@ -479,6 +496,13 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <p class="section-bar-title" style="margin-bottom:1.25rem">What We Believe (6 points)</p>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem" id="believeEditor"></div>
       </div>
+      <div class="table-wrap" style="padding:1.5rem;margin-bottom:1.5rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+          <p class="section-bar-title">Resident Artists</p>
+          <button class="btn btn-outline btn-sm" onclick="addResidentArtist()">+ Add Artist</button>
+        </div>
+        <div id="residentArtistsEditor"></div>
+      </div>
     </div>
 
     <!-- REGULAR BATCHES -->
@@ -589,6 +613,42 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <table><thead><tr><th>Name</th><th>Phone</th><th>Package</th><th>Slot / Song</th><th>Amount</th><th>Booked On</th><th></th></tr></thead>
         <tbody id="notArrivedTable"></tbody></table>
       </div>
+    </div>
+
+    <!-- MONTHLY SCHEDULE VIEW -->
+    <div class="view" id="view-monthschedule">
+      <div class="page-header">
+        <div><h1 class="page-title">Monthly View</h1><p class="page-sub">All bookings this month at a glance</p></div>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <select id="monthViewMonth" onchange="renderMonthSchedule()" style="background:var(--bg3);border:1px solid var(--border2);padding:0.5rem 0.85rem;color:var(--text);font-family:'Syne',sans-serif;font-size:0.78rem;outline:none"></select>
+          <select id="monthViewYear" onchange="renderMonthSchedule()" style="background:var(--bg3);border:1px solid var(--border2);padding:0.5rem 0.85rem;color:var(--text);font-family:'Syne',sans-serif;font-size:0.78rem;outline:none"></select>
+        </div>
+      </div>
+      <div id="monthScheduleGrid"></div>
+    </div>
+
+    <!-- STAFF MANAGEMENT -->
+    <div class="view" id="view-staff">
+      <div class="page-header">
+        <div><h1 class="page-title">Staff Management</h1><p class="page-sub">Track attendance and salary payments</p></div>
+        <button class="btn btn-red" onclick="openAddStaffPayment()">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Payment
+        </button>
+      </div>
+      <div id="staffList"></div>
+    </div>
+
+    <!-- EXPENSES -->
+    <div class="view" id="view-expenses">
+      <div class="page-header">
+        <div><h1 class="page-title">Expenses</h1><p class="page-sub">Track all studio expenses</p></div>
+        <button class="btn btn-red" onclick="openAddExpense()">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Expense
+        </button>
+      </div>
+      <!-- Summary cards -->
+      <div id="expenseSummary" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem"></div>
+      <div id="expenseList"></div>
     </div>
 
     <!-- STUDIO SCHEDULE -->
@@ -725,6 +785,86 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
     </div>
     <div id="reportContent" style="padding:1.5rem;overflow-y:auto;max-height:calc(100vh - 80px)"></div>
+  </div>
+</div>
+
+<!-- ADD STAFF PAYMENT MODAL -->
+<div class="modal-backdrop" id="staffPaymentModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-head">
+      <h2 class="modal-title" id="staffPaymentTitle">Add Staff Payment</h2>
+      <button class="modal-close" onclick="closeModal('staffPaymentModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="staffPaymentEditId">
+      <div class="form-row">
+        <div class="form-group"><label>Staff Name *</label><input type="text" id="spName" placeholder="e.g. Divyanshi Singhvi"></div>
+        <div class="form-group"><label>Role</label><input type="text" id="spRole" placeholder="e.g. Batch Trainer"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Date *</label><input type="date" id="spDate" style="color-scheme:dark"></div>
+        <div class="form-group"><label>Amount (₹) *</label><input type="number" id="spAmount" placeholder="e.g. 5000"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Payment Mode</label>
+          <select id="spMode" style="background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;width:100%">
+            <option value="Cash">Cash</option>
+            <option value="Online">Online</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+            <option value="UPI">UPI</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Paid By</label><input type="text" id="spPaidBy" placeholder="e.g. Chikki"></div>
+      </div>
+      <div class="form-group"><label>Remarks</label><input type="text" id="spRemarks" placeholder="e.g. April salary, bonus"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('staffPaymentModal')">Cancel</button>
+      <button class="btn btn-red" onclick="saveStaffPayment()">Save Payment</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD EXPENSE MODAL -->
+<div class="modal-backdrop" id="expenseModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-head">
+      <h2 class="modal-title" id="expenseModalTitle">Add Expense</h2>
+      <button class="modal-close" onclick="closeModal('expenseModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="expenseEditId">
+      <div class="form-row">
+        <div class="form-group"><label>Date *</label><input type="date" id="expDate" style="color-scheme:dark"></div>
+        <div class="form-group"><label>Amount (₹) *</label><input type="number" id="expAmount" placeholder="e.g. 2000"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Mode</label>
+          <select id="expMode" style="background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;width:100%">
+            <option value="Cash">Cash</option>
+            <option value="Online">Online</option>
+            <option value="UPI">UPI</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Paid By</label><input type="text" id="expPaidBy" placeholder="e.g. Chikki"></div>
+      </div>
+      <div class="form-group"><label>Particulars / Description *</label><input type="text" id="expParticulars" placeholder="e.g. Sound system repair, Cleaning supplies"></div>
+      <div class="form-group"><label>Category</label>
+        <select id="expCategory" style="background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;width:100%">
+          <option value="Maintenance">Maintenance</option>
+          <option value="Supplies">Supplies</option>
+          <option value="Marketing">Marketing</option>
+          <option value="Utilities">Utilities</option>
+          <option value="Equipment">Equipment</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('expenseModal')">Cancel</button>
+      <button class="btn btn-red" onclick="saveExpense()">Save Expense</button>
+    </div>
   </div>
 </div>
 
@@ -1231,11 +1371,12 @@ if(sessionStorage.getItem('ths_auth')==='1'){
 ══════════════════════════════════════ */
 async function initApp(){
   applyMasterAccess();
-  // Show master badge in sidebar if master
   if(isMaster()){
     const tag = document.querySelector('.sidebar-tag');
     if(tag) tag.textContent = 'Master Admin';
   }
+  listenStaffPayments();
+  listenExpenses();
   document.getElementById('dashDate').textContent =
     new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
@@ -1306,9 +1447,12 @@ window.showView = function(id){
   if(id==='checkins')    renderCheckinsView();
   if(id==='payments')    renderAllPayments();
   if(id==='schedule')  { goScheduleToday(); }
+  if(id==='monthschedule'){ initMonthViewSelectors(); renderMonthSchedule(); }
   if(id==='rentals')     renderRentals();
   if(id==='artists')     renderArtistRoster();
   if(id==='adminaccounts') renderAdminAccounts();
+  if(id==='staff')       renderStaff();
+  if(id==='expenses')    renderExpenses();
   if(id==='settings'){
     document.getElementById('settingsCurrentUser').textContent = currentAdminUser||'—';
     document.getElementById('settingsMsg') && (document.getElementById('settingsMsg').textContent='');
@@ -1799,6 +1943,10 @@ window.addSlotRow = function(s={}){
         <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">Total Spots</p>
         <input type="number" placeholder="e.g. 20" value="${s.totalSpots||''}" min="1" class="slot-spots-inp" style="width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.8rem;outline:none">
       </div>
+      <div style="grid-column:1/-1">
+        <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">Instagram Video Link <span style="color:var(--muted);font-weight:300;text-transform:none;letter-spacing:0">(choreography preview)</span></p>
+        <input type="url" placeholder="https://www.instagram.com/reel/..." value="${s.instaLink||''}" class="slot-insta-inp" style="width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.8rem;outline:none">
+      </div>
     </div>`;
   document.getElementById('slotsEditor').appendChild(div);
 };
@@ -1837,6 +1985,7 @@ window.saveWorkshop = async function(saveStatus){
       song: row.querySelector('.slot-song-inp').value.trim(),
       totalSpots: total,
       spots: prev ? prev.spots : total,
+      instaLink: row.querySelector('.slot-insta-inp')?.value.trim()||'',
     };
   }).filter(s=>s.date);
 
@@ -2925,7 +3074,7 @@ window.renderCheckinsView = function(){
     <td>${r.package||'—'}</td>
     <td style="font-size:0.75rem;color:var(--yellow)">${getSong(r)}</td>
     <td style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
-    <td style="color:var(--green);font-size:0.78rem">✓ ${r.checkedInAt||'—'}</td>
+    <td style="color:var(--green);font-size:0.78rem">✓ ${r.checkedInAt||'—'} ${r.checkedInBy?`<span style="color:var(--muted);font-size:0.68rem">by ${r.checkedInBy}</span>`:''}</td>
   </tr>`;
 
   const rowPending = r => `<tr>
@@ -2961,7 +3110,11 @@ window.selectCheckinSlot = function(id){
 window.adminCheckIn = async function(regId, name){
   const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
   try {
-    await updateDoc(doc(db,'registrations',regId), {checkedIn:true, checkedInAt:time});
+    await updateDoc(doc(db,'registrations',regId), {
+      checkedIn:true,
+      checkedInAt:time,
+      checkedInBy: currentAdminUser || 'Admin'
+    });
     showToast(`${name} checked in ✓`);
   } catch(e){
     showToast('Check-in failed — try again','error');
@@ -3021,6 +3174,13 @@ function initAboutEditor(data){
       <div class="form-group" style="margin-bottom:0.6rem"><label>Title ${i+1}</label><input type="text" id="bel-title-${i}" value="${b.title||''}"></div>
       <div class="form-group"><label>Text</label><textarea id="bel-text-${i}" style="min-height:70px">${b.text||''}</textarea></div>
     </div>`).join('');
+
+  // Populate resident artists editor
+  const raEditor = document.getElementById('residentArtistsEditor');
+  if(raEditor){
+    raEditor.innerHTML = '';
+    (d.residentArtists||[]).forEach(a => window.addResidentArtist(a));
+  }
 }
 
 /* ══════════════════════════════════════
@@ -3209,7 +3369,6 @@ window.renderSchedule = function(){
   document.getElementById('scheduleGrid').innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
       <p style="font-size:0.82rem;color:var(--text-mid)">${dayName}</p>
-      <button class="btn btn-outline btn-sm" onclick="openAddScheduleForDate('${selDate}')">+ Add to this day</button>
     </div>
     ${dayEntries.length?dayEntries.map(e=>`
       <div style="display:grid;grid-template-columns:110px 1fr auto;gap:1rem;align-items:center;padding:0.85rem 1.25rem;background:${catColor[e.category]||'rgba(255,255,255,0.04)'};border:1px solid ${catBorder[e.category]||'var(--border)'};margin-bottom:0.5rem">
@@ -3557,6 +3716,116 @@ window.exportRentalsCSV=function(){
   a.download='ths-rentals-'+new Date().toISOString().slice(0,10)+'.csv';a.click();showToast('Rentals CSV downloaded!');
 };
 
+/* ══════════════════════════════════════
+   MONTHLY SCHEDULE VIEW
+══════════════════════════════════════ */
+function initMonthViewSelectors(){
+  const now = new Date();
+  const monthSel = document.getElementById('monthViewMonth');
+  const yearSel  = document.getElementById('monthViewYear');
+  if(!monthSel||monthSel.options.length) return;
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  months.forEach((m,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=m; if(i===now.getMonth()) o.selected=true; monthSel.appendChild(o); });
+  for(let y=2024;y<=2030;y++){ const o=document.createElement('option'); o.value=y; o.textContent=y; if(y===now.getFullYear()) o.selected=true; yearSel.appendChild(o); }
+}
+
+window.renderMonthSchedule = function(){
+  initMonthViewSelectors();
+  const month = parseInt(document.getElementById('monthViewMonth').value);
+  const year  = parseInt(document.getElementById('monthViewYear').value);
+  const from  = new Date(year,month,1);
+  const to    = new Date(year,month+1,0);
+  const catColor={'Dance Workshop':'rgba(188,31,46,0.12)','Studio Rental':'rgba(106,176,245,0.12)','Shoot':'rgba(106,175,126,0.12)','Event':'rgba(245,230,66,0.1)','Meditation':'rgba(149,128,255,0.12)','Regulars':'rgba(232,134,58,0.12)'};
+  const entries = scheduleEntries.filter(e=>{
+    if(!e.date) return false;
+    const d=new Date(e.date+'T00:00'); return d>=from&&d<=to;
+  }).sort((a,b)=>a.date.localeCompare(b.date)||(a.timeFrom||'').localeCompare(b.timeFrom||''));
+  if(!entries.length){ document.getElementById('monthScheduleGrid').innerHTML=`<div style="text-align:center;padding:3rem;color:var(--muted);border:1px dashed var(--border)">No bookings this month.</div>`; return; }
+  const grouped={};
+  entries.forEach(e=>{ if(!grouped[e.date]) grouped[e.date]=[]; grouped[e.date].push(e); });
+  let html='';
+  Object.keys(grouped).sort().forEach(date=>{
+    const d=new Date(date+'T00:00');
+    const dayName=d.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short'});
+    html+=`<div style="margin-bottom:1.25rem"><p style="font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;font-family:'Syne',sans-serif">${dayName}</p>${grouped[date].map(e=>`<div style="display:grid;grid-template-columns:100px 1fr;gap:0.75rem;align-items:center;padding:0.65rem 1rem;background:${catColor[e.category]||'rgba(255,255,255,0.04)'};border:1px solid rgba(255,255,255,0.06);margin-bottom:0.35rem"><div><p style="font-family:'Bebas Neue',sans-serif;font-size:0.95rem;color:var(--text)">${fmt12(e.timeFrom)}</p><p style="font-size:0.65rem;color:var(--muted)">– ${fmt12(e.timeTo)}</p></div><div><p style="font-weight:500;color:var(--text);font-size:0.85rem">${e.artist||'—'}</p><p style="font-size:0.7rem;color:var(--muted)">${e.category||'—'}${e.remarks?' · '+e.remarks:''}</p></div></div>`).join('')}</div>`;
+  });
+  document.getElementById('monthScheduleGrid').innerHTML=`<p style="font-size:0.82rem;color:var(--text-mid);margin-bottom:1rem">${entries.length} booking${entries.length!==1?'s':''} this month</p>${html}`;
+};
+
+/* ══════════════════════════════════════
+   STAFF MANAGEMENT
+══════════════════════════════════════ */
+let staffPayments = [];
+function listenStaffPayments(){
+  onSnapshot(collection(db,'staffPayments'), snap=>{
+    staffPayments=snap.docs.map(d=>({id:d.id,...d.data()}));
+    staffPayments.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    if(document.getElementById('view-staff')?.classList.contains('active')) renderStaff();
+  });
+}
+function renderStaff(){
+  const total=staffPayments.reduce((s,p)=>s+parseFloat(p.amount||0),0);
+  let html=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem"><div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem"><p style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">Total Paid</p><p style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--yellow)">₹${total.toLocaleString('en-IN')}</p></div></div>`;
+  html+=`<div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--border)">${['Name','Role','Date','Amount','Mode','Paid By','Remarks',''].map(h=>`<th style="padding:0.75rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">${h}</th>`).join('')}</tr></thead><tbody>${staffPayments.length?staffPayments.map(p=>`<tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="padding:0.75rem 1rem;font-weight:500;color:var(--text)">${p.name||'—'}</td><td style="padding:0.75rem 1rem;font-size:0.78rem;color:var(--muted)">${p.role||'—'}</td><td style="padding:0.75rem 1rem;font-size:0.78rem">${p.date||'—'}</td><td style="padding:0.75rem 1rem;color:var(--yellow);font-weight:500">₹${parseFloat(p.amount||0).toLocaleString('en-IN')}</td><td style="padding:0.75rem 1rem"><span class="pill pill-blue" style="font-size:0.6rem">${p.mode||'—'}</span></td><td style="padding:0.75rem 1rem;font-size:0.78rem;color:var(--muted)">${p.paidBy||'—'}</td><td style="padding:0.75rem 1rem;font-size:0.75rem;color:var(--muted)">${p.remarks||'—'}</td><td style="padding:0.75rem 1rem"><button class="btn btn-danger btn-sm" onclick="deleteStaffPayment('${p.id}','${p.name}')">Delete</button></td></tr>`).join(''):`<tr><td colspan="8" style="padding:2rem;text-align:center;color:var(--muted)">No payments yet</td></tr>`}</tbody></table></div>`;
+  document.getElementById('staffList').innerHTML=html;
+}
+window.openAddStaffPayment=function(){
+  ['spName','spRole','spAmount','spPaidBy','spRemarks'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('spDate').value=new Date().toLocaleDateString('en-CA');
+  document.getElementById('spMode').value='Cash';
+  openModal('staffPaymentModal');
+};
+window.saveStaffPayment=async function(){
+  const name=document.getElementById('spName').value.trim();
+  const date=document.getElementById('spDate').value;
+  const amount=document.getElementById('spAmount').value;
+  if(!name||!date||!amount){showToast('Name, date and amount are required','error');return;}
+  await addDoc(collection(db,'staffPayments'),{name,date,amount:parseFloat(amount),role:document.getElementById('spRole').value.trim(),mode:document.getElementById('spMode').value,paidBy:document.getElementById('spPaidBy').value.trim(),remarks:document.getElementById('spRemarks').value.trim(),createdAt:Date.now()});
+  closeModal('staffPaymentModal');showToast('Payment saved ✓');
+};
+window.deleteStaffPayment=async function(id,name){
+  if(!confirm(`Delete payment for ${name}?`))return;
+  await deleteDoc(doc(db,'staffPayments',id));showToast('Deleted ✓');
+};
+
+/* ══════════════════════════════════════
+   EXPENSES
+══════════════════════════════════════ */
+let expenses=[];
+function listenExpenses(){
+  onSnapshot(collection(db,'expenses'),snap=>{
+    expenses=snap.docs.map(d=>({id:d.id,...d.data()}));
+    expenses.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    if(document.getElementById('view-expenses')?.classList.contains('active')) renderExpenses();
+  });
+}
+function renderExpenses(){
+  const total=expenses.reduce((s,e)=>s+parseFloat(e.amount||0),0);
+  const byCategory={};
+  expenses.forEach(e=>{byCategory[e.category||'Other']=(byCategory[e.category||'Other']||0)+parseFloat(e.amount||0);});
+  document.getElementById('expenseSummary').innerHTML=[{label:'Total Expenses',val:`₹${total.toLocaleString('en-IN')}`,color:'var(--red)'},...Object.entries(byCategory).map(([k,v])=>({label:k,val:`₹${v.toLocaleString('en-IN')}`,color:'var(--text)'}))].map(s=>`<div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem"><p style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">${s.label}</p><p style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:${s.color}">${s.val}</p></div>`).join('');
+  document.getElementById('expenseList').innerHTML=`<div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--border)">${['Date','Particulars','Category','Amount','Mode','Paid By',''].map(h=>`<th style="padding:0.75rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">${h}</th>`).join('')}</tr></thead><tbody>${expenses.length?expenses.map(e=>`<tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="padding:0.75rem 1rem;font-size:0.78rem">${e.date||'—'}</td><td style="padding:0.75rem 1rem;font-weight:500;color:var(--text)">${e.particulars||'—'}</td><td style="padding:0.75rem 1rem"><span class="pill" style="font-size:0.6rem;background:rgba(255,255,255,0.06);color:var(--muted)">${e.category||'Other'}</span></td><td style="padding:0.75rem 1rem;color:var(--red);font-weight:500">₹${parseFloat(e.amount||0).toLocaleString('en-IN')}</td><td style="padding:0.75rem 1rem"><span class="pill pill-blue" style="font-size:0.6rem">${e.mode||'—'}</span></td><td style="padding:0.75rem 1rem;font-size:0.78rem;color:var(--muted)">${e.paidBy||'—'}</td><td style="padding:0.75rem 1rem"><button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.id}')">Delete</button></td></tr>`).join(''):`<tr><td colspan="7" style="padding:2rem;text-align:center;color:var(--muted)">No expenses yet</td></tr>`}</tbody></table></div>`;
+}
+window.openAddExpense=function(){
+  ['expAmount','expPaidBy','expParticulars'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('expDate').value=new Date().toLocaleDateString('en-CA');
+  document.getElementById('expMode').value='Cash';
+  document.getElementById('expCategory').value='Maintenance';
+  openModal('expenseModal');
+};
+window.saveExpense=async function(){
+  const date=document.getElementById('expDate').value;
+  const amount=document.getElementById('expAmount').value;
+  const particulars=document.getElementById('expParticulars').value.trim();
+  if(!date||!amount||!particulars){showToast('Date, amount and particulars are required','error');return;}
+  await addDoc(collection(db,'expenses'),{date,amount:parseFloat(amount),particulars,mode:document.getElementById('expMode').value,paidBy:document.getElementById('expPaidBy').value.trim(),category:document.getElementById('expCategory').value,createdAt:Date.now()});
+  closeModal('expenseModal');showToast('Expense saved ✓');
+};
+window.deleteExpense=async function(id){
+  if(!confirm('Delete this expense?'))return;
+  await deleteDoc(doc(db,'expenses',id));showToast('Deleted ✓');
+};
+
 const MASTER_USER = 'chikki';
 
 function isMaster(){ return currentAdminUser === MASTER_USER; }
@@ -3775,11 +4044,35 @@ window.saveAboutContent = async function(){
       title:(document.getElementById('bel-title-'+i)||{}).value||'',
       text: (document.getElementById('bel-text-'+i)||{}).value||'',
     }));
+    // Save resident artists
+    const artistRows = document.querySelectorAll('.resident-artist-row');
+    data.residentArtists = Array.from(artistRows).map(row=>({
+      name:  row.querySelector('.ra-name')?.value.trim()||'',
+      style: row.querySelector('.ra-style')?.value.trim()||'',
+      bio:   row.querySelector('.ra-bio')?.value.trim()||'',
+      image: row.querySelector('.ra-image')?.value.trim()||'',
+    })).filter(a=>a.name);
     await setDoc(doc(db,'settings','about'), data);
     showToast('About Us saved ✓');
   } catch(e) {
     showToast('Save failed: '+e.message,'error');
   }
+};
+
+// Resident Artists editor
+let _residentArtists = [];
+
+window.addResidentArtist = function(a={}){
+  const div = document.createElement('div');
+  div.className = 'resident-artist-row';
+  div.style.cssText = 'background:var(--bg2);border:1px solid var(--border);padding:1rem;margin-bottom:0.75rem;display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;position:relative';
+  div.innerHTML = `
+    <div class="form-group"><label>Name *</label><input type="text" class="ra-name" value="${a.name||''}" placeholder="e.g. Om Tarphe"></div>
+    <div class="form-group"><label>Style / Role</label><input type="text" class="ra-style" value="${a.style||''}" placeholder="e.g. Contemporary, Hip Hop"></div>
+    <div class="form-group" style="grid-column:1/-1"><label>Bio</label><input type="text" class="ra-bio" value="${a.bio||''}" placeholder="Short bio about the artist"></div>
+    <div class="form-group" style="grid-column:1/-1"><label>Photo URL <span style="font-weight:300;color:var(--muted)">(paste image URL)</span></label><input type="url" class="ra-image" value="${a.image||''}" placeholder="https://..."></div>
+    <button onclick="this.closest('.resident-artist-row').remove()" style="position:absolute;top:0.5rem;right:0.5rem;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem">✕</button>`;
+  document.getElementById('residentArtistsEditor').appendChild(div);
 };
 
 window.loadAboutContent = loadAboutContent;
