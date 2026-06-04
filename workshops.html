@@ -126,7 +126,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
 
 /* BIO */
 .ws-bio{display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;padding:0.75rem;background:rgba(255,255,255,0.02);border-left:2px solid var(--border-red)}
-.ws-bio-avatar{width:36px;height:36px;border:1px solid var(--border-red);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:0.85rem;color:var(--red);flex-shrink:0}
+.ws-bio-avatar{min-width:36px;height:36px;padding:0 0.5rem;border:1px solid var(--border-red);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:0.05em;color:var(--red);flex-shrink:0;white-space:nowrap}
 .ws-bio-text{font-size:0.78rem;color:var(--text-muted);font-weight:300;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
 /* ACTIONS */
@@ -329,8 +329,7 @@ function render() {
         ${bannerHTML}
         <div class="ws-poster">
           <div class="ws-poster-bg" style="${posterStyle}"></div>
-          <div class="ws-poster-overlay"></div>
-          <div class="ws-poster-initials">${w.initials||''}</div>
+          ${status==='full'?`<div style="position:absolute;top:0.6rem;left:0.6rem;background:#bc1f2e;color:#fff;font-size:0.58rem;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.12em;padding:0.2rem 0.45rem;z-index:2">FULL</div>`:''}
         </div>
         <div class="ws-info">
           <div class="ws-top">
@@ -345,7 +344,7 @@ function render() {
           </div>
           <p class="ws-desc">${w.desc||''}</p>
           <div class="ws-bio">
-            <div class="ws-bio-avatar">${w.initials||'—'}</div>
+            <div class="ws-bio-avatar" style="font-size:0.75rem;letter-spacing:0.05em">${w.artist||'—'}</div>
             <p class="ws-bio-text">${w.bio||''}</p>
           </div>
           <div class="ws-slots">${slotsHTML||'<p style="font-size:0.8rem;color:var(--text-muted)">Dates TBA</p>'}</div>
