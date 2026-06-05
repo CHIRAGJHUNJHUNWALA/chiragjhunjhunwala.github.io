@@ -220,6 +220,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
 <!-- LOGIN SCREEN -->
 <div id="loginScreen">
   <div class="login-box">
+    <a href="index.html" style="display:inline-flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.4);font-size:0.72rem;text-decoration:none;margin-bottom:1.5rem;font-family:'Syne',sans-serif;letter-spacing:0.08em">
+      <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>BACK TO WEBSITE
+    </a>
     <p class="login-eyebrow">The Happening Space</p>
     <h1 class="login-title">MY <span>ACCOUNT</span></h1>
 
@@ -279,12 +282,22 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
   </div>
 
   <div class="tabs-wrap">
-    <button class="tab-btn active" onclick="switchTab('batches',this)">My Batches</button>
-    <button class="tab-btn" onclick="switchTab('workshops',this)">My Workshops</button>
+    <button class="tab-btn active" onclick="switchTab('workshops',this)">My Workshops</button>
+    <button class="tab-btn" onclick="switchTab('batches',this)">My Batches</button>
+    <button class="tab-btn" onclick="switchTab('history',this)">History</button>
+  </div>
+
+  <!-- WORKSHOPS TAB — shown first -->
+  <div class="tab-content active" id="tab-workshops">
+    <div class="loading-wrap" id="workshopLoading">
+      <div class="spinner"></div>
+      <p class="loading-text">Loading your bookings…</p>
+    </div>
+    <div id="workshopContent" style="display:none"></div>
   </div>
 
   <!-- BATCHES TAB -->
-  <div class="tab-content active" id="tab-batches">
+  <div class="tab-content" id="tab-batches">
     <div class="loading-wrap" id="batchLoading">
       <div class="spinner"></div>
       <p class="loading-text">Loading your batch info…</p>
@@ -292,13 +305,11 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
     <div id="batchContent" style="display:none"></div>
   </div>
 
-  <!-- WORKSHOPS TAB -->
-  <div class="tab-content" id="tab-workshops">
-    <div class="loading-wrap" id="workshopLoading">
-      <div class="spinner"></div>
-      <p class="loading-text">Loading your bookings…</p>
+  <!-- HISTORY TAB -->
+  <div class="tab-content" id="tab-history">
+    <div id="historyContent">
+      <p style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:3rem 0">Loading history…</p>
     </div>
-    <div id="workshopContent" style="display:none"></div>
   </div>
 </div>
 
@@ -514,10 +525,29 @@ function showApp(phone, name, regs, batches){
 
   document.getElementById('profileInitial').textContent = name.charAt(0).toUpperCase();
   document.getElementById('profileName').textContent    = name;
-  document.getElementById('profilePhone').textContent = '+91 ' + phone.replace(/^\+91/,'');
+  document.getElementById('profilePhone').textContent   = '+91 ' + phone.replace(/^\+91/,'');
 
-  renderBatches(batches, phone);
-  renderWorkshops(regs);
+  // Split batches into active and expired
+  const activeBatches  = batches.filter(b => b.status !== 'expired' && b.status !== 'inactive');
+  const expiredBatches = batches.filter(b => b.status === 'expired' || b.status === 'inactive');
+
+  // A reg is "completed" only if ALL slots are checked in
+  const isFullyDone = (r) => {
+    const slots = (r.slots||'').split('|').filter(Boolean);
+    if(r.checkedIn && slots.length <= 1) return true; // legacy single-slot
+    if(slots.length > 1){
+      const cis = r.checkedInSlots||{};
+      return slots.every((_,i)=>!!cis['s'+(i+1)]);
+    }
+    return r.checkedIn===true;
+  };
+
+  const activeRegs    = regs.filter(r => !isFullyDone(r));
+  const completedRegs = regs.filter(r => isFullyDone(r));
+
+  renderBatches(activeBatches, phone);
+  renderWorkshops(activeRegs);
+  renderHistory(expiredBatches, completedRegs);
 }
 
 /* ══════ BATCHES ══════ */
@@ -655,15 +685,54 @@ function renderWorkshops(regs){
     return;
   }
 
-  let html = `<p class="section-eyebrow">Your Bookings</p><h2 class="section-title">WORKSHOP HISTORY</h2>`;
+  let html = `<p class="section-eyebrow">Your Bookings</p><h2 class="section-title">MY WORKSHOPS</h2>`;
 
   // Sort newest first
   const sorted = [...regs].sort((a,b)=>(b.timestamp||'').localeCompare(a.timestamp||''));
 
   for(const [i,r] of sorted.entries()){
-    const qrVal     = 'THS-REG-' + r.id;
-    const checkedIn = r.checkedIn || false;
-    const checkedAt = r.checkedInAt || '';
+    const qrVal          = 'THS-REG-' + r.id;
+    const checkedInSlots = r.checkedInSlots || {};
+    const slotParts      = (r.slots||'').split('|').map(s=>s.trim()).filter(Boolean);
+    const anyCheckedIn   = r.checkedIn || Object.keys(checkedInSlots).length > 0;
+    const allCheckedIn   = r.checkedIn && !Object.keys(checkedInSlots).length
+                           ? true
+                           : slotParts.length > 0 && slotParts.every((_,i)=>!!checkedInSlots['s'+(i+1)]);
+
+    // Build per-slot status pills
+    const slotStatusHTML = slotParts.length > 1
+      ? `<div style="margin-top:0.75rem">
+          <p style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">Slot Attendance</p>
+          <div style="display:flex;flex-wrap:wrap;gap:0.4rem">
+            ${slotParts.map((sp,idx)=>{
+              const key  = 's'+(idx+1);
+              const done = !!checkedInSlots[key] || r.checkedIn;
+              const time = checkedInSlots[key]||'';
+              return `<div style="padding:0.35rem 0.65rem;border:1px solid ${done?'rgba(34,197,94,0.4)':'var(--border)'};background:${done?'rgba(34,197,94,0.08)':'transparent'};font-size:0.7rem;color:${done?'var(--green)':'var(--muted)'}">
+                ${sp.includes('♪')?sp.split('·')[0].trim():sp.split('·')[0].trim()} ${done?'✓'+(time?' · '+time:''):'○ Not yet'}
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`
+      : (anyCheckedIn ? `<div class="info-item"><strong>Checked In</strong><span style="color:var(--green)">✓ ${r.checkedInAt||Object.values(checkedInSlots)[0]||''}</span></div>` : '');
+
+    // Overall status pill
+    const statusPill = allCheckedIn
+      ? `<span class="pill pill-green">✓ All Done</span>`
+      : anyCheckedIn
+        ? `<span class="pill" style="background:rgba(34,197,94,0.15);color:var(--green);border:1px solid rgba(34,197,94,0.3)">Partial Check-In</span>`
+        : `<span class="pill pill-blue">Confirmed</span>`;
+
+    // QR overlay — only show USED if ALL slots done
+    const qrOverlay = allCheckedIn
+      ? `<div style="position:absolute;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;border-radius:4px">
+          <div style="border:3px solid #e57373;padding:4px 8px;transform:rotate(-15deg)">
+            <p style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#e57373;letter-spacing:0.1em;line-height:1">USED</p>
+          </div>
+        </div>` : '';
+
+    const qrLabel = allCheckedIn ? 'All slots attended' : anyCheckedIn ? 'Show for remaining slot' : 'Show at entry';
+
     html += `
       <div class="booking-card">
         <div class="booking-card-header">
@@ -671,26 +740,22 @@ function renderWorkshops(regs){
             <p class="booking-artist">${r.workshop||'—'}</p>
             <p class="booking-style">${r.style||'Workshop'}</p>
           </div>
-          <span class="pill ${checkedIn?'pill-green':'pill-blue'}">${checkedIn?'✓ Checked In':'Confirmed'}</span>
+          ${statusPill}
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:start">
           <div class="booking-body">
             <div class="info-item"><strong>Package</strong><span>${r.package||'—'}</span></div>
-            <div class="info-item"><strong>Slot / Song</strong><span style="font-size:0.82rem;color:var(--yellow)">${(r.slots||'—')}</span></div>
+            <div class="info-item"><strong>Slot / Song</strong><span style="font-size:0.82rem;color:var(--yellow)">${r.slots||'—'}</span></div>
             <div class="info-item"><strong>Amount Paid</strong><span style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</span></div>
             <div class="info-item"><strong>Booked On</strong><span style="font-size:0.78rem">${r.timestamp||'—'}</span></div>
-            ${checkedIn?`<div class="info-item"><strong>Checked In At</strong><span style="color:var(--green)">${checkedAt}</span></div>`:''}
+            ${slotStatusHTML}
           </div>
           <div style="padding:1.25rem 1.25rem 0 0;text-align:center;position:relative">
             <div style="background:#fff;padding:8px;display:inline-block;border-radius:4px;position:relative" id="qr-wrap-${i}">
               <div id="qr-${i}"></div>
-              ${checkedIn?`<div style="position:absolute;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;border-radius:4px">
-                <div style="border:3px solid #e57373;padding:4px 8px;transform:rotate(-15deg)">
-                  <p style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#e57373;letter-spacing:0.1em;line-height:1">USED</p>
-                </div>
-              </div>`:''}
+              ${qrOverlay}
             </div>
-            <p style="font-size:0.6rem;color:${checkedIn?'#e57373':'var(--text-muted)'};margin-top:0.4rem;letter-spacing:0.05em">${checkedIn?'Already used':'Show at entry'}</p>
+            <p style="font-size:0.6rem;color:${allCheckedIn?'#e57373':'var(--text-muted)'};margin-top:0.4rem;letter-spacing:0.05em">${qrLabel}</p>
           </div>
         </div>
         <div class="booking-pid">ID: ${qrVal}</div>
@@ -704,6 +769,65 @@ function renderWorkshops(regs){
     const wrap = document.getElementById('qr-'+i);
     if(wrap && window.QRCode) new QRCode(wrap,{text:'THS-REG-'+r.id,width:120,height:120,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.H});
   });
+}
+
+/* ══════ HISTORY ══════ */
+function renderHistory(expiredBatches, completedRegs){
+  const el = document.getElementById('historyContent');
+  let html = '';
+
+  // Expired batches
+  if(expiredBatches.length){
+    html += `<p class="section-eyebrow" style="margin-top:1.5rem">Past Batches</p>`;
+    expiredBatches.forEach(b => {
+      const batchInfo = window._BATCHES?.[b.batchId] || {};
+      html += `<div class="booking-card" style="opacity:0.7">
+        <div class="booking-card-header">
+          <div>
+            <p class="booking-artist">${batchInfo.name||b.batchId||'Batch'}</p>
+            <p class="booking-style">by ${b.teacher||'—'}</p>
+          </div>
+          <span class="pill" style="background:rgba(255,255,255,0.08);color:var(--muted)">Expired</span>
+        </div>
+        <div class="booking-body">
+          <div class="info-item"><strong>Subscription</strong><span>${b.subscription||'—'}</span></div>
+          <div class="info-item"><strong>Joined</strong><span>${b.joinDate||'—'}</span></div>
+          <div class="info-item"><strong>Expired</strong><span style="color:#e57373">${b.expiryDate||'—'}</span></div>
+        </div>
+      </div>`;
+    });
+  }
+
+  // Completed workshops
+  if(completedRegs.length){
+    html += `<p class="section-eyebrow" style="margin-top:2rem">Attended Workshops</p>`;
+    completedRegs.forEach(r => {
+      html += `<div class="booking-card" style="opacity:0.7">
+        <div class="booking-card-header">
+          <div>
+            <p class="booking-artist">${r.workshop||'—'}</p>
+            <p class="booking-style">${r.style||'Workshop'}</p>
+          </div>
+          <span class="pill pill-green">✓ Attended</span>
+        </div>
+        <div class="booking-body">
+          <div class="info-item"><strong>Slot / Song</strong><span style="color:var(--yellow)">${r.slots||'—'}</span></div>
+          <div class="info-item"><strong>Checked In</strong><span style="color:var(--green)">${r.checkedInAt||'—'}</span></div>
+          <div class="info-item"><strong>Amount Paid</strong><span>₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</span></div>
+        </div>
+      </div>`;
+    });
+  }
+
+  if(!expiredBatches.length && !completedRegs.length){
+    html = `<div class="empty-state">
+      <svg viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+      <h3>No History Yet</h3>
+      <p>Attended workshops and expired batches will appear here.</p>
+    </div>`;
+  }
+
+  el.innerHTML = html;
 }
 
 /* ══════ AUTO-LOGIN ══════ */

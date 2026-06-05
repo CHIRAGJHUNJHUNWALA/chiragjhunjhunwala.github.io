@@ -3168,11 +3168,15 @@ window.renderCheckinsView = function(){
   const rowChecked = r => {
     const slots = (r.slots||'').split('|').map(s=>s.trim()).filter(Boolean);
     const checkedInSlots = r.checkedInSlots||{};
-    const slotStatus = slots.map(s=>{
-      const key = Object.keys(checkedInSlots).find(k=>s.toLowerCase().includes(k.toLowerCase().slice(0,8)))||
-                  s.replace(/\W/g,'').slice(0,12);
-      const done = !!checkedInSlots[key]||r.checkedIn;
-      return `<span style="font-size:0.65rem;padding:0.15rem 0.4rem;background:${done?'rgba(34,197,94,0.15)':'rgba(255,255,255,0.06)'};color:${done?'var(--green)':'var(--muted)'};margin:0.1rem;display:inline-block">${s.split('·')[0]||s} ${done?'✓':'○'}</span>`;
+    // Map each booked slot label to a workshop slot id
+    const slotStatus = slots.map((sp,i)=>{
+      const wsSlot = (ws?.slots||[]).find(s=>
+        sp.includes(s.song||'__')||sp.includes(s.time||'__')||sp.includes(s.date||'__')
+      );
+      const key  = wsSlot ? wsSlot.id : ('s'+(i+1));
+      const done = !!checkedInSlots[key] || r.checkedIn===true;
+      const time = checkedInSlots[key]||'';
+      return `<span style="font-size:0.65rem;padding:0.15rem 0.4rem;background:${done?'rgba(34,197,94,0.15)':'rgba(255,255,255,0.06)'};color:${done?'var(--green)':'var(--muted)'};margin:0.1rem;display:inline-block;border:1px solid ${done?'rgba(34,197,94,0.3)':'transparent'}">${sp.split('·')[0].trim()||sp} ${done?'✓'+(time?' '+time:''):'○'}</span>`;
     }).join('');
     return `<tr>
       <td style="color:var(--text);font-weight:500">${r.name||'—'}</td>
@@ -3180,7 +3184,7 @@ window.renderCheckinsView = function(){
       <td>${r.package||'—'}</td>
       <td style="font-size:0.75rem">${slotStatus||'—'}</td>
       <td style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
-      <td style="color:var(--green);font-size:0.78rem">✓ ${r.checkedInAt||Object.values(r.checkedInSlots||{})[0]||'—'} ${r.checkedInBy?`<span style="color:var(--muted);font-size:0.68rem">by ${r.checkedInBy}</span>`:''}</td>
+      <td style="color:var(--green);font-size:0.78rem">✓ ${r.checkedInAt||Object.values(checkedInSlots)[0]||'—'} ${r.checkedInBy?`<span style="color:var(--muted);font-size:0.68rem">by ${r.checkedInBy}</span>`:''}</td>
     </tr>`;
   };
 
