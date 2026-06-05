@@ -1249,8 +1249,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <div class="form-group"><label>WhatsApp Number *</label>
           <div style="display:flex;align-items:center;gap:0.5rem">
             <span style="background:var(--bg3);border:1px solid var(--border2);padding:0.5rem 0.75rem;color:var(--muted);font-size:0.85rem;white-space:nowrap">+91</span>
-            <input type="tel" id="manualPhone" placeholder="98765 43210" maxlength="10" oninput="this.value=this.value.replace(/\D/g,'').slice(0,10)">
+            <input type="tel" id="manualPhone" placeholder="98765 43210" maxlength="10"
+              oninput="this.value=this.value.replace(/\D/g,'').slice(0,10);if(this.value.length===10)adminAutoFillName(this.value)">
           </div>
+          <p id="manualPhoneHint" style="font-size:0.7rem;color:var(--green);margin-top:0.3rem;display:none">✓ Name autofilled from existing record</p>
         </div>
       </div>
       <div class="form-row">
@@ -2245,6 +2247,20 @@ window.limitManualSlots = function(max){
     // Uncheck the last one checked
     event.target.checked = false;
     showToast(`This package allows ${max} slot${max>1?'s':''} only`,'error');
+  }
+};
+
+window.adminAutoFillName = async function(digits){
+  const phone = '+91' + digits;
+  const found = registrations.find(r=>r.phone===phone)
+             || batchStudents.find(s=>s.phone===phone);
+  const nameEl = document.getElementById('manualName');
+  const hint   = document.getElementById('manualPhoneHint');
+  if(found && found.name && !nameEl.value){
+    nameEl.value = found.name;
+    if(hint) hint.style.display = 'block';
+  } else if(hint){
+    hint.style.display = 'none';
   }
 };
 

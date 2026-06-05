@@ -180,6 +180,9 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 <!-- LOGIN -->
 <div id="loginScreen">
   <div class="login-box">
+    <a href="index.html" style="display:inline-flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.4);font-size:0.72rem;text-decoration:none;margin-bottom:1.5rem;font-family:'Syne',sans-serif;letter-spacing:0.08em">
+      <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>BACK TO WEBSITE
+    </a>
     <div class="login-logo">The <span>Happening</span> Space</div>
     <p class="login-sub">Artist Panel</p>
     <label class="login-label">Username</label>
@@ -325,8 +328,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           <div class="form-group"><label>WhatsApp Number *</label>
             <div style="display:flex;align-items:center;gap:0.5rem">
               <span style="background:var(--bg3);border:1px solid var(--border2);padding:0.5rem 0.75rem;color:var(--muted);font-size:0.85rem;white-space:nowrap">+91</span>
-              <input type="tel" id="sPhone" placeholder="98765 43210" maxlength="10" oninput="this.value=this.value.replace(/\D/g,'').slice(0,10)">
+              <input type="tel" id="sPhone" placeholder="98765 43210" maxlength="10"
+                oninput="this.value=this.value.replace(/\D/g,'').slice(0,10);if(this.value.length===10)artistAutoFillName(this.value)">
             </div>
+            <p id="sPhoneHint" style="font-size:0.7rem;color:var(--green);margin-top:0.3rem;display:none">✓ Name autofilled from existing record</p>
           </div>
       </div>
       <div class="form-row">
@@ -1027,6 +1032,19 @@ window.openEditStudent = function(id){
   const sel = document.getElementById('sBatch');
   sel.innerHTML = currentArtist.batches.map(b=>`<option value="${b.id}" ${b.id===s.batchId?'selected':''}>${b.name} · ${b.time}</option>`).join('');
   openModal('studentModal');
+};
+
+window.artistAutoFillName = function(digits){
+  const phone = '+91' + digits;
+  const found = batchStudents.find(s=>s.phone===phone);
+  const nameEl = document.getElementById('sName');
+  const hint   = document.getElementById('sPhoneHint');
+  if(found && found.name && !nameEl.value){
+    nameEl.value = found.name;
+    if(hint) hint.style.display = 'block';
+  } else if(hint){
+    hint.style.display = 'none';
+  }
 };
 
 window.saveStudent = async function(){
