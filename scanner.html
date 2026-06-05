@@ -332,63 +332,125 @@ async function processCode(raw){
 }
 
 async function processReg(id, data){
-  const checkedIn = data.checkedIn || false;
-  const checkedAt = data.checkedInAt || null;
-
-  // Fetch song from workshop slots
+  // Fetch workshop slot details
+  let wsSlots = [];
   try {
     const wsSnap = await getDocs(collection(db,'workshops'));
-    const ws     = wsSnap.docs.map(d=>d.data()).find(w=>w.artist===data.workshop);
-    if(ws && ws.slots){
-      // Find the slot that matches the booking
-      const slotStr = data.slots||'';
-      const match   = ws.slots.find(s=>slotStr.includes(s.date));
-      if(match && match.song) data.song = match.song;
-    }
+    const ws = wsSnap.docs.map(d=>d.data()).find(w=>w.artist===data.workshop);
+    if(ws && ws.slots) wsSlots = ws.slots;
   } catch(e){}
 
-  if(checkedIn){
-    showResult('used','⚠','Already Checked In',
-      `Checked in at ${checkedAt||'earlier'}`,
-      data, null);
-    addHistory(data.name||'Unknown', 'duplicate');
+  // Parse booked slots from registration
+  const slotStr    = data.slots||'';
+  const slotParts  = slotStr.split('|').map(s=>s.trim()).filter(Boolean);
+  const checkedInSlots = data.checkedInSlots || {}; // {slotKey: time}
+
+  // Build per-slot status
+  const slotStatuses = slotParts.map(sp=>{
+    // Try to match to workshop slot by song or time
+    const wsSlot = wsSlots.find(s=>sp.includes(s.song||'__')||sp.includes(s.time||'__')||sp.includes(s.date||'__'));
+    const key    = wsSlot ? wsSlot.id : sp.replace(/\W/g,'').slice(0,12);
+    const done   = !!checkedInSlots[key];
+    return { label: sp, key, done, checkedInAt: checkedInSlots[key]||null };
+  });
+
+  const allDone = slotStatuses.every(s=>s.done);
+  const anyDone = slotStatuses.some(s=>s.done);
+
+  if(allDone){
+    showResultSlots('used', data, slotStatuses, id);
+    addHistory(data.name||'Unknown','duplicate');
     if(navigator.vibrate) navigator.vibrate([100,50,100,50,100]);
     return;
   }
 
-  showResult('pending','👤','Student Found', 'Verify details and tap Check In', data, id);
+  showResultSlots('pending', data, slotStatuses, id);
   if(navigator.vibrate) navigator.vibrate(100);
 }
 
-window.doCheckIn = async function(id, name){
-  const btn = document.getElementById('checkInBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Checking in…';
+window.doCheckInSlot = async function(regId, slotKey, slotLabel, name){
+  const btn = document.getElementById('slot-btn-'+slotKey);
+  if(btn){ btn.disabled=true; btn.textContent='Checking in…'; }
   try {
     const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-    await updateDoc(doc(db,'registrations',id),{
-      checkedIn: true,
-      checkedInAt: time,
-    });
-    // Update result card to confirmed
+    const field = `checkedInSlots.${slotKey}`;
+    const update = { checkedInBy:'Scanner' };
+    update[field] = time;
+    // Also set top-level checkedIn if all slots done (handled on next scan)
+    await updateDoc(doc(db,'registrations',regId), update);
+
+    // Update UI
+    if(btn){ btn.textContent='✓ Done'; btn.style.background='var(--green)'; btn.style.color='#000'; }
+    const row = document.getElementById('slot-row-'+slotKey);
+    if(row) row.style.opacity='0.6';
+    addHistory(name+' ('+slotLabel+')', 'valid');
+    if(navigator.vibrate) navigator.vibrate(300);
+  } catch(e){
+    if(btn){ btn.disabled=false; btn.textContent='Check In'; }
+    alert('Failed. Try again.');
+  }
+};
+
+// Legacy single check-in (kept for old registrations)
+window.doCheckIn = async function(id, name){
+  const btn = document.getElementById('checkInBtn');
+  if(btn){ btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Checking in…'; }
+  try {
+    const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    await updateDoc(doc(db,'registrations',id),{ checkedIn:true, checkedInAt:time, checkedInBy:'Scanner' });
     document.getElementById('resultArea').innerHTML = `
       <div class="result-card valid">
         <div class="result-header">
           <div class="result-icon valid">✓</div>
-          <div>
-            <p class="result-title" style="color:var(--green)">Checked In!</p>
-            <p class="result-sub">${name} — checked in at ${time}</p>
-          </div>
+          <div><p class="result-title" style="color:var(--green)">Checked In!</p>
+          <p class="result-sub">${name} — ${time}</p></div>
         </div>
       </div>`;
-    addHistory(name, 'valid');
+    addHistory(name,'valid');
     if(navigator.vibrate) navigator.vibrate(300);
   } catch(e){
-    btn.disabled = false;
-    btn.innerHTML = '✓ Mark as Checked In';
-    alert('Failed to check in. Try again.');
+    if(btn){ btn.disabled=false; btn.innerHTML='✓ Mark as Checked In'; }
+    alert('Failed. Try again.');
   }
 };
+
+function showResultSlots(type, data, slotStatuses, regId){
+  const resultArea = document.getElementById('resultArea');
+  const allDone    = slotStatuses.every(s=>s.done);
+
+  const slotsHTML = slotStatuses.map(s=>`
+    <div id="slot-row-${s.key}" style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:${s.done?'rgba(34,197,94,0.08)':'rgba(255,255,255,0.04)'};border:1px solid ${s.done?'rgba(34,197,94,0.2)':'var(--border)'};margin-bottom:0.5rem;gap:0.75rem">
+      <div style="flex:1;min-width:0">
+        <p style="font-size:0.8rem;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.label}</p>
+        ${s.done?`<p style="font-size:0.68rem;color:var(--green)">✓ Checked in at ${s.checkedInAt}</p>`:'<p style="font-size:0.68rem;color:var(--muted)">Not checked in yet</p>'}
+      </div>
+      ${s.done
+        ? `<span style="color:var(--green);font-size:1.1rem">✓</span>`
+        : `<button id="slot-btn-${s.key}" onclick="doCheckInSlot('${regId}','${s.key}','${s.label.replace(/'/g,'')}','${(data.name||'').replace(/'/g,'')}')"
+            style="background:var(--red);color:#fff;border:none;padding:0.5rem 1rem;font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:0.06em;cursor:pointer;white-space:nowrap">
+            Check In
+          </button>`}
+    </div>`).join('');
+
+  resultArea.innerHTML = `
+    <div class="result-card ${allDone?'used':'valid'}">
+      <div class="result-header">
+        <div class="result-icon ${allDone?'used':'valid'}">${allDone?'⚠':'👤'}</div>
+        <div>
+          <p class="result-title" style="${allDone?'color:var(--orange)':''}">${allDone?'All Slots Done':'Student Found'}</p>
+          <p class="result-sub">${data.name||'—'} · ${data.workshop||'—'}</p>
+        </div>
+      </div>
+      <div class="result-body">
+        <div class="result-item"><strong>Package</strong><span>${data.package||'—'}</span></div>
+        <div class="result-item"><strong>Phone</strong><span>${data.phone||'—'}</span></div>
+      </div>
+      <div style="padding:0 1rem 1rem">
+        <p style="font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;font-family:'Syne',sans-serif">Select Slot to Check In</p>
+        ${slotsHTML}
+      </div>
+    </div>`;
+}
 
 function showResult(type, icon, title, sub, data, regId){
   const resultArea = document.getElementById('resultArea');
