@@ -71,7 +71,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .stat-meta{font-size:0.72rem;color:var(--muted);margin-top:0.25rem}
 
 /* TABLE */
-.table-wrap{background:var(--bg2);border:1px solid var(--border);overflow:hidden;margin-bottom:1.5rem}
+.table-wrap{background:var(--bg2);border:1px solid var(--border);overflow-x:auto;overflow-y:hidden;margin-bottom:1.5rem;-webkit-overflow-scrolling:touch}
+.table-wrap table{min-width:600px;width:100%}
 .table-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:0.75rem}
 .table-title{font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:600;color:var(--text)}
 .table-search{background:var(--bg3);border:1px solid var(--border);padding:0.5rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none;width:220px;transition:border-color 0.2s}
@@ -390,13 +391,23 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Workshop
         </button>
       </div>
-      <div class="filter-tabs" id="workshopFilters">
+      <div class="filter-tabs" id="workshopFilters" style="display:flex;align-items:center;flex-wrap:wrap;gap:0.5rem">
         <button class="filter-tab active" onclick="filterWorkshops('all',this)">All</button>
         <button class="filter-tab" onclick="filterWorkshops('active',this)">Active</button>
         <button class="filter-tab" onclick="filterWorkshops('full',this)">Full</button>
         <button class="filter-tab" onclick="filterWorkshops('cancelled',this)">Cancelled</button>
         <button class="filter-tab" onclick="filterWorkshops('completed',this)">Completed</button>
         <button class="filter-tab" onclick="filterWorkshops('draft',this)">Drafts</button>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:0.5rem">
+          <span style="font-size:0.7rem;color:var(--muted)">Sort:</span>
+          <select id="wsSortSelect" onchange="sortAndRenderWorkshops()" style="background:var(--bg3);border:1px solid var(--border2);padding:0.35rem 0.65rem;color:var(--text);font-family:'Syne',sans-serif;font-size:0.72rem;outline:none">
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="name">Artist Name A–Z</option>
+            <option value="date">By Date</option>
+            <option value="spots">Spots Filled</option>
+          </select>
+        </div>
       </div>
       <div class="ws-grid" id="workshopGrid"></div>
     </div>
@@ -630,11 +641,22 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <!-- STAFF MANAGEMENT -->
     <div class="view" id="view-staff">
       <div class="page-header">
-        <div><h1 class="page-title">Staff Management</h1><p class="page-sub">Track attendance and salary payments</p></div>
-        <button class="btn btn-red" onclick="openAddStaffPayment()">
-          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Payment
-        </button>
+        <div><h1 class="page-title">Staff Management</h1><p class="page-sub">Manage staff roster and salary payments</p></div>
+        <div style="display:flex;gap:0.75rem">
+          <button class="btn btn-outline" onclick="openAddStaffMember()">
+            <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Add Staff Member
+          </button>
+          <button class="btn btn-red" onclick="openAddStaffPayment()">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Payment
+          </button>
+        </div>
       </div>
+      <!-- Staff Roster -->
+      <div id="staffRosterSection" style="margin-bottom:2rem">
+        <p style="font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem;font-family:'Syne',sans-serif">Staff Roster</p>
+        <div id="staffRosterGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.75rem"></div>
+      </div>
+      <!-- Payments -->
       <div id="staffList"></div>
     </div>
 
@@ -645,6 +667,28 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <button class="btn btn-red" onclick="openAddExpense()">
           <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Expense
         </button>
+      </div>
+      <!-- Filters -->
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center">
+        <input type="text" id="expSearch" placeholder="Search particulars…" oninput="renderExpenses()"
+          style="background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none;min-width:200px">
+        <select id="expFilterPeriod" onchange="updateExpDateFilter()" style="background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.85rem;color:var(--text);font-family:'Syne',sans-serif;font-size:0.78rem;outline:none">
+          <option value="all">All Time</option>
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+          <option value="custom">Custom Date</option>
+        </select>
+        <input type="date" id="expCustomDate" style="display:none;background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none;color-scheme:dark" onchange="renderExpenses()">
+        <select id="expFilterCat" onchange="renderExpenses()" style="background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.85rem;color:var(--text);font-family:'Syne',sans-serif;font-size:0.78rem;outline:none">
+          <option value="all">All Categories</option>
+          <option value="Maintenance">Maintenance</option>
+          <option value="Supplies">Supplies</option>
+          <option value="Marketing">Marketing</option>
+          <option value="Utilities">Utilities</option>
+          <option value="Equipment">Equipment</option>
+          <option value="Other">Other</option>
+        </select>
       </div>
       <!-- Summary cards -->
       <div id="expenseSummary" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem"></div>
@@ -788,18 +832,46 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   </div>
 </div>
 
+<!-- ADD STAFF MEMBER MODAL -->
+<div class="modal-backdrop" id="staffMemberModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head">
+      <h2 class="modal-title">Add Staff Member</h2>
+      <button class="modal-close" onclick="closeModal('staffMemberModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Full Name *</label><input type="text" id="smName" placeholder="e.g. Divyanshi Singhvi"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Role</label><input type="text" id="smRole" placeholder="e.g. Batch Trainer"></div>
+        <div class="form-group"><label>Monthly Salary (₹)</label><input type="number" id="smSalary" placeholder="e.g. 8000"></div>
+      </div>
+      <div class="form-group"><label>Phone Number</label>
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          <span style="background:var(--bg3);border:1px solid var(--border2);padding:0.5rem 0.65rem;color:var(--muted);font-size:0.82rem">+91</span>
+          <input type="tel" id="smPhone" placeholder="98765 43210" maxlength="10" oninput="this.value=this.value.replace(/\D/g,'').slice(0,10)">
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('staffMemberModal')">Cancel</button>
+      <button class="btn btn-red" onclick="saveStaffMember()">Add to Roster</button>
+    </div>
+  </div>
+</div>
+
 <!-- ADD STAFF PAYMENT MODAL -->
 <div class="modal-backdrop" id="staffPaymentModal">
   <div class="modal" style="max-width:480px">
     <div class="modal-head">
-      <h2 class="modal-title" id="staffPaymentTitle">Add Staff Payment</h2>
+      <h2 class="modal-title">Add Staff Payment</h2>
       <button class="modal-close" onclick="closeModal('staffPaymentModal')">✕</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="staffPaymentEditId">
-      <div class="form-row">
-        <div class="form-group"><label>Staff Name *</label><input type="text" id="spName" placeholder="e.g. Divyanshi Singhvi"></div>
-        <div class="form-group"><label>Role</label><input type="text" id="spRole" placeholder="e.g. Batch Trainer"></div>
+      <div class="form-group"><label>Staff Member *</label>
+        <select id="spNameSelect" onchange="prefillStaffPayment()" style="background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;width:100%">
+          <option value="">— Select Staff —</option>
+        </select>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Date *</label><input type="date" id="spDate" style="color-scheme:dark"></div>
@@ -1678,10 +1750,28 @@ function wsCardHTML(w){
 ══════════════════════════════════════ */
 function renderWorkshopGrid(){
   const filtered = currentWsFilter==='all' ? workshops : workshops.filter(w=>w.status===currentWsFilter);
-  document.getElementById('workshopGrid').innerHTML = filtered.length
-    ? filtered.map(wsCardHTML).join('')
+  const sort = document.getElementById('wsSortSelect')?.value || 'newest';
+  const sorted = [...filtered].sort((a,b)=>{
+    if(sort==='oldest') return (a.createdAt||0)-(b.createdAt||0);
+    if(sort==='name')   return (a.artist||'').localeCompare(b.artist||'');
+    if(sort==='date'){
+      const ad=(a.slots&&a.slots[0])?a.slots[0].date:''; 
+      const bd=(b.slots&&b.slots[0])?b.slots[0].date:'';
+      return ad.localeCompare(bd);
+    }
+    if(sort==='spots'){
+      const au=registrations.filter(r=>r.workshop===a.artist).reduce((s,r)=>s+(parseInt(r.people)||1),0);
+      const bu=registrations.filter(r=>r.workshop===b.artist).reduce((s,r)=>s+(parseInt(r.people)||1),0);
+      return bu-au;
+    }
+    return (b.createdAt||0)-(a.createdAt||0); // newest
+  });
+  document.getElementById('workshopGrid').innerHTML = sorted.length
+    ? sorted.map(wsCardHTML).join('')
     : '<p style="color:var(--muted);padding:3rem;text-align:center">No workshops in this category.</p>';
 }
+
+window.sortAndRenderWorkshops = function(){ renderWorkshopGrid(); };
 
 window.filterWorkshops = function(f,el){
   currentWsFilter=f;
@@ -3756,33 +3846,120 @@ window.renderMonthSchedule = function(){
    STAFF MANAGEMENT
 ══════════════════════════════════════ */
 let staffPayments = [];
+let staffRoster   = [];
+
 function listenStaffPayments(){
   onSnapshot(collection(db,'staffPayments'), snap=>{
     staffPayments=snap.docs.map(d=>({id:d.id,...d.data()}));
     staffPayments.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     if(document.getElementById('view-staff')?.classList.contains('active')) renderStaff();
   });
+  onSnapshot(collection(db,'staffRoster'), snap=>{
+    staffRoster=snap.docs.map(d=>({id:d.id,...d.data()}));
+    staffRoster.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    if(document.getElementById('view-staff')?.classList.contains('active')) renderStaff();
+    updateStaffDropdown();
+  });
 }
+
+function updateStaffDropdown(){
+  const sel = document.getElementById('spNameSelect');
+  if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Select Staff —</option>' +
+    staffRoster.map(s=>`<option value="${s.name}" data-role="${s.role||''}" data-salary="${s.salary||''}">${s.name}${s.role?' ('+s.role+')':''}</option>`).join('');
+  if(cur) sel.value = cur;
+}
+
+window.prefillStaffPayment = function(){
+  const sel = document.getElementById('spNameSelect');
+  const opt = sel.options[sel.selectedIndex];
+  if(opt && opt.dataset.salary) document.getElementById('spAmount').value = opt.dataset.salary;
+};
+
 function renderStaff(){
+  updateStaffDropdown();
+  // Roster grid
+  document.getElementById('staffRosterGrid').innerHTML = staffRoster.length
+    ? staffRoster.map(s=>`<div style="background:var(--bg2);border:1px solid var(--border);padding:1rem;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <p style="font-weight:600;color:var(--text);font-size:0.88rem">${s.name}</p>
+          <p style="font-size:0.72rem;color:var(--muted)">${s.role||'—'} ${s.salary?'· ₹'+parseFloat(s.salary).toLocaleString('en-IN'):''}</p>
+          <p style="font-size:0.68rem;color:var(--muted)">${s.phone?'+91 '+s.phone:''}</p>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="deleteStaffMember('${s.id}','${s.name}')">Remove</button>
+      </div>`).join('')
+    : '<p style="color:var(--muted);font-size:0.82rem">No staff added yet. Add staff members above.</p>';
+
+  // Payments table
   const total=staffPayments.reduce((s,p)=>s+parseFloat(p.amount||0),0);
-  let html=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem"><div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem"><p style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">Total Paid</p><p style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--yellow)">₹${total.toLocaleString('en-IN')}</p></div></div>`;
-  html+=`<div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--border)">${['Name','Role','Date','Amount','Mode','Paid By','Remarks',''].map(h=>`<th style="padding:0.75rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">${h}</th>`).join('')}</tr></thead><tbody>${staffPayments.length?staffPayments.map(p=>`<tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="padding:0.75rem 1rem;font-weight:500;color:var(--text)">${p.name||'—'}</td><td style="padding:0.75rem 1rem;font-size:0.78rem;color:var(--muted)">${p.role||'—'}</td><td style="padding:0.75rem 1rem;font-size:0.78rem">${p.date||'—'}</td><td style="padding:0.75rem 1rem;color:var(--yellow);font-weight:500">₹${parseFloat(p.amount||0).toLocaleString('en-IN')}</td><td style="padding:0.75rem 1rem"><span class="pill pill-blue" style="font-size:0.6rem">${p.mode||'—'}</span></td><td style="padding:0.75rem 1rem;font-size:0.78rem;color:var(--muted)">${p.paidBy||'—'}</td><td style="padding:0.75rem 1rem;font-size:0.75rem;color:var(--muted)">${p.remarks||'—'}</td><td style="padding:0.75rem 1rem"><button class="btn btn-danger btn-sm" onclick="deleteStaffPayment('${p.id}','${p.name}')">Delete</button></td></tr>`).join(''):`<tr><td colspan="8" style="padding:2rem;text-align:center;color:var(--muted)">No payments yet</td></tr>`}</tbody></table></div>`;
-  document.getElementById('staffList').innerHTML=html;
+  document.getElementById('staffList').innerHTML = `
+    <p style="font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem;font-family:'Syne',sans-serif">Payment History</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem">
+      <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem">
+        <p style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">Total Paid</p>
+        <p style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--yellow)">₹${total.toLocaleString('en-IN')}</p>
+      </div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;min-width:600px">
+        <thead><tr style="border-bottom:1px solid var(--border)">${['Name','Date','Amount','Mode','Paid By','Remarks',''].map(h=>`<th style="padding:0.75rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;white-space:nowrap">${h}</th>`).join('')}</tr></thead>
+        <tbody>${staffPayments.length?staffPayments.map(p=>`
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.04)">
+            <td style="padding:0.75rem 1rem;font-weight:500;color:var(--text)">${p.name||'—'}</td>
+            <td style="padding:0.75rem 1rem;font-size:0.78rem;white-space:nowrap">${p.date||'—'}</td>
+            <td style="padding:0.75rem 1rem;color:var(--yellow);font-weight:500;white-space:nowrap">₹${parseFloat(p.amount||0).toLocaleString('en-IN')}</td>
+            <td style="padding:0.75rem 1rem"><span class="pill pill-blue" style="font-size:0.6rem">${p.mode||'—'}</span></td>
+            <td style="padding:0.75rem 1rem;font-size:0.78rem;color:var(--muted)">${p.paidBy||'—'}</td>
+            <td style="padding:0.75rem 1rem;font-size:0.75rem;color:var(--muted)">${p.remarks||'—'}</td>
+            <td style="padding:0.75rem 1rem"><button class="btn btn-danger btn-sm" onclick="deleteStaffPayment('${p.id}','${p.name}')">Delete</button></td>
+          </tr>`).join(''):`<tr><td colspan="7" style="padding:2rem;text-align:center;color:var(--muted)">No payments yet</td></tr>`}
+        </tbody>
+      </table>
+    </div>`;
 }
+
+window.openAddStaffMember = function(){
+  ['smName','smRole','smSalary','smPhone'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  openModal('staffMemberModal');
+};
+
+window.saveStaffMember = async function(){
+  const name = document.getElementById('smName').value.trim();
+  if(!name){ showToast('Name is required','error'); return; }
+  await addDoc(collection(db,'staffRoster'),{
+    name, role:document.getElementById('smRole').value.trim(),
+    salary:parseFloat(document.getElementById('smSalary').value)||0,
+    phone:document.getElementById('smPhone').value.trim(),
+    createdAt:Date.now()
+  });
+  closeModal('staffMemberModal'); showToast('Staff member added ✓');
+};
+
+window.deleteStaffMember = async function(id,name){
+  if(!confirm(`Remove ${name} from roster?`)) return;
+  await deleteDoc(doc(db,'staffRoster',id)); showToast('Removed ✓');
+};
+
 window.openAddStaffPayment=function(){
-  ['spName','spRole','spAmount','spPaidBy','spRemarks'].forEach(id=>document.getElementById(id).value='');
+  ['spAmount','spPaidBy','spRemarks'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('spDate').value=new Date().toLocaleDateString('en-CA');
   document.getElementById('spMode').value='Cash';
+  document.getElementById('spNameSelect').value='';
+  document.getElementById('staffPaymentEditId').value='';
+  updateStaffDropdown();
   openModal('staffPaymentModal');
 };
+
 window.saveStaffPayment=async function(){
-  const name=document.getElementById('spName').value.trim();
+  const name=document.getElementById('spNameSelect').value;
   const date=document.getElementById('spDate').value;
   const amount=document.getElementById('spAmount').value;
-  if(!name||!date||!amount){showToast('Name, date and amount are required','error');return;}
-  await addDoc(collection(db,'staffPayments'),{name,date,amount:parseFloat(amount),role:document.getElementById('spRole').value.trim(),mode:document.getElementById('spMode').value,paidBy:document.getElementById('spPaidBy').value.trim(),remarks:document.getElementById('spRemarks').value.trim(),createdAt:Date.now()});
+  if(!name||!date||!amount){showToast('Staff, date and amount are required','error');return;}
+  await addDoc(collection(db,'staffPayments'),{name,date,amount:parseFloat(amount),mode:document.getElementById('spMode').value,paidBy:document.getElementById('spPaidBy').value.trim(),remarks:document.getElementById('spRemarks').value.trim(),createdAt:Date.now()});
   closeModal('staffPaymentModal');showToast('Payment saved ✓');
 };
+
 window.deleteStaffPayment=async function(id,name){
   if(!confirm(`Delete payment for ${name}?`))return;
   await deleteDoc(doc(db,'staffPayments',id));showToast('Deleted ✓');
@@ -3799,12 +3976,39 @@ function listenExpenses(){
     if(document.getElementById('view-expenses')?.classList.contains('active')) renderExpenses();
   });
 }
+window.updateExpDateFilter = function(){
+  const v = document.getElementById('expFilterPeriod').value;
+  document.getElementById('expCustomDate').style.display = v==='custom'?'block':'none';
+  renderExpenses();
+};
+
 function renderExpenses(){
-  const total=expenses.reduce((s,e)=>s+parseFloat(e.amount||0),0);
+  const search  = (document.getElementById('expSearch')?.value||'').toLowerCase();
+  const period  = document.getElementById('expFilterPeriod')?.value||'all';
+  const cat     = document.getElementById('expFilterCat')?.value||'all';
+  const custom  = document.getElementById('expCustomDate')?.value||'';
+
+  const now = new Date();
+  const toStr = d=>d.toLocaleDateString('en-CA');
+  const todayStr = toStr(now);
+  const weekStart = new Date(now); weekStart.setDate(now.getDate()-now.getDay());
+  const monthStart = new Date(now.getFullYear(),now.getMonth(),1);
+
+  let filtered = expenses.filter(e=>{
+    if(search && !(e.particulars||'').toLowerCase().includes(search)) return false;
+    if(cat!=='all' && e.category!==cat) return false;
+    if(period==='today' && e.date!==todayStr) return false;
+    if(period==='week' && e.date<toStr(weekStart)) return false;
+    if(period==='month' && e.date<toStr(monthStart)) return false;
+    if(period==='custom' && custom && e.date!==custom) return false;
+    return true;
+  });
+
+  const total=filtered.reduce((s,e)=>s+parseFloat(e.amount||0),0);
   const byCategory={};
-  expenses.forEach(e=>{byCategory[e.category||'Other']=(byCategory[e.category||'Other']||0)+parseFloat(e.amount||0);});
-  document.getElementById('expenseSummary').innerHTML=[{label:'Total Expenses',val:`₹${total.toLocaleString('en-IN')}`,color:'var(--red)'},...Object.entries(byCategory).map(([k,v])=>({label:k,val:`₹${v.toLocaleString('en-IN')}`,color:'var(--text)'}))].map(s=>`<div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem"><p style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">${s.label}</p><p style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:${s.color}">${s.val}</p></div>`).join('');
-  document.getElementById('expenseList').innerHTML=`<div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--border)">${['Date','Particulars','Category','Amount','Mode','Paid By',''].map(h=>`<th style="padding:0.75rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">${h}</th>`).join('')}</tr></thead><tbody>${expenses.length?expenses.map(e=>`<tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="padding:0.75rem 1rem;font-size:0.78rem">${e.date||'—'}</td><td style="padding:0.75rem 1rem;font-weight:500;color:var(--text)">${e.particulars||'—'}</td><td style="padding:0.75rem 1rem"><span class="pill" style="font-size:0.6rem;background:rgba(255,255,255,0.06);color:var(--muted)">${e.category||'Other'}</span></td><td style="padding:0.75rem 1rem;color:var(--red);font-weight:500">₹${parseFloat(e.amount||0).toLocaleString('en-IN')}</td><td style="padding:0.75rem 1rem"><span class="pill pill-blue" style="font-size:0.6rem">${e.mode||'—'}</span></td><td style="padding:0.75rem 1rem;font-size:0.78rem;color:var(--muted)">${e.paidBy||'—'}</td><td style="padding:0.75rem 1rem"><button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.id}')">Delete</button></td></tr>`).join(''):`<tr><td colspan="7" style="padding:2rem;text-align:center;color:var(--muted)">No expenses yet</td></tr>`}</tbody></table></div>`;
+  filtered.forEach(e=>{byCategory[e.category||'Other']=(byCategory[e.category||'Other']||0)+parseFloat(e.amount||0);});
+  document.getElementById('expenseSummary').innerHTML=[{label:'Filtered Total',val:`₹${total.toLocaleString('en-IN')}`,color:'var(--red)'},...Object.entries(byCategory).map(([k,v])=>({label:k,val:`₹${v.toLocaleString('en-IN')}`,color:'var(--text)'}))].map(s=>`<div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem"><p style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">${s.label}</p><p style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:${s.color}">${s.val}</p></div>`).join('');
+  document.getElementById('expenseList').innerHTML=`<div style="background:var(--bg2);border:1px solid var(--border);overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:600px"><thead><tr style="border-bottom:1px solid var(--border)">${['Date','Particulars','Category','Amount','Mode','Paid By',''].map(h=>`<th style="padding:0.75rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;white-space:nowrap">${h}</th>`).join('')}</tr></thead><tbody>${filtered.length?filtered.map(e=>`<tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="padding:0.75rem 1rem;font-size:0.78rem;white-space:nowrap">${e.date||'—'}</td><td style="padding:0.75rem 1rem;font-weight:500;color:var(--text)">${e.particulars||'—'}</td><td style="padding:0.75rem 1rem"><span class="pill" style="font-size:0.6rem;background:rgba(255,255,255,0.06);color:var(--muted)">${e.category||'Other'}</span></td><td style="padding:0.75rem 1rem;color:var(--red);font-weight:500;white-space:nowrap">₹${parseFloat(e.amount||0).toLocaleString('en-IN')}</td><td style="padding:0.75rem 1rem"><span class="pill pill-blue" style="font-size:0.6rem">${e.mode||'—'}</span></td><td style="padding:0.75rem 1rem;font-size:0.78rem;color:var(--muted)">${e.paidBy||'—'}</td><td style="padding:0.75rem 1rem"><button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.id}')">Delete</button></td></tr>`).join(''):`<tr><td colspan="7" style="padding:2rem;text-align:center;color:var(--muted)">No expenses found</td></tr>`}</tbody></table></div>`;
 }
 window.openAddExpense=function(){
   ['expAmount','expPaidBy','expParticulars'].forEach(id=>document.getElementById(id).value='');

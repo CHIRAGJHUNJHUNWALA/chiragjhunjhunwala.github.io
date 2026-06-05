@@ -80,8 +80,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
 .nav-overlay-links li{transform:translateY(20px);opacity:0;transition:transform 0.4s ease,opacity 0.4s ease}
 
 /* ── HERO ── */
-.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:flex-end;padding:0 2rem 5rem;position:relative;overflow:hidden}
-.hero-bg{position:absolute;inset:0;background:linear-gradient(135deg,#0a0a0a 0%,#1a0608 50%,#0a0a0a 100%)}
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:flex-end;padding:0 2rem 5rem;position:relative;overflow:hidden}.hero-bg{position:absolute;inset:0;background:linear-gradient(135deg,#0a0a0a 0%,#1a0608 50%,#0a0a0a 100%)}
 .hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(188,31,46,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(188,31,46,0.06) 1px,transparent 1px);background-size:60px 60px;animation:gridMove 20s linear infinite}
 @keyframes gridMove{from{background-position:0 0}to{background-position:60px 60px}}
 .hero-accent{position:absolute;top:20%;right:-100px;width:500px;height:500px;background:radial-gradient(circle,rgba(188,31,46,0.18) 0%,transparent 70%);animation:pulse 4s ease-in-out infinite}
@@ -222,7 +221,7 @@ footer{background:var(--off-black);border-top:1px solid var(--border);padding:4r
   body{cursor:auto}
   section{padding:4rem 1.25rem}
   nav{padding:1rem 1.25rem}
-  .hero{padding:0 1.25rem 3rem;min-height:85vh}
+  .hero{padding:6rem 1.25rem 3rem;min-height:100vh}
   .nav-overlay{padding:4rem 1.5rem}
   .nav-overlay-links a{font-size:2.2rem}
 }
@@ -507,14 +506,14 @@ footer{background:var(--off-black);border-top:1px solid var(--border);padding:4r
       <span style="display:inline-block;width:32px;height:1px;background:var(--red)"></span>Studio Hours
     </p>
     <h2 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,7vw,5rem);line-height:0.9;letter-spacing:0.02em;color:var(--text);margin-bottom:3rem">WHEN WE'RE <span style="color:var(--red)">OPEN</span></h2>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem">
       <div style="border:1px solid var(--border);padding:2rem">
         <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem">Regular Classes</p>
         <p style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--text);margin-bottom:0.25rem">12:00 PM – 9:00 PM</p>
-        <p style="font-size:0.8rem;color:var(--muted)">Monday to Saturday</p>
+        <p style="font-size:0.8rem;color:var(--muted)">Monday to Wednesday</p>
       </div>
       <div style="border:1px solid var(--border);padding:2rem">
-        <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem">Workshops & Events</p>
+        <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem">Workshops</p>
         <p style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--text);margin-bottom:0.25rem">As Scheduled</p>
         <p style="font-size:0.8rem;color:var(--muted)">Check workshop listings for dates</p>
       </div>
@@ -522,11 +521,6 @@ footer{background:var(--off-black);border-top:1px solid var(--border);padding:4r
         <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem">Studio Rental</p>
         <p style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--text);margin-bottom:0.25rem">Flexible Hours</p>
         <p style="font-size:0.8rem;color:var(--muted)">Contact us to book the space</p>
-      </div>
-      <div style="border:1px solid var(--border);padding:2rem">
-        <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem">Location</p>
-        <p style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--text);margin-bottom:0.25rem">311, INTERNATIONAL WEALTH CENTER</p>
-        <p style="font-size:0.8rem;color:var(--muted)">VIP Road, Surat, Gujarat</p>
       </div>
     </div>
   </div>

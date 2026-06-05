@@ -378,10 +378,29 @@ let selectedSlots = [];
 async function init() {
   const id = new URLSearchParams(window.location.search).get('id');
   try {
-    const snap = await getDocs(collection(db,'workshops'));
-    const all  = snap.docs.map(d=>({id:d.id,...d.data()}))
-                         .filter(w=>w.status==='active'||w.status==='full');
-    workshop   = all.find(w=>w.id===id) || all[0];
+    const wsSnap = await getDocs(collection(db,'workshops'));
+    const all = wsSnap.docs.map(d=>({id:d.id,...d.data()}))
+                       .filter(w=>w.status==='active'||w.status==='full');
+    workshop = all.find(w=>w.id===id) || all[0];
+
+    // Try to get registrations for accurate spot counts (may fail if not auth'd)
+    if(workshop && workshop.slots){
+      try {
+        const regSnap = await getDocs(collection(db,'registrations'));
+        const regs = regSnap.docs.map(d=>d.data()).filter(r=>r.workshop===workshop.artist);
+        workshop.slots = workshop.slots.map(s=>{
+          const slotRegs = regs.filter(r=>{
+            const rSlots = (r.slots||'').toLowerCase();
+            return (s.song && rSlots.includes(s.song.toLowerCase())) ||
+                   (s.time && rSlots.includes(s.time.toLowerCase())) ||
+                   (s.date && rSlots.includes(s.date.toLowerCase()));
+          });
+          const enrolled = slotRegs.reduce((sum,r)=>sum+(parseInt(r.people)||1),0);
+          const total    = parseInt(s.totalSpots||s.spots||20);
+          return {...s, spots: Math.max(0, total - enrolled), totalSpots: total};
+        });
+      } catch(e){ /* use stored spots if registrations read fails */ }
+    }
   } catch(e) {
     workshop = null;
   }
@@ -428,19 +447,17 @@ function renderPage(){
   document.getElementById('posterPrice').textContent  = '₹'+minP.toLocaleString('en-IN')+' onwards';
   document.getElementById('detailsTitle').textContent = w.artist+' — '+w.style;
   document.getElementById('detailsDesc').textContent  = w.desc||'';
-  document.getElementById('bioAvatar').textContent = w.artist||'—';
-  document.getElementById('bioName').textContent      = w.artist;
-  document.getElementById('bioTitle').textContent     = w.bioTitle||w.style||'';
-  document.getElementById('bioText').textContent      = w.bio||'';
   document.getElementById('form-workshop').textContent= w.artist+' — '+w.style;
 
-  document.getElementById('packageList').innerHTML = pkg.map(p=>`
+  // Packages
+  document.getElementById('packageList').innerHTML = pkg.length ? pkg.map(p=>`
     <div class="package-opt" id="pkg-${p.id}" onclick="selectPackage('${p.id}')">
       ${p.badge?`<span class="pkg-badge">${p.badge}</span>`:''}
       <div class="pkg-radio"></div>
-      <div class="pkg-info"><p class="pkg-name">${p.name}</p></div>
+      <div class="pkg-info"><p class="pkg-name">${p.name}</p><p class="pkg-desc" style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem">${p.slots?p.slots+' slot'+(p.slots>1?'s':''):''} ${p.desc||''}</p></div>
       <span class="pkg-price">₹${parseInt(p.price||0).toLocaleString('en-IN')}</span>
-    </div>`).join('');
+    </div>`).join('')
+    : '<p style="color:var(--text-muted);font-size:0.85rem">No packages available yet.</p>';
 
   renderSlots(0);
 }

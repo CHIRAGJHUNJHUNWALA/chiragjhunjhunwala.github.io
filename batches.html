@@ -214,7 +214,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
   <div class="batches-grid">
 
     <!-- BATCH 1 — Ladies Batch -->
-    <div class="batch-card" id="bc1">
+    <div class="batch-card" id="ladies-batch">
       <div class="batch-poster">
         <div class="batch-poster-bg" style="background:linear-gradient(145deg,#0e0514,#4b1a7a)"></div>
         <div class="batch-poster-overlay"></div>
@@ -248,7 +248,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
     </div>
 
     <!-- BATCH 2 — Beginners Batch -->
-    <div class="batch-card" id="bc2">
+    <div class="batch-card" id="beginners-batch">
       <div class="batch-poster">
         <div class="batch-poster-bg" style="background:linear-gradient(145deg,#1a0407,#bc1f2e)"></div>
         <div class="batch-poster-overlay"></div>
@@ -282,7 +282,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
     </div>
 
     <!-- BATCH 3 — Intermediate Batch 1 -->
-    <div class="batch-card" id="bc3">
+    <div class="batch-card" id="intermediate-6-7">
       <div class="batch-poster">
         <div class="batch-poster-bg" style="background:linear-gradient(145deg,#050f08,#0f5c2a)"></div>
         <div class="batch-poster-overlay"></div>
@@ -316,7 +316,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
     </div>
 
     <!-- BATCH 4 — Intermediate Batch 2 -->
-    <div class="batch-card" id="bc4">
+    <div class="batch-card" id="intermediate-7-8">
       <div class="batch-poster">
         <div class="batch-poster-bg" style="background:linear-gradient(145deg,#05080f,#1a3a6b)"></div>
         <div class="batch-poster-overlay"></div>
@@ -350,7 +350,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
     </div>
 
     <!-- BATCH 5 — Intermediate Batch 3 -->
-    <div class="batch-card" id="bc5">
+    <div class="batch-card" id="intermediate-8-9">
       <div class="batch-poster">
         <div class="batch-poster-bg" style="background:linear-gradient(145deg,#1a0c05,#8b4513)"></div>
         <div class="batch-poster-overlay"></div>
@@ -457,6 +457,15 @@ const obs=new IntersectionObserver(entries=>{
 document.querySelectorAll('.batch-card,.why-item').forEach((el,i)=>{
   el.style.transitionDelay=(i*0.08)+'s';
   obs.observe(el);
+});
+
+// Scroll to specific batch if hash in URL
+window.addEventListener('load',()=>{
+  const hash = window.location.hash;
+  if(hash){
+    const el = document.querySelector(hash);
+    if(el) setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'start'}),400);
+  }
 });
 </script>
 </body>
