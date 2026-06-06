@@ -34,7 +34,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
 .hamburger.open span:nth-child(1){transform:translateY(7.5px) rotate(45deg)}
 .hamburger.open span:nth-child(2){opacity:0;width:0}
 .hamburger.open span:nth-child(3){transform:translateY(-7.5px) rotate(-45deg)}
-.nav-overlay{position:fixed;inset:0;z-index:250;background:rgba(10,10,10,0.97);display:flex;flex-direction:column;justify-content:center;padding:4rem 3rem;opacity:0;pointer-events:none;transition:opacity 0.4s ease;backdrop-filter:blur(20px)}
+.nav-overlay{position:fixed;inset:0;z-index:250;background:rgba(10,10,10,0.97);display:flex;flex-direction:column;justify-content:flex-start;padding:5rem 3rem 3rem;overflow-y:auto;opacity:0;pointer-events:none;transition:opacity 0.4s ease;backdrop-filter:blur(20px)}
 .nav-overlay.open{opacity:1;pointer-events:all}
 .nav-overlay.open .nav-overlay-links li:nth-child(1){transform:translateY(0);opacity:1;transition-delay:0.08s}
 .nav-overlay.open .nav-overlay-links li:nth-child(2){transform:translateY(0);opacity:1;transition-delay:0.13s}
@@ -189,8 +189,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
       <li><a href="workshops.html"><span>Workshops</span><span class="link-num">02</span></a></li>
       <li><a href="batches.html"><span>Regular Batches</span><span class="link-num">03</span></a></li>
       <li><a href="studio-booking.html"><span>Studio Booking</span><span class="link-num">04</span></a></li>
-      <li><a href="about.html"><span>About Us</span><span class="link-num">05</span></a></li>
-      <li><a href="contact.html"><span>Contact Us</span><span class="link-num">06</span></a></li>
+      <li><a href="collective.html"><span>The Collective</span><span class="link-num">05</span></a></li>
+      <li><a href="about.html"><span>About Us</span><span class="link-num">06</span></a></li>
+      <li><a href="contact.html"><span>Contact Us</span><span class="link-num">07</span></a></li>
       <li><a href="student.html" style="color:var(--red)"><span>Student Login</span><span class="link-num">07</span></a></li>
       <li><a href="admin.html" style="opacity:0.4;font-size:clamp(1rem,3vw,1.8rem)"><span>Admin Login</span><span class="link-num" style="font-size:0.6rem">08</span></a></li>
       <li><a href="artist-panel.html" style="opacity:0.4;font-size:clamp(1rem,3vw,1.8rem)"><span>Artist Login</span><span class="link-num" style="font-size:0.6rem">09</span></a></li>
