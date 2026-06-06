@@ -285,6 +285,9 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="nav-item" onclick="showView('batches')">
         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>All Batches
       </div>
+      <div class="nav-item" onclick="showView('editbatches')">
+        <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit Batches
+      </div>
       <div class="nav-section-title">Studio</div>
       <div class="nav-item" onclick="showView('schedule')">
         <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Schedule
@@ -308,6 +311,9 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="nav-section-title">Content</div>
       <div class="nav-item" onclick="showView('abouteditor')">
         <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit About Us
+      </div>
+      <div class="nav-item" onclick="showView('gallery')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Gallery / Photos
       </div>
       <div class="nav-section-title">Access</div>
       <div class="nav-item master-only" onclick="showView('adminaccounts')" style="display:none">
@@ -516,13 +522,50 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
     </div>
 
-    <!-- REGULAR BATCHES -->
+    <!-- EDIT BATCHES -->
+    <div class="view" id="view-editbatches">
+      <div class="page-header">
+        <div>
+          <button class="btn btn-ghost btn-sm" onclick="showView('batches')" style="margin-bottom:0.5rem">
+            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>Back to Batches
+          </button>
+          <h1 class="page-title">Edit Batches</h1>
+          <p class="page-sub">Add, edit or delete regular batch schedules</p>
+        </div>
+        <button class="btn btn-red" onclick="openAddBatch()">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add New Batch
+        </button>
+      </div>
+      <div id="editBatchGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.25rem"></div>
+    </div>
+
+    <!-- GALLERY MANAGEMENT -->
+    <div class="view" id="view-gallery">
+      <div class="page-header">
+        <div><h1 class="page-title">Gallery</h1><p class="page-sub">Manage the moving pictures on the home page</p></div>
+        <label class="btn btn-red" style="cursor:pointer">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload Photos
+          <input type="file" id="galleryUpload" multiple accept="image/*" style="display:none" onchange="handleGalleryUpload(this.files)">
+        </label>
+      </div>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:1.5rem">Upload photos that will appear in the home page slideshow. Only uploaded photos are shown — no empty boxes.</p>
+      <div id="galleryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem"></div>
+      <div style="margin-top:1.5rem;display:flex;gap:0.75rem;align-items:center">
+        <button class="btn btn-red" onclick="saveGalleryOrder()">Save & Publish</button>
+        <p id="galleryStatus" style="font-size:0.8rem;color:var(--muted)"></p>
+      </div>
+    </div>
+
+    <!-- REGULAR BATCHES VIEW -->
     <div class="view" id="view-batches">
       <div class="page-header">
         <div><h1 class="page-title">Regular Batches</h1><p class="page-sub">Overview of all ongoing batches and their students</p></div>
         <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+          <button class="btn btn-red" onclick="showView('editbatches')">
+            <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit Batches
+          </button>
           <button class="btn btn-outline" onclick="notifyAllExpired()" style="border-color:rgba(232,134,58,0.4);color:var(--orange)">
-            <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Notify All Expired
+            <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Notify Expired
           </button>
           <button class="btn btn-outline btn-sm" onclick="exportBatchCSV()">
             <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV
@@ -940,6 +983,60 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   </div>
 </div>
 
+<!-- ADD/EDIT BATCH MODAL -->
+<div class="modal-backdrop" id="batchEditModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head">
+      <h2 class="modal-title" id="batchEditTitle">Add New Batch</h2>
+      <button class="modal-close" onclick="closeModal('batchEditModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="batchEditId">
+      <div class="form-row">
+        <div class="form-group"><label>Batch Name *</label><input type="text" id="beBatchName" placeholder="e.g. Ladies Batch"></div>
+        <div class="form-group"><label>Batch ID *</label><input type="text" id="beBatchId" placeholder="e.g. ladies-batch"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Trainer Name *</label><input type="text" id="beTrainer" placeholder="e.g. Divyanshi Singhvi"></div>
+        <div class="form-group"><label>Style / Level</label><input type="text" id="beStyle" placeholder="e.g. Intermediate, Beginners"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Days</label><input type="text" id="beDays" placeholder="e.g. Mon · Tue · Wed"></div>
+        <div class="form-group"><label>Time</label><input type="text" id="beTime" placeholder="e.g. 7:00 PM – 8:00 PM"></div>
+      </div>
+      <div class="form-group"><label>Monthly Fee (₹)</label><input type="number" id="beFee" placeholder="e.g. 2500"></div>
+      <div class="form-group"><label>Description</label><textarea id="beDesc" placeholder="Brief description of the batch…" style="min-height:70px"></textarea></div>
+      <div class="form-group">
+        <label>Trainer Photo URL <span style="font-weight:300;color:var(--muted);font-size:0.8em">(paste image URL)</span></label>
+        <input type="url" id="beImage" placeholder="https://...">
+        <div id="beImagePreview" style="margin-top:0.6rem;display:none">
+          <img id="beImagePreviewImg" style="width:80px;height:80px;object-fit:cover;border-radius:50%;border:2px solid var(--border)">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Background Gradient</label>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap" id="bgGradientPicker">
+          ${[
+            ['linear-gradient(145deg,#1a0407,#bc1f2e)','Red'],
+            ['linear-gradient(145deg,#050f08,#0f5c2a)','Green'],
+            ['linear-gradient(145deg,#05080f,#1a3a6b)','Blue'],
+            ['linear-gradient(145deg,#1a0c05,#8b4513)','Brown'],
+            ['linear-gradient(145deg,#0f0a1a,#6b1a8b)','Purple'],
+            ['linear-gradient(145deg,#0a0a0a,#2a2a2a)','Dark'],
+          ].map(([g,label])=>`<div onclick="selectBatchGradient('${g}',this)" title="${label}"
+            style="width:40px;height:40px;background:${g};border:2px solid transparent;cursor:pointer;border-radius:4px;transition:border-color 0.2s"
+            data-gradient="${g}"></div>`).join('')}
+        </div>
+        <input type="hidden" id="beGradient" value="linear-gradient(145deg,#1a0407,#bc1f2e)">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('batchEditModal')">Cancel</button>
+      <button class="btn btn-red" onclick="saveBatch()">Save Batch</button>
+    </div>
+  </div>
+</div>
+
 <!-- ADD ARTIST MODAL -->
 <div class="modal-backdrop" id="addArtistModal">
   <div class="modal" style="max-width:460px">
@@ -1320,6 +1417,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, addDoc, onSnapshot, query, orderBy, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 import { getAuth, signInWithCustomToken, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 /* ══════════════════════════════════════
@@ -1336,6 +1434,7 @@ const firebaseConfig = {
 
 const app  = initializeApp(firebaseConfig);
 const db   = getFirestore(app);
+const storage = getStorage(app);
 const auth = getAuth(app);
 
 /* ══════════════════════════════════════
@@ -1367,7 +1466,15 @@ let registrations  = [];
 let deleteTargetId = null;
 let editingSpotsId = null;
 let manualWsId     = null;
-let pendingPosterURL = null;
+let pendingPosterURL  = null;
+let pendingPosterFile = null;
+
+/* Upload file to Firebase Storage and return download URL */
+async function uploadToStorage(file, path){
+  const storageRef = ref(storage, path);
+  await uploadBytes(storageRef, file);
+  return await getDownloadURL(storageRef);
+}
 let currentWsFilter  = 'all';
 let currentRegFilter = 'all';
 let regSearchQ = '';
@@ -1518,6 +1625,8 @@ window.showView = function(id){
   });
   if(id==='abouteditor') loadAboutContent();
   if(id==='batches')     renderBatchesView();
+  if(id==='editbatches') renderEditBatches();
+  if(id==='gallery')     renderGallery();
   if(id==='checkins')    renderCheckinsView();
   if(id==='payments')    renderAllPayments();
   if(id==='schedule')  { goScheduleToday(); }
@@ -1926,9 +2035,10 @@ window.handlePosterDrop = function(e){
   if(file&&file.type.startsWith('image/')) loadPoster(file);
 };
 function loadPoster(file){
+  pendingPosterFile = file; // store file for Storage upload
   const reader = new FileReader();
   reader.onload = e => {
-    pendingPosterURL = e.target.result;
+    pendingPosterURL = e.target.result; // preview only
     document.getElementById('posterPreviewImg').src = e.target.result;
     document.getElementById('posterPreview').style.display = 'block';
     document.getElementById('posterUploadText').textContent = '✓ ' + file.name;
@@ -1954,7 +2064,8 @@ window.openAddWorkshop = function(){
   document.getElementById('posterUploadText').textContent = 'Click or drag & drop poster image here';
   document.getElementById('packagesEditor').innerHTML = '';
   document.getElementById('slotsEditor').innerHTML    = '';
-  pendingPosterURL = null;
+  pendingPosterURL  = null;
+  pendingPosterFile = null;
   addPackageRow(); addSlotRow();
   openModal('wsModal');
 };
@@ -2086,10 +2197,19 @@ window.saveWorkshop = async function(saveStatus){
     };
   }).filter(s=>s.date);
 
-  // Compress poster — higher quality, larger size for crisp display
-  let posterToSave = pendingPosterURL || existing?.poster || '';
-  if(posterToSave && posterToSave.startsWith('data:')) {
-    posterToSave = await compressImage(posterToSave, 800, 0.85);
+  // Upload poster to Firebase Storage if new file selected
+  let posterToSave = existing?.poster || '';
+  if(pendingPosterFile){
+    try {
+      showToast('Uploading poster…');
+      const ext = pendingPosterFile.name.split('.').pop();
+      posterToSave = await uploadToStorage(pendingPosterFile, `posters/${id}-${Date.now()}.${ext}`);
+    } catch(e){
+      // Fallback to base64 if Storage fails
+      posterToSave = pendingPosterURL ? await compressImage(pendingPosterURL, 800, 0.85) : '';
+    }
+  } else if(pendingPosterURL && pendingPosterURL.startsWith('data:')){
+    posterToSave = await compressImage(pendingPosterURL, 800, 0.85);
   }
 
   const wsData = {
@@ -4065,6 +4185,197 @@ window.saveExpense=async function(){
 window.deleteExpense=async function(id){
   if(!confirm('Delete this expense?'))return;
   await deleteDoc(doc(db,'expenses',id));showToast('Deleted ✓');
+};
+
+/* ══════════════════════════════════════
+   EDIT BATCHES
+══════════════════════════════════════ */
+let batchDefs = [];
+
+async function loadBatchDefs(){
+  try {
+    const snap = await getDocs(collection(db,'batchDefs'));
+    batchDefs = snap.docs.map(d=>({id:d.id,...d.data()}));
+    batchDefs.sort((a,b)=>(a.order||0)-(b.order||0)||(a.name||'').localeCompare(b.name||''));
+  } catch(e){ batchDefs = []; }
+}
+
+window.renderEditBatches = async function(){
+  await loadBatchDefs();
+  const grid = document.getElementById('editBatchGrid');
+  if(!batchDefs.length){
+    grid.innerHTML = `<div style="padding:3rem;text-align:center;color:var(--muted);border:1px dashed var(--border);grid-column:1/-1">
+      No batches yet. Click "Add New Batch" to get started.
+    </div>`;
+    return;
+  }
+  grid.innerHTML = batchDefs.map(b=>`
+    <div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden">
+      <div style="height:140px;background:${b.gradient||'linear-gradient(145deg,#1a0407,#bc1f2e)'};position:relative">
+        ${b.image?`<img src="${b.image}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;position:absolute;bottom:-20px;left:1.25rem;border:3px solid var(--bg2)">`:''}
+      </div>
+      <div style="padding:${b.image?'1.5rem 1.25rem 1.25rem':'1.25rem'}">
+        ${b.image?'<div style="height:20px"></div>':''}
+        <p style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--text)">${b.name||'—'}</p>
+        <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.5rem">${b.style||''}</p>
+        <p style="font-size:0.78rem;color:var(--text-mid)">by ${b.trainer||'—'}</p>
+        <p style="font-size:0.75rem;color:var(--muted)">${b.days||''} · ${b.time||''}</p>
+        ${b.fee?`<p style="font-size:0.75rem;color:var(--yellow);margin-top:0.25rem">₹${parseFloat(b.fee).toLocaleString('en-IN')}/month</p>`:''}
+        <div style="display:flex;gap:0.5rem;margin-top:1rem">
+          <button class="btn btn-outline btn-sm" onclick="openEditBatch('${b.id}')">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteBatch('${b.id}','${b.name}')">Delete</button>
+        </div>
+      </div>
+    </div>`).join('');
+};
+
+window.selectBatchGradient = function(g, el){
+  document.getElementById('beGradient').value = g;
+  document.querySelectorAll('#bgGradientPicker div').forEach(d=>d.style.borderColor='transparent');
+  el.style.borderColor = 'var(--red)';
+};
+
+window.openAddBatch = function(){
+  document.getElementById('batchEditTitle').textContent = 'Add New Batch';
+  document.getElementById('batchEditId').value = '';
+  ['beBatchName','beBatchId','beTrainer','beStyle','beDays','beTime','beDesc','beImage'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('beFee').value = '';
+  document.getElementById('beGradient').value = 'linear-gradient(145deg,#1a0407,#bc1f2e)';
+  document.querySelectorAll('#bgGradientPicker div').forEach((d,i)=>d.style.borderColor=i===0?'var(--red)':'transparent');
+  document.getElementById('beImagePreview').style.display='none';
+  openModal('batchEditModal');
+};
+
+window.openEditBatch = async function(id){
+  const b = batchDefs.find(x=>x.id===id);
+  if(!b) return;
+  document.getElementById('batchEditTitle').textContent = 'Edit Batch';
+  document.getElementById('batchEditId').value = id;
+  document.getElementById('beBatchName').value = b.name||'';
+  document.getElementById('beBatchId').value   = b.batchId||b.id||'';
+  document.getElementById('beTrainer').value   = b.trainer||'';
+  document.getElementById('beStyle').value     = b.style||'';
+  document.getElementById('beDays').value      = b.days||'';
+  document.getElementById('beTime').value      = b.time||'';
+  document.getElementById('beFee').value       = b.fee||'';
+  document.getElementById('beDesc').value      = b.desc||'';
+  document.getElementById('beImage').value     = b.image||'';
+  document.getElementById('beGradient').value  = b.gradient||'linear-gradient(145deg,#1a0407,#bc1f2e)';
+  if(b.image){
+    document.getElementById('beImagePreview').style.display='block';
+    document.getElementById('beImagePreviewImg').src=b.image;
+  }
+  document.querySelectorAll('#bgGradientPicker div').forEach(d=>{
+    d.style.borderColor=d.dataset.gradient===b.gradient?'var(--red)':'transparent';
+  });
+  openModal('batchEditModal');
+};
+
+window.saveBatch = async function(){
+  const name    = document.getElementById('beBatchName').value.trim();
+  const batchId = document.getElementById('beBatchId').value.trim();
+  const trainer = document.getElementById('beTrainer').value.trim();
+  if(!name||!trainer){ showToast('Batch name and trainer are required','error'); return; }
+  const editId = document.getElementById('batchEditId').value;
+  const data = {
+    name, trainer,
+    batchId:  batchId || name.toLowerCase().replace(/\s+/g,'-'),
+    style:    document.getElementById('beStyle').value.trim(),
+    days:     document.getElementById('beDays').value.trim(),
+    time:     document.getElementById('beTime').value.trim(),
+    fee:      parseFloat(document.getElementById('beFee').value)||0,
+    desc:     document.getElementById('beDesc').value.trim(),
+    image:    document.getElementById('beImage').value.trim(),
+    gradient: document.getElementById('beGradient').value,
+    updatedAt:Date.now()
+  };
+  if(editId){
+    await setDoc(doc(db,'batchDefs',editId), data);
+  } else {
+    data.createdAt = Date.now();
+    await addDoc(collection(db,'batchDefs'), data);
+  }
+  closeModal('batchEditModal');
+  showToast('Batch saved ✓');
+  renderEditBatches();
+};
+
+window.deleteBatch = async function(id, name){
+  if(!confirm(`Delete "${name}"? This won't delete student records.`)) return;
+  await deleteDoc(doc(db,'batchDefs',id));
+  showToast('Deleted ✓');
+  renderEditBatches();
+};
+
+/* ══════════════════════════════════════
+   GALLERY MANAGEMENT
+══════════════════════════════════════ */
+let galleryImages = [];
+
+window.renderGallery = async function(){
+  try {
+    const snap = await getDoc(doc(db,'settings','gallery'));
+    galleryImages = snap.exists() ? (snap.data().images||[]) : [];
+  } catch(e){ galleryImages=[]; }
+  renderGalleryGrid();
+};
+
+function renderGalleryGrid(){
+  const grid = document.getElementById('galleryGrid');
+  if(!galleryImages.length){
+    grid.innerHTML=`<div style="padding:3rem;text-align:center;color:var(--muted);border:2px dashed var(--border);grid-column:1/-1">
+      No photos uploaded yet. Click "Upload Photos" to add images.
+    </div>`;
+    return;
+  }
+  grid.innerHTML = galleryImages.map((img,i)=>`
+    <div style="position:relative;aspect-ratio:1;overflow:hidden;background:var(--bg2)">
+      <img src="${img}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.opacity=0.3">
+      <button onclick="removeGalleryImage(${i})"
+        style="position:absolute;top:0.4rem;right:0.4rem;background:rgba(0,0,0,0.7);color:#fff;border:none;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:0.8rem;display:flex;align-items:center;justify-content:center">✕</button>
+      <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);padding:0.25rem 0.5rem;font-size:0.62rem;color:var(--muted);font-family:'Syne',sans-serif">${i+1} of ${galleryImages.length}</div>
+    </div>`).join('');
+}
+
+window.handleGalleryUpload = async function(files){
+  const status = document.getElementById('galleryStatus');
+  status.textContent = 'Uploading…';
+  let uploaded = 0;
+  for(const file of Array.from(files)){
+    if(galleryImages.length >= 20){ showToast('Max 20 photos','error'); break; }
+    try {
+      const ext = file.name.split('.').pop();
+      const url = await uploadToStorage(file, `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`);
+      galleryImages.push(url);
+      uploaded++;
+      status.textContent = `Uploaded ${uploaded} of ${files.length}…`;
+    } catch(e){
+      showToast('Upload failed for '+file.name,'error');
+    }
+  }
+  renderGalleryGrid();
+  status.textContent = `${galleryImages.length} photo${galleryImages.length!==1?'s':''} ready — click Save to publish`;
+};
+
+window.removeGalleryImage = function(i){
+  galleryImages.splice(i,1);
+  renderGalleryGrid();
+  document.getElementById('galleryStatus').textContent = 'Removed — click Save to publish';
+};
+
+window.saveGalleryOrder = async function(){
+  const status = document.getElementById('galleryStatus');
+  status.textContent = 'Saving…';
+  try {
+    await setDoc(doc(db,'settings','gallery'),{ images: galleryImages, updatedAt: Date.now() });
+    status.textContent = `✓ Published — ${galleryImages.length} photo${galleryImages.length!==1?'s':''} live on home page`;
+    showToast('Gallery saved ✓');
+  } catch(e){
+    status.textContent = 'Save failed — try again';
+    showToast('Save failed','error');
+  }
 };
 
 const MASTER_USER = 'chikki';
