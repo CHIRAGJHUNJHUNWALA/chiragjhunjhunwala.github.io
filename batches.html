@@ -352,11 +352,12 @@ async function loadBatches(){
         <div class="batch-meta">
           <div class="batch-meta-item"><strong>Time</strong><span>${b.time||'—'}</span></div>
           <div class="batch-meta-item"><strong>Level</strong><span>${b.style||'All Levels'}</span></div>
-          ${b.fee?`<div class="batch-meta-item"><strong>Fee</strong><span>₹${parseFloat(b.fee).toLocaleString('en-IN')}/month</span></div>`:''}
+          ${b.fee?`<div class="batch-meta-item"><strong>Monthly</strong><span>₹${parseFloat(b.fee).toLocaleString('en-IN')}</span></div>`:''}
+          ${b.feeWeekly?`<div class="batch-meta-item"><strong>Weekly</strong><span>₹${parseFloat(b.feeWeekly).toLocaleString('en-IN')}</span></div>`:''}
         </div>
         <div class="batch-days">${getDayChips(b.days)}</div>
         ${b.desc?`<p style="font-size:0.8rem;color:rgba(245,245,240,0.5);margin:0.75rem 0;line-height:1.6">${b.desc}</p>`:''}
-        <a href="https://wa.me/919057975755?text=Hi! I'd like to enquire about ${encodeURIComponent(b.name||'a batch')} at The Happening Space." class="batch-enquire" target="_blank">
+        <a href="https://wa.me/919057975755?text=Hi!%20I%27d%20like%20to%20enquire%20about%20the%20${encodeURIComponent(b.name||'batch')}%20(${encodeURIComponent(b.time||'')}%2C%20by%20${encodeURIComponent(b.trainer||'')})%20at%20The%20Happening%20Space.%20Could%20you%20share%20details%20about%20fees%20and%20availability%3F" class="batch-enquire" target="_blank">
           Enquire on WhatsApp
           <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </a>

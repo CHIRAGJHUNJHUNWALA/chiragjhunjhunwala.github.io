@@ -4230,15 +4230,18 @@ window.renderEditBatches = async function(){
   await loadBatchDefs();
   const grid = document.getElementById('editBatchGrid');
   if(!batchDefs.length){
-    grid.innerHTML = `<div style="padding:3rem;text-align:center;color:var(--muted);border:1px dashed var(--border);grid-column:1/-1">
-      No batches yet. Click "Add New Batch" to get started.
-    </div>`;
+    grid.innerHTML = `<div style="padding:3rem;text-align:center;color:var(--muted);border:1px dashed var(--border);grid-column:1/-1">No batches yet. Click "Add New Batch" to get started.</div>`;
     return;
   }
-  grid.innerHTML = batchDefs.map(b=>`
+  grid.innerHTML = batchDefs.map((b,idx)=>`
     <div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden">
       <div style="height:140px;background:${b.gradient||'linear-gradient(145deg,#1a0407,#bc1f2e)'};position:relative">
         ${b.image?`<img src="${b.image}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;position:absolute;bottom:-20px;left:1.25rem;border:3px solid var(--bg2)">`:''}
+        <div style="position:absolute;top:0.5rem;right:0.5rem;display:flex;flex-direction:column;gap:0.2rem">
+          ${idx>0?`<button onclick="reorderBatch(${idx},-1)" style="background:rgba(0,0,0,0.7);border:none;color:#fff;width:26px;height:26px;cursor:pointer;font-size:0.7rem;display:flex;align-items:center;justify-content:center;border-radius:2px" title="Move Up">▲</button>`:''}
+          ${idx<batchDefs.length-1?`<button onclick="reorderBatch(${idx},1)" style="background:rgba(0,0,0,0.7);border:none;color:#fff;width:26px;height:26px;cursor:pointer;font-size:0.7rem;display:flex;align-items:center;justify-content:center;border-radius:2px" title="Move Down">▼</button>`:''}
+        </div>
+        <div style="position:absolute;top:0.5rem;left:0.6rem;background:rgba(0,0,0,0.6);padding:0.15rem 0.45rem;font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;color:rgba(255,255,255,0.6)">#${idx+1}</div>
       </div>
       <div style="padding:${b.image?'1.5rem 1.25rem 1.25rem':'1.25rem'}">
         ${b.image?'<div style="height:20px"></div>':''}
@@ -4253,6 +4256,22 @@ window.renderEditBatches = async function(){
         </div>
       </div>
     </div>`).join('');
+};
+
+window.reorderBatch = async function(idx, dir){
+  const newIdx = idx + dir;
+  if(newIdx < 0 || newIdx >= batchDefs.length) return;
+  // Swap in array
+  [batchDefs[idx], batchDefs[newIdx]] = [batchDefs[newIdx], batchDefs[idx]];
+  // Save new order to Firestore
+  try {
+    for(let i=0;i<batchDefs.length;i++){
+      if(batchDefs[i].id && !batchDefs[i].id.startsWith('default-')){
+        await updateDoc(doc(db,'batchDefs',batchDefs[i].id),{order:i+1});
+      }
+    }
+  } catch(e){ showToast('Order saved locally only — Firestore update failed','error'); }
+  renderEditBatches();
 };
 
 window.toggleBatchDay = function(btn){

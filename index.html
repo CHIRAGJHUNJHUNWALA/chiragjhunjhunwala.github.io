@@ -677,6 +677,11 @@ function renderBatchCards(batches){
       <div class="batch-body">
         <div class="batch-info">
           <div class="batch-info-item"><strong>${b.days||''}</strong>${b.time||''}</div>
+          ${b.fee||b.feeWeekly?`<div class="batch-info-item" style="font-size:0.75rem;color:var(--red)">
+            ${b.fee?`<span>₹${parseFloat(b.fee).toLocaleString('en-IN')}/month</span>`:''}
+            ${b.fee&&b.feeWeekly?'<span style="color:rgba(245,245,240,0.3);margin:0 0.25rem">·</span>':''}
+            ${b.feeWeekly?`<span>₹${parseFloat(b.feeWeekly).toLocaleString('en-IN')}/week</span>`:''}
+          </div>`:''}
         </div>
       </div>
     </div>`).join('');
