@@ -1016,16 +1016,12 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="form-group">
         <label>Background Gradient</label>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap" id="bgGradientPicker">
-          ${[
-            ['linear-gradient(145deg,#1a0407,#bc1f2e)','Red'],
-            ['linear-gradient(145deg,#050f08,#0f5c2a)','Green'],
-            ['linear-gradient(145deg,#05080f,#1a3a6b)','Blue'],
-            ['linear-gradient(145deg,#1a0c05,#8b4513)','Brown'],
-            ['linear-gradient(145deg,#0f0a1a,#6b1a8b)','Purple'],
-            ['linear-gradient(145deg,#0a0a0a,#2a2a2a)','Dark'],
-          ].map(([g,label])=>`<div onclick="selectBatchGradient('${g}',this)" title="${label}"
-            style="width:40px;height:40px;background:${g};border:2px solid transparent;cursor:pointer;border-radius:4px;transition:border-color 0.2s"
-            data-gradient="${g}"></div>`).join('')}
+          <div onclick="selectBatchGradient('linear-gradient(145deg,#1a0407,#bc1f2e)',this)" title="Red" data-gradient="linear-gradient(145deg,#1a0407,#bc1f2e)" style="width:40px;height:40px;background:linear-gradient(145deg,#1a0407,#bc1f2e);border:2px solid var(--red);cursor:pointer;border-radius:4px"></div>
+          <div onclick="selectBatchGradient('linear-gradient(145deg,#050f08,#0f5c2a)',this)" title="Green" data-gradient="linear-gradient(145deg,#050f08,#0f5c2a)" style="width:40px;height:40px;background:linear-gradient(145deg,#050f08,#0f5c2a);border:2px solid transparent;cursor:pointer;border-radius:4px"></div>
+          <div onclick="selectBatchGradient('linear-gradient(145deg,#05080f,#1a3a6b)',this)" title="Blue" data-gradient="linear-gradient(145deg,#05080f,#1a3a6b)" style="width:40px;height:40px;background:linear-gradient(145deg,#05080f,#1a3a6b);border:2px solid transparent;cursor:pointer;border-radius:4px"></div>
+          <div onclick="selectBatchGradient('linear-gradient(145deg,#1a0c05,#8b4513)',this)" title="Brown" data-gradient="linear-gradient(145deg,#1a0c05,#8b4513)" style="width:40px;height:40px;background:linear-gradient(145deg,#1a0c05,#8b4513);border:2px solid transparent;cursor:pointer;border-radius:4px"></div>
+          <div onclick="selectBatchGradient('linear-gradient(145deg,#0f0a1a,#6b1a8b)',this)" title="Purple" data-gradient="linear-gradient(145deg,#0f0a1a,#6b1a8b)" style="width:40px;height:40px;background:linear-gradient(145deg,#0f0a1a,#6b1a8b);border:2px solid transparent;cursor:pointer;border-radius:4px"></div>
+          <div onclick="selectBatchGradient('linear-gradient(145deg,#0a0a0a,#2a2a2a)',this)" title="Dark" data-gradient="linear-gradient(145deg,#0a0a0a,#2a2a2a)" style="width:40px;height:40px;background:linear-gradient(145deg,#0a0a0a,#2a2a2a);border:2px solid transparent;cursor:pointer;border-radius:4px"></div>
         </div>
         <input type="hidden" id="beGradient" value="linear-gradient(145deg,#1a0407,#bc1f2e)">
       </div>
@@ -4192,12 +4188,27 @@ window.deleteExpense=async function(id){
 ══════════════════════════════════════ */
 let batchDefs = [];
 
+const DEFAULT_BATCHES = [
+  { batchId:'ladies-batch',      name:'Ladies Batch',       trainer:'Divyanshi Singhvi', style:'Contemporary / Bollywood', days:'Mon · Tue · Wed', time:'12:00 PM – 1:00 PM', fee:2500, gradient:'linear-gradient(145deg,#1a0407,#bc1f2e)', order:1 },
+  { batchId:'beginners-batch',   name:'Beginners Batch',    trainer:'Divyanshi Singhvi', style:'Beginners',                days:'Mon · Tue · Wed', time:'4:00 PM – 5:00 PM',  fee:2500, gradient:'linear-gradient(145deg,#1a0407,#bc1f2e)', order:2 },
+  { batchId:'intermediate-6-7',  name:'Intermediate Batch', trainer:'Hriday Khubchandani', style:'Intermediate',          days:'Mon · Tue · Wed', time:'6:00 PM – 7:00 PM',  fee:3000, gradient:'linear-gradient(145deg,#050f08,#0f5c2a)', order:3 },
+  { batchId:'intermediate-7-8',  name:'Intermediate Batch', trainer:'Divyanshi Singhvi', style:'Intermediate',            days:'Mon · Tue · Wed', time:'7:00 PM – 8:00 PM',  fee:3000, gradient:'linear-gradient(145deg,#05080f,#1a3a6b)', order:4 },
+  { batchId:'intermediate-8-9',  name:'Intermediate Batch', trainer:'Ritu Hariyani',     style:'Intermediate',            days:'Mon · Tue · Wed', time:'8:00 PM – 9:00 PM',  fee:3000, gradient:'linear-gradient(145deg,#1a0c05,#8b4513)', order:5 },
+];
+
 async function loadBatchDefs(){
   try {
     const snap = await getDocs(collection(db,'batchDefs'));
     batchDefs = snap.docs.map(d=>({id:d.id,...d.data()}));
+    // Seed defaults if Firestore is empty
+    if(!batchDefs.length){
+      for(const b of DEFAULT_BATCHES){
+        const ref = await addDoc(collection(db,'batchDefs'), {...b, createdAt:Date.now()});
+        batchDefs.push({id:ref.id,...b});
+      }
+    }
     batchDefs.sort((a,b)=>(a.order||0)-(b.order||0)||(a.name||'').localeCompare(b.name||''));
-  } catch(e){ batchDefs = []; }
+  } catch(e){ batchDefs = DEFAULT_BATCHES.map((b,i)=>({id:'default-'+i,...b})); }
 }
 
 window.renderEditBatches = async function(){

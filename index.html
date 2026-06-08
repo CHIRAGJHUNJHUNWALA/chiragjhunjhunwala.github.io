@@ -359,88 +359,9 @@ footer{background:var(--off-black);border-top:1px solid var(--border);padding:4r
   <p class="section-eyebrow">Ongoing</p>
   <h2 class="section-title">REGULAR <span class="red">BATCHES</span></h2>
   <p class="section-sub">Consistent training, real growth. Mon · Tue · Wed every week.</p>
-  <div class="batches-grid">
-
-    <div class="batch-card" style="cursor:pointer" onclick="window.location.href='batches.html#ladies-batch'">
-      <div class="batch-poster">
-        <div class="batch-poster-inner" style="background:linear-gradient(145deg,#0e0514,#4b1a7a)"></div>
-        <div class="batch-poster-content">
-          <p class="batch-name">Ladies Batch</p>
-          <p class="batch-level">by Divyanshi Singhvi</p>
-        </div>
-      </div>
-      <div class="batch-body">
-        <div class="batch-info">
-          <div class="batch-info-item"><strong>Mon · Tue · Wed</strong>12:00 PM – 1:00 PM</div>
-        </div>
-        
-      </div>
-    </div>
-
-    <div class="batch-card" style="cursor:pointer" onclick="window.location.href='batches.html#beginners-batch'">
-      <div class="batch-poster">
-        <div class="batch-poster-inner" style="background:linear-gradient(145deg,#1a0407,#bc1f2e)"></div>
-        <div class="batch-poster-content">
-          <p class="batch-name">Beginners Batch</p>
-          <p class="batch-level">by Divyanshi Singhvi</p>
-        </div>
-      </div>
-      <div class="batch-body">
-        <div class="batch-info">
-          <div class="batch-info-item"><strong>Mon · Tue · Wed</strong>4:00 PM – 5:00 PM</div>
-        </div>
-        
-      </div>
-    </div>
-
-    <div class="batch-card" style="cursor:pointer" onclick="window.location.href='batches.html#intermediate-6-7'">
-      <div class="batch-poster">
-        <div class="batch-poster-inner" style="background:linear-gradient(145deg,#050f08,#0f5c2a)"></div>
-        <div class="batch-poster-content">
-          <p class="batch-name">Intermediate Batch</p>
-          <p class="batch-level">by Hriday Khubchandani</p>
-        </div>
-      </div>
-      <div class="batch-body">
-        <div class="batch-info">
-          <div class="batch-info-item"><strong>Mon · Tue · Wed</strong>6:00 PM – 7:00 PM</div>
-        </div>
-        
-      </div>
-    </div>
-
-    <div class="batch-card" style="cursor:pointer" onclick="window.location.href='batches.html#intermediate-7-8'">
-      <div class="batch-poster">
-        <div class="batch-poster-inner" style="background:linear-gradient(145deg,#05080f,#1a3a6b)"></div>
-        <div class="batch-poster-content">
-          <p class="batch-name">Intermediate Batch</p>
-          <p class="batch-level">by Divyanshi Singhvi</p>
-        </div>
-      </div>
-      <div class="batch-body">
-        <div class="batch-info">
-          <div class="batch-info-item"><strong>Mon · Tue · Wed</strong>7:00 PM – 8:00 PM</div>
-        </div>
-        
-      </div>
-    </div>
-
-    <div class="batch-card" style="cursor:pointer" onclick="window.location.href='batches.html#intermediate-8-9'">
-      <div class="batch-poster">
-        <div class="batch-poster-inner" style="background:linear-gradient(145deg,#1a0c05,#8b4513)"></div>
-        <div class="batch-poster-content">
-          <p class="batch-name">Intermediate Batch</p>
-          <p class="batch-level">by Ritu Hariyani (Aajanachle)</p>
-        </div>
-      </div>
-      <div class="batch-body">
-        <div class="batch-info">
-          <div class="batch-info-item"><strong>Mon · Tue · Wed</strong>8:00 PM – 9:00 PM</div>
-        </div>
-        
-      </div>
-    </div>
-
+  <div class="batches-grid" id="batchesGrid">
+    <!-- loaded dynamically from Firestore -->
+    <div style="grid-column:1/-1;text-align:center;padding:2rem;color:rgba(245,245,240,0.3);font-size:0.85rem">Loading batches…</div>
   </div>
 </section>
 
@@ -729,6 +650,36 @@ async function loadWorkshops() {
 }
 
 loadWorkshops();
+
+// Load batches from Firestore
+async function loadBatches(){
+  try {
+    const snap = await getDocs(collection(db,'batchDefs'));
+    let batches = snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(!batches.length) return; // keep loading placeholder
+    batches.sort((a,b)=>(a.order||0)-(b.order||0));
+    const grid = document.getElementById('batchesGrid');
+    if(!grid) return;
+    grid.innerHTML = batches.map(b=>`
+      <div class="batch-card" style="cursor:pointer" onclick="window.location.href='batches.html#${b.batchId||b.id}'">
+        <div class="batch-poster">
+          <div class="batch-poster-inner" style="background:${b.gradient||'linear-gradient(145deg,#1a0407,#bc1f2e)'}">
+            ${b.image?`<img src="${b.image}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.4">`:''}
+          </div>
+          <div class="batch-poster-content">
+            <p class="batch-name">${b.name||'—'}</p>
+            <p class="batch-level">by ${b.trainer||'—'}</p>
+          </div>
+        </div>
+        <div class="batch-body">
+          <div class="batch-info">
+            <div class="batch-info-item"><strong>${b.days||''}</strong>${b.time||''}</div>
+          </div>
+        </div>
+      </div>`).join('');
+  } catch(e){}
+}
+loadBatches();
 
 // Load gallery
 async function loadGallery(){
