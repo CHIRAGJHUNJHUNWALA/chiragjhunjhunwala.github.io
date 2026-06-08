@@ -316,53 +316,64 @@ function getDayChips(days){
     .map(d=>`<span class="batch-day-chip">${d}</span>`).join('');
 }
 
+const FALLBACK_BATCHES = [
+  {batchId:'ladies-batch',     name:'Ladies Batch',       trainer:'Divyanshi Singhvi',  style:'All Levels',   days:'Mon · Tue · Wed', time:'12:00 PM – 1:00 PM', gradient:'linear-gradient(145deg,#1a0407,#bc1f2e)', order:1},
+  {batchId:'beginners-batch',  name:'Beginners Batch',    trainer:'Divyanshi Singhvi',  style:'Beginners',    days:'Mon · Tue · Wed', time:'4:00 PM – 5:00 PM',  gradient:'linear-gradient(145deg,#1a0407,#bc1f2e)', order:2},
+  {batchId:'intermediate-6-7', name:'Intermediate Batch', trainer:'Hriday Khubchandani',style:'Intermediate', days:'Mon · Tue · Wed', time:'6:00 PM – 7:00 PM',  gradient:'linear-gradient(145deg,#050f08,#0f5c2a)', order:3},
+  {batchId:'intermediate-7-8', name:'Intermediate Batch', trainer:'Divyanshi Singhvi',  style:'Intermediate', days:'Mon · Tue · Wed', time:'7:00 PM – 8:00 PM',  gradient:'linear-gradient(145deg,#05080f,#1a3a6b)', order:4},
+  {batchId:'intermediate-8-9', name:'Intermediate Batch', trainer:'Ritu Hariyani',      style:'Intermediate', days:'Mon · Tue · Wed', time:'8:00 PM – 9:00 PM',  gradient:'linear-gradient(145deg,#1a0c05,#8b4513)', order:5},
+];
+
 async function loadBatches(){
+  let batches = [];
   try {
     const snap = await getDocs(collection(db,'batchDefs'));
-    let batches = snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(!batches.length) return;
+    batches = snap.docs.map(d=>({id:d.id,...d.data()}));
     batches.sort((a,b)=>(a.order||0)-(b.order||0));
-    const grid = document.getElementById('batchesGrid');
-    grid.innerHTML = batches.map((b,i)=>`
-      <div class="batch-card" id="${b.batchId||b.id}">
-        <div class="batch-poster">
-          <div class="batch-poster-bg" style="background:${b.gradient||'linear-gradient(145deg,#1a0407,#bc1f2e)'}">
-            ${b.image?`<img src="${b.image}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.5">`:''}
-          </div>
-          <div class="batch-poster-overlay"></div>
-          <div class="batch-poster-content">
-            <p class="batch-number">Batch 0${i+1}</p>
-            <p class="batch-name">${b.name||'—'}</p>
-            <p class="batch-by">by <strong>${b.trainer||'—'}</strong></p>
-          </div>
-        </div>
-        <div class="batch-body">
-          <div class="batch-meta">
-            <div class="batch-meta-item"><strong>Time</strong><span>${b.time||'—'}</span></div>
-            <div class="batch-meta-item"><strong>Level</strong><span>${b.style||'All Levels'}</span></div>
-            ${b.fee?`<div class="batch-meta-item"><strong>Fee</strong><span>₹${parseFloat(b.fee).toLocaleString('en-IN')}/month</span></div>`:''}
-          </div>
-          <div class="batch-days">${getDayChips(b.days)}</div>
-          ${b.desc?`<p style="font-size:0.8rem;color:rgba(245,245,240,0.5);margin:0.75rem 0;line-height:1.6">${b.desc}</p>`:''}
-          <a href="https://wa.me/919057975755?text=Hi! I'd like to enquire about the ${encodeURIComponent(b.name||'batch')} at The Happening Space." class="batch-enquire" target="_blank">
-            Enquire on WhatsApp
-            <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </a>
-        </div>
-      </div>`).join('');
-
-    // Animate cards
-    const obsB = new IntersectionObserver(entries=>{
-      entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('visible'); });
-    },{threshold:0.1});
-    document.querySelectorAll('.batch-card').forEach((el,i)=>{
-      el.style.transitionDelay=(i*0.08)+'s'; obsB.observe(el);
-    });
-
-    // Scroll to hash
-    const hash = window.location.hash;
-    if(hash){ setTimeout(()=>{ const el=document.querySelector(hash); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); },500); }
   } catch(e){}
+
+  if(!batches.length) batches = FALLBACK_BATCHES;
+
+  const grid = document.getElementById('batchesGrid');
+  grid.innerHTML = batches.map((b,i)=>`
+    <div class="batch-card" id="${b.batchId||b.id}">
+      <div class="batch-poster">
+        <div class="batch-poster-bg" style="background:${b.gradient||'linear-gradient(145deg,#1a0407,#bc1f2e)'}">
+          ${b.image?`<img src="${b.image}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.5">`:''}
+        </div>
+        <div class="batch-poster-overlay"></div>
+        <div class="batch-poster-content">
+          <p class="batch-number">Batch 0${i+1}</p>
+          <p class="batch-name">${b.name||'—'}</p>
+          <p class="batch-by">by <strong>${b.trainer||'—'}</strong></p>
+        </div>
+      </div>
+      <div class="batch-body">
+        <div class="batch-meta">
+          <div class="batch-meta-item"><strong>Time</strong><span>${b.time||'—'}</span></div>
+          <div class="batch-meta-item"><strong>Level</strong><span>${b.style||'All Levels'}</span></div>
+          ${b.fee?`<div class="batch-meta-item"><strong>Fee</strong><span>₹${parseFloat(b.fee).toLocaleString('en-IN')}/month</span></div>`:''}
+        </div>
+        <div class="batch-days">${getDayChips(b.days)}</div>
+        ${b.desc?`<p style="font-size:0.8rem;color:rgba(245,245,240,0.5);margin:0.75rem 0;line-height:1.6">${b.desc}</p>`:''}
+        <a href="https://wa.me/919057975755?text=Hi! I'd like to enquire about ${encodeURIComponent(b.name||'a batch')} at The Happening Space." class="batch-enquire" target="_blank">
+          Enquire on WhatsApp
+          <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </div>`).join('');
+
+  // Animate
+  const obsB = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('visible'); });
+  },{threshold:0.1});
+  document.querySelectorAll('.batch-card').forEach((el,i)=>{
+    el.style.transitionDelay=(i*0.08)+'s'; obsB.observe(el);
+  });
+
+  // Scroll to hash
+  const hash = window.location.hash;
+  if(hash){ setTimeout(()=>{ const el=document.querySelector(hash); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); },500); }
 }
 loadBatches();
 </script>

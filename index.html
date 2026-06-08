@@ -652,32 +652,45 @@ async function loadWorkshops() {
 loadWorkshops();
 
 // Load batches from Firestore
+const FALLBACK_BATCHES = [
+  {batchId:'ladies-batch',     name:'Ladies Batch',       trainer:'Divyanshi Singhvi',  style:'Contemporary',  days:'Mon · Tue · Wed', time:'12:00 PM – 1:00 PM', gradient:'linear-gradient(145deg,#1a0407,#bc1f2e)', order:1},
+  {batchId:'beginners-batch',  name:'Beginners Batch',    trainer:'Divyanshi Singhvi',  style:'Beginners',     days:'Mon · Tue · Wed', time:'4:00 PM – 5:00 PM',  gradient:'linear-gradient(145deg,#1a0407,#bc1f2e)', order:2},
+  {batchId:'intermediate-6-7', name:'Intermediate Batch', trainer:'Hriday Khubchandani',style:'Intermediate',  days:'Mon · Tue · Wed', time:'6:00 PM – 7:00 PM',  gradient:'linear-gradient(145deg,#050f08,#0f5c2a)', order:3},
+  {batchId:'intermediate-7-8', name:'Intermediate Batch', trainer:'Divyanshi Singhvi',  style:'Intermediate',  days:'Mon · Tue · Wed', time:'7:00 PM – 8:00 PM',  gradient:'linear-gradient(145deg,#05080f,#1a3a6b)', order:4},
+  {batchId:'intermediate-8-9', name:'Intermediate Batch', trainer:'Ritu Hariyani',      style:'Intermediate',  days:'Mon · Tue · Wed', time:'8:00 PM – 9:00 PM',  gradient:'linear-gradient(145deg,#1a0c05,#8b4513)', order:5},
+];
+
+function renderBatchCards(batches){
+  const grid = document.getElementById('batchesGrid');
+  if(!grid) return;
+  grid.innerHTML = batches.map(b=>`
+    <div class="batch-card" style="cursor:pointer" onclick="window.location.href='batches.html#${b.batchId||b.id||''}'">
+      <div class="batch-poster">
+        <div class="batch-poster-inner" style="background:${b.gradient||'linear-gradient(145deg,#1a0407,#bc1f2e)'}">
+          ${b.image?`<img src="${b.image}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.4">`:''}
+        </div>
+        <div class="batch-poster-content">
+          <p class="batch-name">${b.name||'—'}</p>
+          <p class="batch-level">by ${b.trainer||'—'}</p>
+        </div>
+      </div>
+      <div class="batch-body">
+        <div class="batch-info">
+          <div class="batch-info-item"><strong>${b.days||''}</strong>${b.time||''}</div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
 async function loadBatches(){
   try {
     const snap = await getDocs(collection(db,'batchDefs'));
     let batches = snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(!batches.length) return; // keep loading placeholder
     batches.sort((a,b)=>(a.order||0)-(b.order||0));
-    const grid = document.getElementById('batchesGrid');
-    if(!grid) return;
-    grid.innerHTML = batches.map(b=>`
-      <div class="batch-card" style="cursor:pointer" onclick="window.location.href='batches.html#${b.batchId||b.id}'">
-        <div class="batch-poster">
-          <div class="batch-poster-inner" style="background:${b.gradient||'linear-gradient(145deg,#1a0407,#bc1f2e)'}">
-            ${b.image?`<img src="${b.image}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.4">`:''}
-          </div>
-          <div class="batch-poster-content">
-            <p class="batch-name">${b.name||'—'}</p>
-            <p class="batch-level">by ${b.trainer||'—'}</p>
-          </div>
-        </div>
-        <div class="batch-body">
-          <div class="batch-info">
-            <div class="batch-info-item"><strong>${b.days||''}</strong>${b.time||''}</div>
-          </div>
-        </div>
-      </div>`).join('');
-  } catch(e){}
+    renderBatchCards(batches.length ? batches : FALLBACK_BATCHES);
+  } catch(e){
+    renderBatchCards(FALLBACK_BATCHES);
+  }
 }
 loadBatches();
 

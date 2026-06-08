@@ -4200,13 +4200,15 @@ async function loadBatchDefs(){
   try {
     const snap = await getDocs(collection(db,'batchDefs'));
     batchDefs = snap.docs.map(d=>({id:d.id,...d.data()}));
-    // Seed defaults if Firestore is empty
-    if(!batchDefs.length){
+    // Seed defaults only when admin is logged in and Firestore is empty
+    if(!batchDefs.length && auth.currentUser){
       for(const b of DEFAULT_BATCHES){
         const ref = await addDoc(collection(db,'batchDefs'), {...b, createdAt:Date.now()});
         batchDefs.push({id:ref.id,...b});
       }
     }
+    // If still empty (not seeded yet), use defaults for display only
+    if(!batchDefs.length) batchDefs = DEFAULT_BATCHES.map((b,i)=>({id:'default-'+i,...b}));
     batchDefs.sort((a,b)=>(a.order||0)-(b.order||0)||(a.name||'').localeCompare(b.name||''));
   } catch(e){ batchDefs = DEFAULT_BATCHES.map((b,i)=>({id:'default-'+i,...b})); }
 }
@@ -4302,15 +4304,20 @@ window.saveBatch = async function(){
     gradient: document.getElementById('beGradient').value,
     updatedAt:Date.now()
   };
-  if(editId){
-    await setDoc(doc(db,'batchDefs',editId), data);
-  } else {
-    data.createdAt = Date.now();
-    await addDoc(collection(db,'batchDefs'), data);
+  try {
+    if(editId){
+      await setDoc(doc(db,'batchDefs',editId), data);
+    } else {
+      data.createdAt = Date.now();
+      data.order = batchDefs.length + 1;
+      await addDoc(collection(db,'batchDefs'), data);
+    }
+    closeModal('batchEditModal');
+    showToast('Batch saved ✓');
+    renderEditBatches();
+  } catch(e){
+    showToast('Save failed: '+e.message,'error');
   }
-  closeModal('batchEditModal');
-  showToast('Batch saved ✓');
-  renderEditBatches();
 };
 
 window.deleteBatch = async function(id, name){
