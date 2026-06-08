@@ -1000,11 +1000,24 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <div class="form-group"><label>Trainer Name *</label><input type="text" id="beTrainer" placeholder="e.g. Divyanshi Singhvi"></div>
         <div class="form-group"><label>Style / Level</label><input type="text" id="beStyle" placeholder="e.g. Intermediate, Beginners"></div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label>Days</label><input type="text" id="beDays" placeholder="e.g. Mon · Tue · Wed"></div>
-        <div class="form-group"><label>Time</label><input type="text" id="beTime" placeholder="e.g. 7:00 PM – 8:00 PM"></div>
+      <div class="form-group">
+        <label>Days</label>
+        <div style="display:flex;gap:0.4rem;flex-wrap:wrap" id="beDaysToggle">
+          <button type="button" class="day-toggle" data-day="Mon" onclick="toggleBatchDay(this)">MON</button>
+          <button type="button" class="day-toggle" data-day="Tue" onclick="toggleBatchDay(this)">TUE</button>
+          <button type="button" class="day-toggle" data-day="Wed" onclick="toggleBatchDay(this)">WED</button>
+          <button type="button" class="day-toggle" data-day="Thu" onclick="toggleBatchDay(this)">THU</button>
+          <button type="button" class="day-toggle" data-day="Fri" onclick="toggleBatchDay(this)">FRI</button>
+          <button type="button" class="day-toggle" data-day="Sat" onclick="toggleBatchDay(this)">SAT</button>
+          <button type="button" class="day-toggle" data-day="Sun" onclick="toggleBatchDay(this)">SUN</button>
+        </div>
+        <input type="hidden" id="beDays">
       </div>
-      <div class="form-group"><label>Monthly Fee (₹)</label><input type="number" id="beFee" placeholder="e.g. 2500"></div>
+      <div class="form-group"><label>Time</label><input type="text" id="beTime" placeholder="e.g. 7:00 PM – 8:00 PM"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Monthly Fee (₹)</label><input type="number" id="beFee" placeholder="e.g. 2500"></div>
+        <div class="form-group"><label>Weekly Fee (₹)</label><input type="number" id="beFeeWeekly" placeholder="e.g. 700"></div>
+      </div>
       <div class="form-group"><label>Description</label><textarea id="beDesc" placeholder="Brief description of the batch…" style="min-height:70px"></textarea></div>
       <div class="form-group">
         <label>Trainer Photo URL <span style="font-weight:300;color:var(--muted);font-size:0.8em">(paste image URL)</span></label>
@@ -4233,7 +4246,7 @@ window.renderEditBatches = async function(){
         <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.5rem">${b.style||''}</p>
         <p style="font-size:0.78rem;color:var(--text-mid)">by ${b.trainer||'—'}</p>
         <p style="font-size:0.75rem;color:var(--muted)">${b.days||''} · ${b.time||''}</p>
-        ${b.fee?`<p style="font-size:0.75rem;color:var(--yellow);margin-top:0.25rem">₹${parseFloat(b.fee).toLocaleString('en-IN')}/month</p>`:''}
+        ${b.fee?`<p style="font-size:0.75rem;color:var(--yellow);margin-top:0.25rem">₹${parseFloat(b.fee).toLocaleString('en-IN')}/month${b.feeWeekly?' · ₹'+parseFloat(b.feeWeekly).toLocaleString('en-IN')+'/week':''}</p>`:''}
         <div style="display:flex;gap:0.5rem;margin-top:1rem">
           <button class="btn btn-outline btn-sm" onclick="openEditBatch('${b.id}')">Edit</button>
           <button class="btn btn-danger btn-sm" onclick="deleteBatch('${b.id}','${b.name}')">Delete</button>
@@ -4242,19 +4255,32 @@ window.renderEditBatches = async function(){
     </div>`).join('');
 };
 
-window.selectBatchGradient = function(g, el){
-  document.getElementById('beGradient').value = g;
-  document.querySelectorAll('#bgGradientPicker div').forEach(d=>d.style.borderColor='transparent');
-  el.style.borderColor = 'var(--red)';
+window.toggleBatchDay = function(btn){
+  btn.classList.toggle('active');
+  // Update hidden input with selected days
+  const selected = Array.from(document.querySelectorAll('#beDaysToggle .day-toggle.active'))
+    .map(b=>b.dataset.day);
+  document.getElementById('beDays').value = selected.join(' · ');
 };
+
+function setBatchDays(daysStr){
+  // Reset all
+  document.querySelectorAll('#beDaysToggle .day-toggle').forEach(b=>b.classList.remove('active'));
+  if(!daysStr) return;
+  const parts = daysStr.split(/[\s·,]+/).map(d=>d.trim()).filter(Boolean);
+  document.querySelectorAll('#beDaysToggle .day-toggle').forEach(b=>{
+    if(parts.some(p=>p.toLowerCase()===b.dataset.day.toLowerCase())) b.classList.add('active');
+  });
+  document.getElementById('beDays').value = daysStr;
+}
 
 window.openAddBatch = function(){
   document.getElementById('batchEditTitle').textContent = 'Add New Batch';
   document.getElementById('batchEditId').value = '';
-  ['beBatchName','beBatchId','beTrainer','beStyle','beDays','beTime','beDesc','beImage'].forEach(id=>{
+  ['beBatchName','beBatchId','beTrainer','beStyle','beTime','beDesc','beImage','beFee','beFeeWeekly'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
-  document.getElementById('beFee').value = '';
+  setBatchDays('Mon · Tue · Wed'); // default selection
   document.getElementById('beGradient').value = 'linear-gradient(145deg,#1a0407,#bc1f2e)';
   document.querySelectorAll('#bgGradientPicker div').forEach((d,i)=>d.style.borderColor=i===0?'var(--red)':'transparent');
   document.getElementById('beImagePreview').style.display='none';
@@ -4270,15 +4296,18 @@ window.openEditBatch = async function(id){
   document.getElementById('beBatchId').value   = b.batchId||b.id||'';
   document.getElementById('beTrainer').value   = b.trainer||'';
   document.getElementById('beStyle').value     = b.style||'';
-  document.getElementById('beDays').value      = b.days||'';
+  setBatchDays(b.days||'');
   document.getElementById('beTime').value      = b.time||'';
   document.getElementById('beFee').value       = b.fee||'';
+  document.getElementById('beFeeWeekly').value = b.feeWeekly||'';
   document.getElementById('beDesc').value      = b.desc||'';
   document.getElementById('beImage').value     = b.image||'';
   document.getElementById('beGradient').value  = b.gradient||'linear-gradient(145deg,#1a0407,#bc1f2e)';
   if(b.image){
     document.getElementById('beImagePreview').style.display='block';
     document.getElementById('beImagePreviewImg').src=b.image;
+  } else {
+    document.getElementById('beImagePreview').style.display='none';
   }
   document.querySelectorAll('#bgGradientPicker div').forEach(d=>{
     d.style.borderColor=d.dataset.gradient===b.gradient?'var(--red)':'transparent';
@@ -4294,15 +4323,16 @@ window.saveBatch = async function(){
   const editId = document.getElementById('batchEditId').value;
   const data = {
     name, trainer,
-    batchId:  batchId || name.toLowerCase().replace(/\s+/g,'-'),
-    style:    document.getElementById('beStyle').value.trim(),
-    days:     document.getElementById('beDays').value.trim(),
-    time:     document.getElementById('beTime').value.trim(),
-    fee:      parseFloat(document.getElementById('beFee').value)||0,
-    desc:     document.getElementById('beDesc').value.trim(),
-    image:    document.getElementById('beImage').value.trim(),
-    gradient: document.getElementById('beGradient').value,
-    updatedAt:Date.now()
+    batchId:    batchId || name.toLowerCase().replace(/\s+/g,'-'),
+    style:      document.getElementById('beStyle').value.trim(),
+    days:       document.getElementById('beDays').value,
+    time:       document.getElementById('beTime').value.trim(),
+    fee:        parseFloat(document.getElementById('beFee').value)||0,
+    feeWeekly:  parseFloat(document.getElementById('beFeeWeekly').value)||0,
+    desc:       document.getElementById('beDesc').value.trim(),
+    image:      document.getElementById('beImage').value.trim(),
+    gradient:   document.getElementById('beGradient').value,
+    updatedAt:  Date.now()
   };
   try {
     if(editId){
@@ -4318,6 +4348,12 @@ window.saveBatch = async function(){
   } catch(e){
     showToast('Save failed: '+e.message,'error');
   }
+};
+
+window.selectBatchGradient = function(g, el){
+  document.getElementById('beGradient').value = g;
+  document.querySelectorAll('#bgGradientPicker div').forEach(d=>d.style.borderColor='transparent');
+  el.style.borderColor = 'var(--red)';
 };
 
 window.deleteBatch = async function(id, name){
