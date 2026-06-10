@@ -408,7 +408,7 @@ const app = initializeApp({
 });
 const db = getFirestore(app);
 
-function setText(id, val){ const el=document.getElementById(id); if(el&&val) el.textContent=val; }
+function setText(id, val){ const el=document.getElementById(id); if(el && val !== undefined && val !== null) el.textContent=val; }
 
 async function loadAbout(){
   try {

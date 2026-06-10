@@ -520,6 +520,18 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         </div>
         <div id="residentArtistsEditor"></div>
       </div>
+      <!-- Homepage Features (the 3 "Why Us" points) -->
+      <div class="table-wrap" style="padding:1.5rem;margin-bottom:1.5rem">
+        <p class="section-bar-title" style="margin-bottom:1.25rem">Homepage Features <span style="font-size:0.65rem;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:300">(the 3 "Why Us" points on the homepage)</span></p>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem" id="homeFeaturesEditor">
+          <div><div class="form-group" style="margin-bottom:0.75rem"><label>Feature 1 — Title</label><input type="text" id="hf1title" placeholder="e.g. Artist-led workshops"></div>
+          <div class="form-group"><label>Feature 1 — Description</label><textarea id="hf1desc" style="min-height:70px" placeholder="Short description…"></textarea></div></div>
+          <div><div class="form-group" style="margin-bottom:0.75rem"><label>Feature 2 — Title</label><input type="text" id="hf2title" placeholder="e.g. Professional studio space"></div>
+          <div class="form-group"><label>Feature 2 — Description</label><textarea id="hf2desc" style="min-height:70px" placeholder="Short description…"></textarea></div></div>
+          <div><div class="form-group" style="margin-bottom:0.75rem"><label>Feature 3 — Title</label><input type="text" id="hf3title" placeholder="e.g. Community first"></div>
+          <div class="form-group"><label>Feature 3 — Description</label><textarea id="hf3desc" style="min-height:70px" placeholder="Short description…"></textarea></div></div>
+        </div>
+      </div>
     </div>
 
     <!-- EDIT BATCHES -->
@@ -781,6 +793,20 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
       <!-- Stats -->
       <div class="stats-grid" id="rentalStats" style="margin-bottom:1.5rem"></div>
+      <!-- Month/Year filters -->
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
+        <select id="rentalMonthFilter" onchange="renderRentals()" style="background:var(--bg3);border:1px solid var(--border2);padding:0.45rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none">
+          <option value="">All Months</option>
+          <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+          <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+          <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+          <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+        </select>
+        <select id="rentalYearFilter" onchange="renderRentals()" style="background:var(--bg3);border:1px solid var(--border2);padding:0.45rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none">
+          <option value="">All Years</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('rentalMonthFilter').value='';document.getElementById('rentalYearFilter').value='';renderRentals()">Clear Filters</button>
+      </div>
       <!-- Filter tabs -->
       <div class="filter-tabs" id="rentalFilterTabs">
         <button class="filter-tab active" onclick="filterRentals('all',this)">All</button>
@@ -916,10 +942,41 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           <option value="">— Select Staff —</option>
         </select>
       </div>
+      <!-- Salary Month Row -->
+      <div class="form-row">
+        <div class="form-group"><label>Salary Month *</label>
+          <select id="spSalaryMonth" onchange="updateStaffRemaining()" style="background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;width:100%">
+            <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+            <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+            <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+            <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Year *</label>
+          <select id="spSalaryYear" onchange="updateStaffRemaining()" style="background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;width:100%">
+          </select>
+        </div>
+      </div>
+      <!-- Remaining salary info -->
+      <div id="spRemainingInfo" style="display:none;background:var(--bg3);border:1px solid var(--border);padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.8rem">
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem">
+          <span style="color:var(--muted)">Monthly Salary</span>
+          <span id="spSalaryTotal" style="color:var(--text)">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem">
+          <span style="color:var(--muted)">Paid This Month</span>
+          <span id="spAlreadyPaid" style="color:var(--yellow)">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:0.3rem;margin-top:0.3rem">
+          <span style="color:var(--muted);font-weight:600">Remaining</span>
+          <span id="spRemaining" style="color:var(--green);font-weight:600">—</span>
+        </div>
+      </div>
       <div class="form-row">
         <div class="form-group"><label>Date *</label><input type="date" id="spDate" style="color-scheme:dark"></div>
-        <div class="form-group"><label>Amount (₹) *</label><input type="number" id="spAmount" placeholder="e.g. 5000"></div>
+        <div class="form-group"><label>Amount (₹) *</label><input type="number" id="spAmount" placeholder="e.g. 5000" oninput="checkStaffAmountCap()"></div>
       </div>
+      <div id="spAmountWarning" style="display:none;color:#e57373;font-size:0.75rem;margin-top:-0.5rem;margin-bottom:0.75rem">⚠ Amount exceeds remaining salary for this month.</div>
       <div class="form-row">
         <div class="form-group"><label>Payment Mode</label>
           <select id="spMode" style="background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;width:100%">
@@ -929,7 +986,12 @@ tr:hover td{background:rgba(255,255,255,0.02)}
             <option value="UPI">UPI</option>
           </select>
         </div>
-        <div class="form-group"><label>Paid By</label><input type="text" id="spPaidBy" placeholder="e.g. Chikki"></div>
+        <div class="form-group"><label>Paid By</label>
+          <select id="spPaidBy" style="background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;width:100%">
+            <option value="Chirag">Chirag</option>
+            <option value="Govind">Govind</option>
+          </select>
+        </div>
       </div>
       <div class="form-group"><label>Remarks</label><input type="text" id="spRemarks" placeholder="e.g. April salary, bonus"></div>
     </div>
@@ -1019,6 +1081,13 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <div class="form-group"><label>Weekly Fee (₹)</label><input type="number" id="beFeeWeekly" placeholder="e.g. 700"></div>
       </div>
       <div class="form-group"><label>Description</label><textarea id="beDesc" placeholder="Brief description of the batch…" style="min-height:70px"></textarea></div>
+      <div class="form-group">
+        <label>Contact Number <span style="font-weight:300;color:var(--muted);font-size:0.8em">(WhatsApp number for enquiries)</span></label>
+        <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border2);overflow:hidden">
+          <span style="background:var(--bg3);padding:0.5rem 0.75rem;color:var(--muted);font-size:0.82rem;border-right:1px solid var(--border2);white-space:nowrap">+91</span>
+          <input type="tel" id="beContact" placeholder="10-digit number" maxlength="10" style="background:var(--bg2);border:none;padding:0.5rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;flex:1">
+        </div>
+      </div>
       <div class="form-group">
         <label>Trainer Photo URL <span style="font-weight:300;color:var(--muted);font-size:0.8em">(paste image URL)</span></label>
         <input type="url" id="beImage" placeholder="https://...">
@@ -1296,6 +1365,16 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           <input type="date" id="wsDateTo" style="color-scheme:dark;width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none">
         </div>
       </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Start Time <span style="font-weight:300;color:var(--muted);font-size:0.75em">(adds to schedule)</span></label>
+          <input type="time" id="wsTimeFrom" style="color-scheme:dark;width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none">
+        </div>
+        <div class="form-group">
+          <label>End Time</label>
+          <input type="time" id="wsTimeTo" style="color-scheme:dark;width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none">
+        </div>
+      </div>
       <div class="form-row full">
         <div class="form-group"><label>Workshop Description</label><textarea id="wsDesc" placeholder="What students will learn…"></textarea></div>
       </div>
@@ -1447,21 +1526,11 @@ const storage = getStorage(app);
 const auth = getAuth(app);
 
 /* ══════════════════════════════════════
-   CONFIG — passwords now stored in Firebase
-   Fallback hardcoded in case Firebase is slow
+   CONFIG — passwords loaded exclusively from Firebase
+   No credentials stored in frontend code
 ══════════════════════════════════════ */
-let ADMINS = [
-  { user: 'chikki',  pass: 'happening2025' },
-  { user: 'staff1',  pass: 'space2025' },
-  { user: 'staff2',  pass: 'studio2025' },
-];
-
-let ARTIST_ROSTER = [
-  { user:'divyanshisinghvi',    pass:'divyanshids2025',    name:'Divyanshi Singhvi',   role:'trainer',  blocked:false },
-  { user:'hridhaykhubchandani', pass:'khubchandanikh2026', name:'Hriday Khubchandani', role:'trainer',  blocked:false },
-  { user:'omtarphe',            pass:'omtarphe2025',       name:'Om Tarphe',           role:'workshop', blocked:false },
-  { user:'heetsamani',          pass:'heetsamani2025',     name:'Heet Samani',         role:'workshop', blocked:false },
-];
+let ADMINS = []; // loaded from Firebase settings/adminPasswords
+let ARTIST_ROSTER = []; // loaded from Firebase settings/artistPasswords
 
 let currentAdminUser = null; // tracks who is logged in
 
@@ -2069,6 +2138,8 @@ window.openAddWorkshop = function(){
   document.getElementById('wsBio').value      = '';
   document.getElementById('wsDateFrom').value = '';
   document.getElementById('wsDateTo').value   = '';
+  document.getElementById('wsTimeFrom').value = '';
+  document.getElementById('wsTimeTo').value   = '';
   document.getElementById('posterPreview').style.display = 'none';
   document.getElementById('posterUploadText').textContent = 'Click or drag & drop poster image here';
   document.getElementById('packagesEditor').innerHTML = '';
@@ -2091,6 +2162,8 @@ window.openEditWorkshop = function(id){
   document.getElementById('wsBio').value      = w.bio||'';
   document.getElementById('wsDateFrom').value = w.dateFrom||'';
   document.getElementById('wsDateTo').value   = w.dateTo||'';
+  document.getElementById('wsTimeFrom').value = w.timeFrom||'';
+  document.getElementById('wsTimeTo').value   = w.timeTo||'';
   pendingPosterURL = w.poster||null;
   if(w.poster){
     document.getElementById('posterPreviewImg').src = w.poster;
@@ -2234,12 +2307,34 @@ window.saveWorkshop = async function(saveStatus){
     bioTitle: document.getElementById('wsStyle').value.trim(),
     dateFrom: document.getElementById('wsDateFrom').value || '',
     dateTo:   document.getElementById('wsDateTo').value   || '',
+    timeFrom: document.getElementById('wsTimeFrom').value || '',
+    timeTo:   document.getElementById('wsTimeTo').value   || '',
     packages, slots,
     createdAt: existing?.createdAt || Date.now(),
   };
 
   try {
     await setDoc(doc(db,'workshops',id), wsData);
+    // Auto-add to schedule if time is set and it's a new workshop (not a re-edit)
+    if(wsData.timeFrom && wsData.dateFrom && saveStatus==='active' && !editId){
+      try {
+        const fmtTime = t => { if(!t) return ''; const [h,m]=t.split(':').map(Number); const ap=h>=12?'PM':'AM'; return (h>12?h-12:h||12)+(m?':'+String(m).padStart(2,'0'):'')+ap; };
+        await addDoc(collection(db,'scheduleEntries'),{
+          title: artist + (wsData.style?' – '+wsData.style:''),
+          category: 'Dance Workshop',
+          instructor: artist,
+          date: wsData.dateFrom,
+          dateEnd: wsData.dateTo || wsData.dateFrom,
+          timeFrom: wsData.timeFrom,
+          timeTo: wsData.timeTo,
+          bookingText: fmtTime(wsData.timeFrom)+(wsData.timeTo?' – '+fmtTime(wsData.timeTo):''),
+          color: '#bc1f2e',
+          source: 'workshop',
+          workshopId: id,
+          createdAt: Date.now(),
+        });
+      } catch(schedErr){ console.warn('Schedule auto-add failed',schedErr); }
+    }
     closeModal('wsModal');
     showToast(saveStatus==='draft' ? '✓ Saved as draft — not live yet' : editId ? 'Workshop updated!' : '✓ Workshop published — now live!');
   } catch(e) {
@@ -3437,6 +3532,18 @@ function initAboutEditor(data){
     raEditor.innerHTML = '';
     (d.residentArtists||[]).forEach(a => window.addResidentArtist(a));
   }
+  // Populate homepage features
+  const defaultFeatures = [
+    {title:'Artist-led workshops', desc:'Every workshop is taught by a practising artist at the top of their style.'},
+    {title:'Professional studio space', desc:'Sprung floors, mirrored walls, quality sound — the right environment to grow.'},
+    {title:'Community first', desc:'A space where dancers connect, collaborate, and push each other forward.'},
+  ];
+  const features = d.homeFeatures || defaultFeatures;
+  [1,2,3].forEach((n,i)=>{
+    const f = features[i]||{};
+    const t=document.getElementById('hf'+n+'title'); if(t) t.value=f.title||defaultFeatures[i].title||'';
+    const dsc=document.getElementById('hf'+n+'desc'); if(dsc) dsc.value=f.desc||defaultFeatures[i].desc||'';
+  });
 }
 
 /* ══════════════════════════════════════
@@ -3770,20 +3877,46 @@ window.filterRentals=function(f,el){rentalFilter=f;document.querySelectorAll('#r
 window.searchRentals=function(q){rentalSearch=q;renderRentals();};
 
 function renderRentals(){
+  // Populate year dropdown if needed
+  const yearSel=document.getElementById('rentalYearFilter');
+  if(yearSel&&yearSel.options.length<=1){
+    const years=new Set(rentals.map(r=>(r.dateFrom||'').slice(0,4)).filter(Boolean));
+    const curY=new Date().getFullYear();
+    [curY-1,curY,curY+1].forEach(y=>years.add(String(y)));
+    const sorted=[...years].sort((a,b)=>b-a);
+    yearSel.innerHTML='<option value="">All Years</option>'+sorted.map(y=>`<option value="${y}">${y}</option>`).join('');
+  }
+
   let data=[...rentals];
+  const selMonth=document.getElementById('rentalMonthFilter')?.value||'';
+  const selYear=document.getElementById('rentalYearFilter')?.value||'';
+  if(selMonth||selYear){
+    data=data.filter(r=>{
+      const d=r.dateFrom||'';
+      if(!d) return false;
+      const dt=new Date(d+'T00:00');
+      if(selMonth && (dt.getMonth()+1)!==parseInt(selMonth)) return false;
+      if(selYear && dt.getFullYear()!==parseInt(selYear)) return false;
+      return true;
+    });
+  }
   if(rentalFilter==='cash')    data=data.filter(r=>r.payMode==='Cash');
   if(rentalFilter==='online')  data=data.filter(r=>r.payMode==='Online');
   if(rentalFilter==='pending') data=data.filter(r=>r.payMode==='Pending');
   if(rentalSearch) data=data.filter(r=>(r.name||'').toLowerCase().includes(rentalSearch.toLowerCase())||(r.purpose||'').toLowerCase().includes(rentalSearch.toLowerCase()));
-  const totalRev=rentals.reduce((s,r)=>s+parseFloat(r.amount||0),0);
-  const cashRev=rentals.filter(r=>r.payMode==='Cash').reduce((s,r)=>s+parseFloat(r.amount||0),0);
-  const pending=rentals.filter(r=>r.payMode==='Pending').reduce((s,r)=>s+parseFloat(r.amount||0),0);
-  const totalHrs=rentals.reduce((s,r)=>s+parseFloat(r.hours||0),0);
+
+  // Stats on filtered data
+  const totalRev=data.reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const cashRev=data.filter(r=>r.payMode==='Cash').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const onlineRev=data.filter(r=>r.payMode==='Online').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const pending=data.filter(r=>r.payMode==='Pending').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const totalHrs=data.reduce((s,r)=>s+parseFloat(r.hours||0),0);
   document.getElementById('rentalStats').innerHTML=`
     <div class="stat-card"><p class="stat-label">Total Revenue</p><p class="stat-val green">₹${totalRev.toLocaleString('en-IN')}</p></div>
+    <div class="stat-card"><p class="stat-label">Online Received</p><p class="stat-val" style="color:#6ab0f5">₹${onlineRev.toLocaleString('en-IN')}</p></div>
     <div class="stat-card"><p class="stat-label">Cash Received</p><p class="stat-val yellow">₹${cashRev.toLocaleString('en-IN')}</p></div>
     <div class="stat-card"><p class="stat-label">Pending</p><p class="stat-val" style="color:#e57373">₹${pending.toLocaleString('en-IN')}</p></div>
-    <div class="stat-card"><p class="stat-label">Total Bookings</p><p class="stat-val">${rentals.length}</p></div>
+    <div class="stat-card"><p class="stat-label">Total Bookings</p><p class="stat-val">${data.length}</p></div>
     <div class="stat-card"><p class="stat-label">Total Hours</p><p class="stat-val">${totalHrs}</p></div>`;
   const payPill=mode=>mode==='Cash'?`<span class="pill pill-yellow">Cash</span>`:mode==='Online'?`<span class="pill pill-green">Online</span>`:`<span class="pill" style="background:rgba(229,115,115,0.15);color:#e57373;border:1px solid rgba(229,115,115,0.3)">Pending</span>`;
   document.getElementById('rentalsTable').innerHTML=data.length
@@ -4041,6 +4174,7 @@ window.prefillStaffPayment = function(){
   const sel = document.getElementById('spNameSelect');
   const opt = sel.options[sel.selectedIndex];
   if(opt && opt.dataset.salary) document.getElementById('spAmount').value = opt.dataset.salary;
+  updateStaffRemaining();
 };
 
 function renderStaff(){
@@ -4069,17 +4203,18 @@ function renderStaff(){
     </div>
     <div style="background:var(--bg2);border:1px solid var(--border);overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;min-width:600px">
-        <thead><tr style="border-bottom:1px solid var(--border)">${['Name','Date','Amount','Mode','Paid By','Remarks',''].map(h=>`<th style="padding:0.75rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;white-space:nowrap">${h}</th>`).join('')}</tr></thead>
+        <thead><tr style="border-bottom:1px solid var(--border)">${['Name','Salary Month','Date','Amount','Mode','Paid By','Remarks',''].map(h=>`<th style="padding:0.75rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;white-space:nowrap">${h}</th>`).join('')}</tr></thead>
         <tbody>${staffPayments.length?staffPayments.map(p=>`
           <tr style="border-bottom:1px solid rgba(255,255,255,0.04)">
             <td style="padding:0.75rem 1rem;font-weight:500;color:var(--text)">${p.name||'—'}</td>
+            <td style="padding:0.75rem 1rem;font-size:0.78rem;color:var(--mid)">${p.salaryMonthLabel||'—'}</td>
             <td style="padding:0.75rem 1rem;font-size:0.78rem;white-space:nowrap">${p.date||'—'}</td>
             <td style="padding:0.75rem 1rem;color:var(--yellow);font-weight:500;white-space:nowrap">₹${parseFloat(p.amount||0).toLocaleString('en-IN')}</td>
             <td style="padding:0.75rem 1rem"><span class="pill pill-blue" style="font-size:0.6rem">${p.mode||'—'}</span></td>
             <td style="padding:0.75rem 1rem;font-size:0.78rem;color:var(--muted)">${p.paidBy||'—'}</td>
             <td style="padding:0.75rem 1rem;font-size:0.75rem;color:var(--muted)">${p.remarks||'—'}</td>
             <td style="padding:0.75rem 1rem"><button class="btn btn-danger btn-sm" onclick="deleteStaffPayment('${p.id}','${p.name}')">Delete</button></td>
-          </tr>`).join(''):`<tr><td colspan="7" style="padding:2rem;text-align:center;color:var(--muted)">No payments yet</td></tr>`}
+          </tr>`).join(''):`<tr><td colspan="8" style="padding:2rem;text-align:center;color:var(--muted)">No payments yet</td></tr>`}
         </tbody>
       </table>
     </div>`;
@@ -4108,21 +4243,91 @@ window.deleteStaffMember = async function(id,name){
 };
 
 window.openAddStaffPayment=function(){
-  ['spAmount','spPaidBy','spRemarks'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['spAmount','spRemarks'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('spDate').value=new Date().toLocaleDateString('en-CA');
   document.getElementById('spMode').value='Cash';
+  document.getElementById('spPaidBy').value='Chirag';
   document.getElementById('spNameSelect').value='';
   document.getElementById('staffPaymentEditId').value='';
+  document.getElementById('spRemainingInfo').style.display='none';
+  document.getElementById('spAmountWarning').style.display='none';
+  // Populate year dropdown
+  const now=new Date();
+  const yearSel=document.getElementById('spSalaryYear');
+  yearSel.innerHTML='';
+  for(let y=now.getFullYear()+1;y>=now.getFullYear()-2;y--){
+    const o=document.createElement('option');o.value=y;o.textContent=y;
+    if(y===now.getFullYear())o.selected=true;
+    yearSel.appendChild(o);
+  }
+  // Set current month
+  document.getElementById('spSalaryMonth').value=now.getMonth()+1;
   updateStaffDropdown();
   openModal('staffPaymentModal');
+};
+
+window.updateStaffRemaining=function(){
+  const name=document.getElementById('spNameSelect').value;
+  if(!name){document.getElementById('spRemainingInfo').style.display='none';return;}
+  const member=staffRoster.find(s=>s.name===name);
+  if(!member||!member.salary){document.getElementById('spRemainingInfo').style.display='none';return;}
+  const month=parseInt(document.getElementById('spSalaryMonth').value);
+  const year=parseInt(document.getElementById('spSalaryYear').value);
+  const alreadyPaid=staffPayments
+    .filter(p=>p.name===name && p.salaryMonth===month && p.salaryYear===year)
+    .reduce((s,p)=>s+parseFloat(p.amount||0),0);
+  const salary=parseFloat(member.salary)||0;
+  const remaining=Math.max(salary-alreadyPaid,0);
+  document.getElementById('spSalaryTotal').textContent='₹'+salary.toLocaleString('en-IN');
+  document.getElementById('spAlreadyPaid').textContent='₹'+alreadyPaid.toLocaleString('en-IN');
+  document.getElementById('spRemaining').textContent='₹'+remaining.toLocaleString('en-IN');
+  document.getElementById('spRemaining').style.color=remaining>0?'var(--green)':'#e57373';
+  document.getElementById('spRemainingInfo').style.display='block';
+  checkStaffAmountCap();
+};
+
+window.checkStaffAmountCap=function(){
+  const name=document.getElementById('spNameSelect').value;
+  const amount=parseFloat(document.getElementById('spAmount').value)||0;
+  if(!name||!amount){document.getElementById('spAmountWarning').style.display='none';return;}
+  const member=staffRoster.find(s=>s.name===name);
+  if(!member||!member.salary){document.getElementById('spAmountWarning').style.display='none';return;}
+  const month=parseInt(document.getElementById('spSalaryMonth').value);
+  const year=parseInt(document.getElementById('spSalaryYear').value);
+  const alreadyPaid=staffPayments
+    .filter(p=>p.name===name && p.salaryMonth===month && p.salaryYear===year)
+    .reduce((s,p)=>s+parseFloat(p.amount||0),0);
+  const salary=parseFloat(member.salary)||0;
+  document.getElementById('spAmountWarning').style.display=(alreadyPaid+amount>salary)?'block':'none';
 };
 
 window.saveStaffPayment=async function(){
   const name=document.getElementById('spNameSelect').value;
   const date=document.getElementById('spDate').value;
-  const amount=document.getElementById('spAmount').value;
+  const amount=parseFloat(document.getElementById('spAmount').value);
+  const month=parseInt(document.getElementById('spSalaryMonth').value);
+  const year=parseInt(document.getElementById('spSalaryYear').value);
   if(!name||!date||!amount){showToast('Staff, date and amount are required','error');return;}
-  await addDoc(collection(db,'staffPayments'),{name,date,amount:parseFloat(amount),mode:document.getElementById('spMode').value,paidBy:document.getElementById('spPaidBy').value.trim(),remarks:document.getElementById('spRemarks').value.trim(),createdAt:Date.now()});
+  // Cap check
+  const member=staffRoster.find(s=>s.name===name);
+  if(member&&member.salary){
+    const alreadyPaid=staffPayments
+      .filter(p=>p.name===name && p.salaryMonth===month && p.salaryYear===year)
+      .reduce((s,p)=>s+parseFloat(p.amount||0),0);
+    if(alreadyPaid+amount>parseFloat(member.salary)){
+      if(!confirm(`This payment exceeds the remaining salary for this month (₹${Math.max(parseFloat(member.salary)-alreadyPaid,0).toLocaleString('en-IN')} remaining). Continue anyway?`))return;
+    }
+  }
+  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  await addDoc(collection(db,'staffPayments'),{
+    name,date,amount,
+    salaryMonth:month,salaryYear:year,
+    salaryMonthLabel:monthNames[month-1]+' '+year,
+    mode:document.getElementById('spMode').value,
+    paidBy:document.getElementById('spPaidBy').value,
+    remarks:document.getElementById('spRemarks').value.trim(),
+    createdAt:Date.now()
+  });
   closeModal('staffPaymentModal');showToast('Payment saved ✓');
 };
 
@@ -4296,7 +4501,7 @@ function setBatchDays(daysStr){
 window.openAddBatch = function(){
   document.getElementById('batchEditTitle').textContent = 'Add New Batch';
   document.getElementById('batchEditId').value = '';
-  ['beBatchName','beBatchId','beTrainer','beStyle','beTime','beDesc','beImage','beFee','beFeeWeekly'].forEach(id=>{
+  ['beBatchName','beBatchId','beTrainer','beStyle','beTime','beDesc','beImage','beFee','beFeeWeekly','beContact'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
   setBatchDays('Mon · Tue · Wed'); // default selection
@@ -4321,6 +4526,7 @@ window.openEditBatch = async function(id){
   document.getElementById('beFeeWeekly').value = b.feeWeekly||'';
   document.getElementById('beDesc').value      = b.desc||'';
   document.getElementById('beImage').value     = b.image||'';
+  document.getElementById('beContact').value   = b.contact||'';
   document.getElementById('beGradient').value  = b.gradient||'linear-gradient(145deg,#1a0407,#bc1f2e)';
   if(b.image){
     document.getElementById('beImagePreview').style.display='block';
@@ -4340,6 +4546,7 @@ window.saveBatch = async function(){
   const trainer = document.getElementById('beTrainer').value.trim();
   if(!name||!trainer){ showToast('Batch name and trainer are required','error'); return; }
   const editId = document.getElementById('batchEditId').value;
+  const rawContact = document.getElementById('beContact').value.trim().replace(/\D/g,'');
   const data = {
     name, trainer,
     batchId:    batchId || name.toLowerCase().replace(/\s+/g,'-'),
@@ -4350,6 +4557,7 @@ window.saveBatch = async function(){
     feeWeekly:  parseFloat(document.getElementById('beFeeWeekly').value)||0,
     desc:       document.getElementById('beDesc').value.trim(),
     image:      document.getElementById('beImage').value.trim(),
+    contact:    rawContact ? '+91'+rawContact.slice(-10) : '',
     gradient:   document.getElementById('beGradient').value,
     updatedAt:  Date.now()
   };
@@ -4629,9 +4837,14 @@ function renderArtistRoster(){
           <button onclick="changeArtistPassword(${i})" class="btn btn-outline btn-sm">Update</button>
         </div>
       </div>
-      <button onclick="toggleArtistBlock(${i})" class="btn btn-sm" style="${a.blocked?'background:rgba(92,184,122,0.12);border:1px solid rgba(92,184,122,0.35);color:var(--green)':'background:rgba(229,115,115,0.1);border:1px solid rgba(229,115,115,0.35);color:#e57373'}">
-        ${a.blocked?'✓ Unblock':'⊘ Block'}
-      </button>
+      <div style="display:flex;gap:0.5rem;flex-direction:column;align-items:flex-end">
+        <button onclick="toggleArtistBlock(${i})" class="btn btn-sm" style="${a.blocked?'background:rgba(92,184,122,0.12);border:1px solid rgba(92,184,122,0.35);color:var(--green)':'background:rgba(229,115,115,0.1);border:1px solid rgba(229,115,115,0.35);color:#e57373'}">
+          ${a.blocked?'✓ Unblock':'⊘ Block'}
+        </button>
+        <button onclick="deleteArtist(${i},'${a.name.replace(/'/g,"\\'")}')" class="btn btn-sm btn-danger" style="background:rgba(229,115,115,0.08);border:1px solid rgba(229,115,115,0.25);color:#e57373;font-size:0.65rem">
+          🗑 Delete
+        </button>
+      </div>
     </div>`).join('');
 }
 
@@ -4659,6 +4872,14 @@ window.toggleArtistBlock = async function(i){
   renderArtistRoster();
 };
 
+window.deleteArtist = async function(i, name){
+  if(!confirm(`Delete artist "${name}"? They will lose login access. This cannot be undone.`)) return;
+  ARTIST_ROSTER.splice(i,1);
+  await setDoc(doc(db,'settings','artistPasswords'),{artists:ARTIST_ROSTER},{merge:true});
+  showToast(`${name} deleted ✓`);
+  renderArtistRoster();
+};
+
 window.saveAboutContent = async function(){
   try {
     const data = {};
@@ -4668,6 +4889,11 @@ window.saveAboutContent = async function(){
     data.believes = Array.from({length:6},(_,i)=>({
       title:(document.getElementById('bel-title-'+i)||{}).value||'',
       text: (document.getElementById('bel-text-'+i)||{}).value||'',
+    }));
+    // Home features
+    data.homeFeatures = [1,2,3].map(n=>({
+      title: (document.getElementById('hf'+n+'title')||{}).value||'',
+      desc:  (document.getElementById('hf'+n+'desc')||{}).value||'',
     }));
     // Save resident artists
     const artistRows = document.querySelectorAll('.resident-artist-row');
