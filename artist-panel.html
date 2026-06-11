@@ -477,25 +477,6 @@ async function doLogin(){
   document.dispatchEvent(new CustomEvent('artistLoggedIn', {detail: {...match, pass: p}}));
 }
 
-  if(!match){
-    document.getElementById('loginError').textContent='Incorrect username or password.';
-    document.getElementById('loginError').classList.add('show');
-    return;
-  }
-
-  if(p !== match.pass){
-    document.getElementById('loginError').textContent='Incorrect username or password.';
-    document.getElementById('loginError').classList.add('show');
-    return;
-  }
-
-  // Password matches — fire event. Module will check blocked status.
-  sessionStorage.setItem('ths_artist', JSON.stringify({user:match.user, name:match.name, role:match.role}));
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('appShell').style.display    = 'block';
-  document.dispatchEvent(new CustomEvent('artistLoggedIn', {detail: {...match, pass: p}}));
-}
-
 function doLogout(){
   sessionStorage.removeItem('ths_artist');
   window.location.href = window.location.href;
