@@ -80,7 +80,15 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .batch-card-meta{font-size:0.8rem;color:var(--muted)}
 
 /* TABLE */
-.table-wrap{background:var(--bg2);border:1px solid var(--border);overflow:hidden;margin-bottom:1.5rem}
+.table-wrap{background:var(--bg2);border:1px solid var(--border);overflow-x:auto;overflow-y:hidden;margin-bottom:1.5rem;-webkit-overflow-scrolling:touch}
+/* All table wrappers scroll horizontally on mobile */
+.table-wrap table, .table-wrap>div>table{ min-width:560px }
+@media(max-width:640px){
+  /* Subtle scroll hint shadow on right edge */
+  .table-wrap{ position:relative }
+  .view{ padding:1rem 0.75rem }
+  th,td{ padding:0.6rem 0.75rem !important; font-size:0.75rem !important; white-space:nowrap }
+}
 .table-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:0.75rem}
 .table-title{font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:600;color:var(--text)}
 .table-search{background:var(--bg3);border:1px solid var(--border);padding:0.5rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none;width:220px;transition:border-color 0.2s}
@@ -282,8 +290,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="batch-cards" id="dashBatches"></div>
       <div class="section-bar"><span class="section-bar-title">Recent Students Added</span></div>
       <div class="table-wrap">
-        <table><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Subscription</th><th>Fee</th><th>Payment</th><th>Expiry</th><th></th></tr></thead>
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <table style="min-width:580px"><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Subscription</th><th>Fee</th><th>Payment</th><th>Expiry</th><th></th></tr></thead>
         <tbody id="dashRecentStudents"></tbody></table>
+        </div>
       </div>
     </div>
 
@@ -301,8 +311,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           <span class="table-title">Students</span>
           <input class="table-search" placeholder="Search name or phone…" oninput="searchStudents(this.value)">
         </div>
-        <table><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Subscription</th><th>Fee Paid</th><th>Payment Mode</th><th>Join Date</th><th>Notes</th><th></th></tr></thead>
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <table style="min-width:760px"><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Subscription</th><th>Fee Paid</th><th>Payment Mode</th><th>Join Date</th><th>Notes</th><th></th></tr></thead>
         <tbody id="studentsTable"></tbody></table>
+        </div>
       </div>
     </div>
 
@@ -818,7 +830,7 @@ function renderWsStats(){
         ? `background-image:url('${w.poster}');background-size:cover;background-position:center`
         : `background:${w.posterBg||'linear-gradient(135deg,#1a0407,#bc1f2e)'}`;
 
-      return `<div class="table-wrap" style="margin-bottom:1.25rem;overflow:hidden">
+      return `<div class="table-wrap" style="margin-bottom:1.25rem;overflow-x:auto;-webkit-overflow-scrolling:touch">
         <!-- Poster strip -->
         <div style="position:relative;height:120px;overflow:hidden">
           <div style="position:absolute;inset:0;${bgStyle}"></div>
@@ -1064,7 +1076,9 @@ function renderStudentsTable(){
         <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block"></span>
         <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);font-family:'Syne',sans-serif">Active Students · ${active.length}</span>
       </div>
-      <table style="width:100%;border-collapse:collapse">${thead}<tbody>${active.map(rowHTML).join('')}</tbody></table>`;
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table style="width:100%;border-collapse:collapse;min-width:680px">${thead}<tbody>${active.map(rowHTML).join('')}</tbody></table>
+      </div>`;
   }
   if(inactive.length){
     html += `
@@ -1072,7 +1086,9 @@ function renderStudentsTable(){
         <span style="width:8px;height:8px;border-radius:50%;background:#e57373;display:inline-block"></span>
         <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#e57373;font-family:'Syne',sans-serif">Expired · ${inactive.length}</span>
       </div>
-      <table style="width:100%;border-collapse:collapse;opacity:0.6">${thead}<tbody>${inactive.map(rowHTML).join('')}</tbody></table>`;
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table style="width:100%;border-collapse:collapse;min-width:680px;opacity:0.6">${thead}<tbody>${inactive.map(rowHTML).join('')}</tbody></table>
+      </div>`;
   }
   if(!html) html = '<p style="text-align:center;color:var(--muted);padding:3rem;font-size:0.85rem">No students found</p>';
 
