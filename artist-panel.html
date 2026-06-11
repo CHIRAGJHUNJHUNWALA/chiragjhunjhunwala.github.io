@@ -185,15 +185,34 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </a>
     <div class="login-logo">The <span>Happening</span> Space</div>
     <p class="login-sub">Artist Panel</p>
-    <label class="login-label">Username</label>
-    <input class="login-input" id="loginUser" type="text" placeholder="your username" autocomplete="username">
-    <label class="login-label">Password</label>
-    <div style="position:relative">
-      <input class="login-input" id="loginPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:2.5rem">
-      <button type="button" id="loginEyeBtn" onclick="(function(){var e=document.getElementById('loginPass'),b=document.getElementById('loginEyeBtn'),s=e.type==='password';e.type=s?'text':'password';b.textContent=s?'🙈':'👁';})()" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:1rem;line-height:1;padding:0">👁</button>
+
+    <!-- Step 1: Phone -->
+    <div id="artistStepPhone">
+      <label class="login-label">Your Mobile Number</label>
+      <div style="display:flex;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.04);transition:border-color 0.2s">
+        <span style="padding:0.85rem 1rem;color:rgba(255,255,255,0.5);font-size:0.9rem;border-right:1px solid rgba(255,255,255,0.1);white-space:nowrap">+91</span>
+        <input type="tel" id="artistPhoneInput" maxlength="10" placeholder="98765 43210"
+          style="flex:1;background:transparent;border:none;padding:0.85rem 1rem;color:#fff;font-family:'Syne',sans-serif;font-size:0.9rem;outline:none"
+          onkeydown="if(event.key==='Enter')sendArtistOtp()">
+      </div>
+      <p class="login-error" id="artistPhoneError" style="margin-top:0.5rem"></p>
+      <button class="login-btn" id="sendArtistOtpBtn" onclick="sendArtistOtp()">Send OTP</button>
+      <div id="artist-recaptcha-container"></div>
     </div>
-    <button class="login-btn" onclick="doLogin()">Enter Artist Panel</button>
-    <p class="login-error" id="loginError">Incorrect username or password.</p>
+
+    <!-- Step 2: OTP -->
+    <div id="artistStepOtp" style="display:none">
+      <p style="font-size:0.78rem;color:rgba(255,255,255,0.5);margin-bottom:1.25rem">OTP sent to <strong id="artistOtpPhone" style="color:#fff"></strong></p>
+      <label class="login-label">6-digit OTP</label>
+      <input class="login-input" type="tel" id="artistOtpInput" maxlength="6" placeholder="• • • • • •"
+        style="letter-spacing:0.3em;font-size:1.1rem;text-align:center"
+        onkeydown="if(event.key==='Enter')verifyArtistOtp()">
+      <p class="login-error" id="artistOtpError" style="margin-top:0.5rem"></p>
+      <button class="login-btn" id="verifyArtistOtpBtn" onclick="verifyArtistOtp()">Verify & Enter</button>
+      <button onclick="artistBackToPhone()" style="display:block;margin-top:0.75rem;background:none;border:none;color:rgba(255,255,255,0.4);font-size:0.78rem;cursor:pointer;width:100%;font-family:'Syne',sans-serif">← Change number</button>
+    </div>
+
+    <p class="login-error" id="loginError"></p>
   </div>
 </div>
 
@@ -419,74 +438,114 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 </div>
 
 <script>
-// Login handled outside module so onclick works
-// All credentials loaded from Firebase — no hardcoded passwords in frontend
+/* ══════════════════════════════════════
+   ARTIST PANEL — PHONE OTP LOGIN
+   Registered phone number → OTP → in.
+   No passwords. Whitelist in Firestore.
+══════════════════════════════════════ */
+let artistConfirmationResult = null;
 
-async function doLogin(){
-  const u = document.getElementById('loginUser').value.trim().toLowerCase();
-  const p = document.getElementById('loginPass').value;
-  const errEl = document.getElementById('loginError');
-  errEl.classList.remove('show');
+async function sendArtistOtp(){
+  const raw   = document.getElementById('artistPhoneInput').value.trim().replace(/\D/g,'');
+  const errEl = document.getElementById('artistPhoneError');
+  errEl.textContent = '';
+  if(raw.length !== 10){ errEl.textContent = 'Enter a valid 10-digit number.'; return; }
+  const phone = '+91' + raw;
+  const btn   = document.getElementById('sendArtistOtpBtn');
+  btn.textContent = 'Sending…'; btn.disabled = true;
 
-  if(!u||!p){ errEl.textContent='Enter username and password.'; errEl.classList.add('show'); return; }
-
-  // Wait up to 3 seconds for module to expose db
+  // Wait for module Firebase instances
   let waited = 0;
-  while(!window._thsDb && waited < 30){ await new Promise(r=>setTimeout(r,100)); waited++; }
-
-  if(!window._thsDb){
-    errEl.textContent = 'Connection error. Please refresh and try again.';
-    errEl.classList.add('show');
-    return;
+  while(!window._thsAuth && waited < 40){ await new Promise(r=>setTimeout(r,100)); waited++; }
+  if(!window._thsAuth){
+    errEl.textContent = 'Connection error. Refresh and try again.';
+    btn.textContent = 'Send OTP'; btn.disabled = false; return;
   }
 
-  let match = null;
   try {
-    const snap = await window._thsGetDoc(window._thsDoc(window._thsDb,'settings','artistPasswords'));
-    if(snap.exists()){
-      const found = (snap.data().artists||[]).find(a=>a.user===u);
-      if(found) match = found;
+    if(!window.artistRecaptcha){
+      window.artistRecaptcha = new window._thsRecaptchaVerifier(window._thsAuth, 'artist-recaptcha-container', {size:'invisible'});
     }
+    artistConfirmationResult = await window._thsSignInWithPhone(window._thsAuth, phone, window.artistRecaptcha);
+    document.getElementById('artistOtpPhone').textContent = '+91 ' + raw.replace(/(\d{5})(\d{5})/,'$1 $2');
+    document.getElementById('artistStepPhone').style.display = 'none';
+    document.getElementById('artistStepOtp').style.display   = 'block';
+    document.getElementById('artistOtpInput').focus();
   } catch(e){
-    console.warn('Firebase credential check failed:',e);
-    errEl.textContent = 'Connection error — check your internet and try again.';
-    errEl.classList.add('show');
-    return;
+    errEl.textContent = 'Failed to send OTP — ' + (e.message||'try again');
+    btn.textContent = 'Send OTP'; btn.disabled = false;
+    if(window.artistRecaptcha){ try{window.artistRecaptcha.clear();}catch(x){} window.artistRecaptcha=null; }
   }
+}
 
-  if(!match){
-    errEl.textContent = 'Incorrect username or password.';
-    errEl.classList.add('show');
-    return;
-  }
-  if(match.blocked){
-    errEl.textContent = 'Your access has been blocked. Please contact admin.';
-    errEl.classList.add('show');
-    return;
-  }
-  if(p !== match.pass){
-    errEl.textContent = 'Incorrect username or password.';
-    errEl.classList.add('show');
-    return;
-  }
+async function verifyArtistOtp(){
+  const otp   = document.getElementById('artistOtpInput').value.trim();
+  const errEl = document.getElementById('artistOtpError');
+  errEl.textContent = '';
+  if(otp.length !== 6){ errEl.textContent = 'Enter the 6-digit OTP.'; return; }
+  if(!artistConfirmationResult){ errEl.textContent = 'Session expired — go back and resend.'; return; }
+  const btn = document.getElementById('verifyArtistOtpBtn');
+  btn.textContent = 'Verifying…'; btn.disabled = true;
 
-  // Login successful
-  sessionStorage.setItem('ths_artist', JSON.stringify({user:match.user, name:match.name, role:match.role}));
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('appShell').style.display    = 'block';
-  document.dispatchEvent(new CustomEvent('artistLoggedIn', {detail: {...match, pass: p}}));
+  try {
+    const result = await artistConfirmationResult.confirm(otp);
+    const phone  = result.user.phoneNumber;
+
+    // Look up artist by phone
+    const snap = await window._thsGetDoc(window._thsDoc(window._thsDb,'settings','artistPasswords'));
+    if(!snap.exists()) throw new Error('Artist data unavailable.');
+    const artist = (snap.data().artists||[]).find(a=>a.phone===phone);
+
+    if(!artist){
+      await window._thsSignOut();
+      errEl.textContent = 'This number is not registered as an artist. Contact admin.';
+      btn.textContent = 'Verify & Enter'; btn.disabled = false; return;
+    }
+    if(artist.blocked){
+      await window._thsSignOut();
+      errEl.textContent = 'Your access has been blocked. Contact admin.';
+      btn.textContent = 'Verify & Enter'; btn.disabled = false; return;
+    }
+
+    sessionStorage.setItem('ths_artist', JSON.stringify({
+      user:artist.user, name:artist.name, role:artist.role,
+      artistId:artist.artistId||artist.user, phone
+    }));
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appShell').style.display    = 'block';
+    document.dispatchEvent(new CustomEvent('artistLoggedIn', {detail: artist}));
+
+  } catch(e){
+    errEl.textContent = e.code==='auth/invalid-verification-code'
+      ? 'Incorrect OTP. Try again.' : (e.message||'Verification failed.');
+    btn.textContent = 'Verify & Enter'; btn.disabled = false;
+  }
+}
+
+function artistBackToPhone(){
+  document.getElementById('artistStepOtp').style.display   = 'none';
+  document.getElementById('artistStepPhone').style.display = 'block';
+  document.getElementById('artistPhoneInput').focus();
+  artistConfirmationResult = null;
 }
 
 function doLogout(){
   sessionStorage.removeItem('ths_artist');
-  window.location.href = window.location.href;
+  if(window._thsSignOut) window._thsSignOut().catch(()=>{});
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appShell').style.display    = 'none';
+  document.getElementById('artistStepOtp').style.display   = 'none';
+  document.getElementById('artistStepPhone').style.display = 'block';
+  document.getElementById('artistPhoneInput').value = '';
+  document.getElementById('artistOtpInput').value   = '';
+  artistConfirmationResult = null;
 }
 </script>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, addDoc, onSnapshot, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { getAuth, signInWithCustomToken, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut, RecaptchaVerifier, signInWithPhoneNumber } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCvGMYRUhDAr4r2zoTbnRJ3PiCwhCWxLFs",
@@ -501,10 +560,16 @@ const app  = initializeApp(firebaseConfig);
 const db   = getFirestore(app);
 const auth = getAuth(app);
 
-// Expose db so the non-module login script can use it directly
-window._thsDb = db;
-window._thsGetDoc = getDoc;
-window._thsDoc    = doc;
+// Expose Firebase instances for the non-module login script
+window._thsDb                 = db;
+window._thsGetDoc             = getDoc;
+window._thsDoc                = doc;
+window._thsAuth               = auth;
+window._thsSignIn             = (email, pass) => signInWithEmailAndPassword(auth, email, pass);
+window._thsSignInAnon         = () => signInAnonymously(auth);
+window._thsSignOut            = () => signOut(auth);
+window._thsRecaptchaVerifier  = RecaptchaVerifier;
+window._thsSignInWithPhone    = signInWithPhoneNumber;
 
 /* ══════════════════════════════════════
    ARTISTS CONFIG — batch assignments only
@@ -562,72 +627,29 @@ let editingStudentId   = null;
 ══════════════════════════════════════ */
 // Check if artist is blocked or password changed in Firebase
 // Returns false if blocked, true if ok
-const CF_BASE = 'https://asia-south1-the-happening-space.cloudfunctions.net';
-
 async function checkBlockedAndInit(user, enteredPass=null){
-  if(enteredPass !== null){
-    try {
-      const res  = await fetch(`${CF_BASE}/artistLogin`, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({username:user, password:enteredPass})
-      });
-      const data = await res.json();
-
-      if(!res.ok){
+  // Firebase Auth is already established by doLogin().
+  // This function just merges latest artist details from Firestore into currentArtist.
+  try {
+    const snap = await getDoc(doc(db,'settings','artistPasswords'));
+    if(snap.exists()){
+      const live = (snap.data().artists||[]).find(a=>a.user===user);
+      if(live && live.blocked){
         sessionStorage.removeItem('ths_artist');
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('appShell').style.display    = 'none';
-        document.getElementById('loginError').textContent    =
-          data.error==='Account blocked'
-            ? 'Your access has been blocked. Please contact admin.'
-            : 'Incorrect username or password.';
+        document.getElementById('loginError').textContent    = 'Your access has been blocked. Please contact admin.';
         document.getElementById('loginError').classList.add('show');
+        try { await signOut(auth); } catch(e){}
         return false;
       }
-
-      // Sign in with custom token from Cloud Function
-      await signInWithCustomToken(auth, data.token);
-
-      // Update currentArtist with full details from Cloud Function
-      if(currentArtist){
-        currentArtist.name     = data.name     || currentArtist.name;
-        currentArtist.role     = data.role      || currentArtist.role;
-        currentArtist.artistId = data.artistId  || currentArtist.artistId || user;
+      if(live && currentArtist){
+        currentArtist.role     = live.role     || currentArtist.role;
+        currentArtist.name     = live.name     || currentArtist.name;
+        currentArtist.artistId = live.artistId || currentArtist.artistId || user;
       }
-
-      // Update session with correct name
-      sessionStorage.setItem('ths_artist', JSON.stringify({
-        user, 
-        name: data.name || currentArtist?.name || user,
-        role: data.role || currentArtist?.role || 'trainer'
-      }));
-
-    } catch(e){
-      console.warn('Cloud Function login error:', e);
     }
-  } else {
-    // Session restore — just check blocked status from Firestore
-    try {
-      const snap = await getDoc(doc(db,'settings','artistPasswords'));
-      if(snap.exists()){
-        const live = (snap.data().artists||[]).find(a=>a.user===user);
-        if(live && live.blocked){
-          sessionStorage.removeItem('ths_artist');
-          document.getElementById('loginScreen').style.display = 'flex';
-          document.getElementById('appShell').style.display    = 'none';
-          document.getElementById('loginError').textContent    = 'Your access has been blocked. Please contact admin.';
-          document.getElementById('loginError').classList.add('show');
-          return false;
-        }
-        if(live && currentArtist){
-          currentArtist.role     = live.role     || currentArtist.role;
-          currentArtist.name     = live.name     || currentArtist.name;
-          currentArtist.artistId = live.artistId || currentArtist.artistId;
-        }
-      }
-    } catch(e){}
-  }
+  } catch(e){ console.warn('checkBlockedAndInit: Firestore read failed:', e); }
   return true;
 }
 

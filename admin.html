@@ -249,15 +249,34 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </a>
     <div class="login-logo">The <span>Happening</span> Space</div>
     <p class="login-sub">Admin Panel</p>
-    <label class="login-label" for="loginUser">Username</label>
-    <input class="login-input" id="loginUser" type="text" placeholder="admin" autocomplete="username">
-    <label class="login-label" for="loginPass">Password</label>
-    <div style="position:relative">
-      <input class="login-input" id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:2.5rem">
-      <button type="button" onclick="togglePassVis('loginPass',this)" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0">👁</button>
+
+    <!-- Step 1: Phone -->
+    <div id="adminStepPhone">
+      <label class="login-label">Mobile Number</label>
+      <div style="display:flex;border:1px solid var(--border);background:rgba(255,255,255,0.04);transition:border-color 0.2s" id="adminPhoneWrap">
+        <span style="padding:0.85rem 1rem;color:rgba(255,255,255,0.5);font-size:0.9rem;border-right:1px solid var(--border);white-space:nowrap">+91</span>
+        <input type="tel" id="adminPhoneInput" maxlength="10" placeholder="98765 43210"
+          style="flex:1;background:transparent;border:none;padding:0.85rem 1rem;color:var(--text);font-family:'Syne',sans-serif;font-size:0.9rem;outline:none"
+          onkeydown="if(event.key==='Enter')sendAdminOtp()">
+      </div>
+      <p class="login-error" id="adminPhoneError"></p>
+      <button class="login-btn" id="sendAdminOtpBtn" onclick="sendAdminOtp()">Send OTP</button>
+      <div id="admin-recaptcha-container"></div>
     </div>
-    <button class="login-btn" onclick="doLogin()">Enter Admin Panel</button>
-    <p class="login-error" id="loginError">Incorrect username or password.</p>
+
+    <!-- Step 2: OTP -->
+    <div id="adminStepOtp" style="display:none">
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1.25rem">OTP sent to <strong id="adminOtpPhone" style="color:var(--text)"></strong></p>
+      <label class="login-label">6-digit OTP</label>
+      <input class="login-input" type="tel" id="adminOtpInput" maxlength="6" placeholder="• • • • • •"
+        style="letter-spacing:0.3em;font-size:1.1rem;text-align:center"
+        onkeydown="if(event.key==='Enter')verifyAdminOtp()">
+      <p class="login-error" id="adminOtpError"></p>
+      <button class="login-btn" id="verifyAdminOtpBtn" onclick="verifyAdminOtp()">Verify & Enter</button>
+      <button onclick="adminBackToPhone()" style="display:block;margin-top:0.75rem;background:none;border:none;color:var(--muted);font-size:0.78rem;cursor:pointer;width:100%;font-family:'Syne',sans-serif">← Change number</button>
+    </div>
+
+    <p class="login-error" id="loginError"></p>
   </div>
 </div>
 
@@ -1153,13 +1172,26 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           </select>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label>Username *</label><input type="text" id="artistNewUser" placeholder="e.g. rituhariyani" autocomplete="off"></div>
-        <div class="form-group"><label>Password *</label><input type="text" id="artistNewPass" placeholder="Min 6 characters" autocomplete="new-password"></div>
+      <div class="form-group">
+        <label>Username * <span style="font-weight:300;color:var(--muted);font-size:0.75em">— also used as Artist ID for workshop linking</span></label>
+        <input type="text" id="artistNewUser" placeholder="e.g. rituhariyani" autocomplete="off"
+          oninput="document.getElementById('artistNewId').value=this.value.trim().toLowerCase().replace(/\s+/g,'')">
+      </div>
+      <input type="hidden" id="artistNewId">
+      <div class="form-group">
+        <label>Phone Number * <span style="font-weight:300;color:var(--muted);font-size:0.75em">— for OTP login (India +91)</span></label>
+        <div style="display:flex;align-items:center;border:1px solid var(--border2);overflow:hidden">
+          <span style="background:var(--bg3);padding:0.55rem 0.75rem;color:var(--muted);font-size:0.82rem;border-right:1px solid var(--border2);white-space:nowrap">+91</span>
+          <input type="tel" id="artistNewPhone" maxlength="10" placeholder="10-digit mobile number"
+            style="background:var(--bg2);border:none;padding:0.55rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;flex:1">
+        </div>
       </div>
       <div class="form-group">
-        <label>Artist ID <span style="font-weight:300;color:var(--muted);font-size:0.75em">(for workshop linking)</span></label>
-        <input type="text" id="artistNewId" placeholder="e.g. rituhariyani">
+        <label>Password * <span style="font-weight:300;color:var(--muted);font-size:0.75em">— will be replaced by OTP login soon</span></label>
+        <div style="position:relative">
+          <input type="password" id="artistNewPass" placeholder="Min 6 characters" autocomplete="new-password" style="padding-right:2.5rem;width:100%">
+          <button type="button" onclick="togglePassVis('artistNewPass',this)" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0">👁</button>
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -1516,7 +1548,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 import { initializeApp, deleteApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, addDoc, onSnapshot, query, orderBy, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
-import { getAuth, signInWithCustomToken, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, deleteUser } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getAuth, signInWithCustomToken, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, deleteUser, RecaptchaVerifier, signInWithPhoneNumber } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 /* ══════════════════════════════════════
    FIREBASE CONFIG
@@ -1580,52 +1612,107 @@ async function loadPasswords(){
 }
 
 // Cloud Function URLs — credentials never in HTML
-const CF_BASE = 'https://asia-south1-the-happening-space.cloudfunctions.net';
+/* ══════════════════════════════════════
+   ADMIN PHONE OTP LOGIN
+   Only these two numbers can enter.
+   Enforced here AND in Firestore rules.
+══════════════════════════════════════ */
+const ADMIN_PHONES = {
+  '+917984448750': { user:'chikki',  name:'Chirag',  master:true  },
+  '+919274598929': { user:'govind',  name:'Govind',  master:false },
+};
 
-window.doLogin = async function(){
-  const u = document.getElementById('loginUser').value.trim();
-  const p = document.getElementById('loginPass').value;
-  const errEl = document.getElementById('loginError');
-  errEl.classList.remove('show');
+let adminConfirmationResult = null;
+
+window.sendAdminOtp = async function(){
+  const raw = document.getElementById('adminPhoneInput').value.trim().replace(/\D/g,'');
+  const errEl = document.getElementById('adminPhoneError');
+  errEl.textContent = '';
+  if(raw.length !== 10){ errEl.textContent = 'Enter a valid 10-digit number.'; return; }
+  const phone = '+91' + raw;
+
+  if(!ADMIN_PHONES[phone]){
+    errEl.textContent = 'This number is not authorised for admin access.';
+    return;
+  }
+
+  const btn = document.getElementById('sendAdminOtpBtn');
+  btn.textContent = 'Sending…'; btn.disabled = true;
 
   try {
-    const res  = await fetch(`${CF_BASE}/adminLogin`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({username:u, password:p})
-    });
-    const data = await res.json();
+    if(!window.adminRecaptcha){
+      window.adminRecaptcha = new RecaptchaVerifier(auth, 'admin-recaptcha-container', {size:'invisible'});
+    }
+    adminConfirmationResult = await signInWithPhoneNumber(auth, phone, window.adminRecaptcha);
+    document.getElementById('adminOtpPhone').textContent = '+91 ' + raw.replace(/(\d{5})(\d{5})/,'$1 $2');
+    document.getElementById('adminStepPhone').style.display = 'none';
+    document.getElementById('adminStepOtp').style.display   = 'block';
+    document.getElementById('adminOtpInput').focus();
+  } catch(e){
+    errEl.textContent = 'Failed to send OTP — ' + (e.message||'try again');
+    btn.textContent = 'Send OTP'; btn.disabled = false;
+    if(window.adminRecaptcha){ try{window.adminRecaptcha.clear();}catch(e){} window.adminRecaptcha=null; }
+  }
+};
 
-    if(!res.ok){
-      errEl.textContent = data.error==='Account blocked'
-        ? 'Your access has been blocked. Contact the master admin.'
-        : 'Incorrect username or password.';
-      errEl.classList.add('show'); return;
+window.verifyAdminOtp = async function(){
+  const otp   = document.getElementById('adminOtpInput').value.trim();
+  const errEl = document.getElementById('adminOtpError');
+  errEl.textContent = '';
+  if(otp.length !== 6){ errEl.textContent = 'Enter the 6-digit OTP.'; return; }
+  if(!adminConfirmationResult){ errEl.textContent = 'Session expired. Go back and resend.'; return; }
+
+  const btn = document.getElementById('verifyAdminOtpBtn');
+  btn.textContent = 'Verifying…'; btn.disabled = true;
+
+  try {
+    const result = await adminConfirmationResult.confirm(otp);
+    const phone  = result.user.phoneNumber;
+    const admin  = ADMIN_PHONES[phone];
+
+    if(!admin){
+      await signOut(auth);
+      errEl.textContent = 'This number is not authorised.';
+      btn.textContent = 'Verify & Enter'; btn.disabled = false;
+      return;
     }
 
-    // Sign into Firebase Auth with the custom token from Cloud Function
-    await signInWithCustomToken(auth, data.token);
-
-    currentAdminUser = data.username;
+    // Authorised — set up session
+    currentAdminUser = admin.user;
+    sessionStorage.setItem('ths_auth',  '1');
+    sessionStorage.setItem('ths_user',  admin.user);
+    sessionStorage.setItem('ths_phone', phone);
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appShell').style.display    = 'block';
-    sessionStorage.setItem('ths_auth','1');
-    sessionStorage.setItem('ths_user', u);
+    await loadPasswords();
     initApp();
 
   } catch(e){
-    errEl.textContent = 'Login failed. Please try again.';
-    errEl.classList.add('show');
+    errEl.textContent = e.code === 'auth/invalid-verification-code'
+      ? 'Incorrect OTP. Try again.'
+      : 'Verification failed — ' + (e.message||'try again');
+    btn.textContent = 'Verify & Enter'; btn.disabled = false;
   }
+};
+
+window.adminBackToPhone = function(){
+  document.getElementById('adminStepOtp').style.display   = 'none';
+  document.getElementById('adminStepPhone').style.display = 'block';
+  document.getElementById('adminPhoneInput').focus();
+  adminConfirmationResult = null;
 };
 
 window.doLogout = async function(){
   try { await signOut(auth); } catch(e){}
   sessionStorage.removeItem('ths_auth');
   sessionStorage.removeItem('ths_user');
+  sessionStorage.removeItem('ths_phone');
   document.getElementById('appShell').style.display    = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
-  document.getElementById('loginPass').value = '';
+  document.getElementById('adminStepOtp').style.display   = 'none';
+  document.getElementById('adminStepPhone').style.display = 'block';
+  document.getElementById('adminPhoneInput').value = '';
+  document.getElementById('adminOtpInput').value   = '';
 };
 
 if(sessionStorage.getItem('ths_auth')==='1'){
@@ -4710,8 +4797,13 @@ window.saveGalleryOrder = async function(){
 };
 
 const MASTER_USER = 'chikki';
+const MASTER_PHONE = '+917984448750';
 
-function isMaster(){ return currentAdminUser === MASTER_USER; }
+function isMaster(){
+  const byUser  = currentAdminUser === MASTER_USER;
+  const byPhone = sessionStorage.getItem('ths_phone') === MASTER_PHONE;
+  return byUser || byPhone;
+}
 
 function applyMasterAccess(){
   // Show/hide master-only nav items
@@ -4828,7 +4920,9 @@ window.saveAdminAccount = async function(){
 window.openAddArtist = function(){
   document.getElementById('addArtistTitle').textContent='Add Artist';
   document.getElementById('artistEditIdx').value='';
-  ['artistNewName','artistNewUser','artistNewPass','artistNewId'].forEach(id=>document.getElementById(id).value='');
+  ['artistNewName','artistNewUser','artistNewPass','artistNewId','artistNewPhone'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
   document.getElementById('artistNewRole').value='trainer';
   openModal('addArtistModal');
 };
@@ -4875,19 +4969,34 @@ window.saveArtistAccount = async function(){
   const user     = document.getElementById('artistNewUser').value.trim().toLowerCase().replace(/\s+/g,'');
   const pass     = document.getElementById('artistNewPass').value.trim();
   const role     = document.getElementById('artistNewRole').value;
-  const artistId = document.getElementById('artistNewId').value.trim()||user;
+  const artistId = user; // username IS the artist ID — same value always
+  const rawPhone = document.getElementById('artistNewPhone').value.trim().replace(/\D/g,'');
+  const phone    = rawPhone ? '+91' + rawPhone.slice(-10) : '';
   if(!name||!user||!pass){showToast('Name, username and password required','error');return;}
   if(pass.length<6){showToast('Password must be at least 6 characters','error');return;}
+  if(!phone){showToast('Phone number required for OTP login','error');return;}
   if(ARTIST_ROSTER.find(a=>a.user===user)){showToast('Username already exists','error');return;}
 
   showToast('Creating artist account…');
   const ok = await syncArtistFirebaseAuth(user, pass);
-  if(!ok) showToast('Firebase Auth sync failed — login may not work until retried','error');
+  if(!ok) showToast('Firebase Auth sync failed — password login may not work until synced','error');
 
-  ARTIST_ROSTER.push({user, pass, name, role, artistId, blocked:false});
+  ARTIST_ROSTER.push({user, pass, name, role, artistId, phone, blocked:false});
   await setDoc(doc(db,'settings','artistPasswords'),{artists:ARTIST_ROSTER},{merge:true});
   closeModal('addArtistModal');
   showToast(`Artist "${name}" added ✓`);
+  renderArtistRoster();
+};
+
+window.editArtistPhone = async function(i){
+  const current = ARTIST_ROSTER[i].phone || '';
+  const input   = prompt(`Phone number for ${ARTIST_ROSTER[i].name}\nCurrent: ${current||'Not set'}\n\nEnter 10-digit mobile number (India):`, current.replace('+91',''));
+  if(input === null) return;
+  const raw = input.trim().replace(/\D/g,'');
+  if(raw && raw.length !== 10){ showToast('Must be exactly 10 digits','error'); return; }
+  ARTIST_ROSTER[i].phone = raw ? '+91'+raw : '';
+  await setDoc(doc(db,'settings','artistPasswords'),{artists:ARTIST_ROSTER},{merge:true});
+  showToast(`${ARTIST_ROSTER[i].name}'s phone updated ✓`);
   renderArtistRoster();
 };
 
@@ -4977,7 +5086,17 @@ function _renderArtistRosterHTML(){
           <span class="pill ${a.role==='trainer'?'pill-blue':'pill-yellow'}" style="font-size:0.6rem">${a.role==='trainer'?'Batch Trainer':'Workshop Artist'}</span>
           ${a.blocked?`<span class="pill" style="background:rgba(229,115,115,0.15);color:#e57373;border:1px solid rgba(229,115,115,0.3);font-size:0.6rem">BLOCKED</span>`:''}
         </div>
-        <p style="font-size:0.75rem;color:var(--muted);margin-bottom:0.6rem">Username: <span style="color:var(--text);font-family:monospace">${a.user}</span></p>
+        <!-- Username = Artist ID row -->
+        <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:0.5rem;flex-wrap:wrap">
+          <div>
+            <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.15rem">Username / Artist ID</p>
+            <p style="font-family:monospace;font-size:0.82rem;color:var(--red);font-weight:600">${a.user}</p>
+          </div>
+          <div>
+            <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.15rem">Phone (OTP Login)</p>
+            <p style="font-size:0.82rem;color:var(--text);font-weight:500">${a.phone||'<span style="color:var(--muted);font-style:italic">Not set</span>'}</p>
+          </div>
+        </div>
         <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem">
           <span style="font-size:0.75rem;color:var(--muted)">Password:</span>
           <span id="apass-${i}" style="font-family:monospace;font-size:0.78rem;color:var(--text)">••••••••</span>
@@ -4990,6 +5109,7 @@ function _renderArtistRosterHTML(){
             <button type="button" onclick="togglePassVis('anewpass-${i}',this)" style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.9rem;line-height:1;padding:0">👁</button>
           </div>
           <button onclick="changeArtistPassword(${i})" class="btn btn-outline btn-sm">Update</button>
+          <button onclick="editArtistPhone(${i})" class="btn btn-outline btn-sm" style="border-color:rgba(100,180,255,0.4);color:#6ab0f5">📱 Phone</button>
         </div>
       </div>
       <div style="display:flex;gap:0.5rem;flex-direction:column;align-items:flex-end">
