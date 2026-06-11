@@ -436,9 +436,17 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <div class="view" id="view-artists">
       <div class="page-header">
         <div><h1 class="page-title">Artists</h1><p class="page-sub">Manage artist logins, passwords and access</p></div>
-        <button class="btn btn-red" onclick="openAddArtist()">
-          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Artist
-        </button>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="migrateArtistsToFirebaseAuth()" style="border-color:rgba(245,230,66,0.4);color:var(--yellow)">
+            ⚡ Sync to Firebase Auth
+          </button>
+          <button class="btn btn-red" onclick="openAddArtist()">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Artist
+          </button>
+        </div>
+      </div>
+      <div style="background:rgba(245,230,66,0.06);border:1px solid rgba(245,230,66,0.2);padding:0.85rem 1rem;margin-bottom:1.25rem;font-size:0.78rem;color:var(--muted)">
+        <strong style="color:var(--yellow)">Security:</strong> Artist passwords are verified by Firebase Auth — not read from Firestore during login. Click <strong style="color:var(--text)">Sync to Firebase Auth</strong> once to migrate existing artists. After that, only new/changed passwords need syncing (happens automatically).
       </div>
       <div id="artistRosterList"></div>
     </div>
@@ -1505,10 +1513,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 
 <!-- FIREBASE -->
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { initializeApp, deleteApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, addDoc, onSnapshot, query, orderBy, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
-import { getAuth, signInWithCustomToken, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getAuth, signInWithCustomToken, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, deleteUser } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 /* ══════════════════════════════════════
    FIREBASE CONFIG
@@ -4825,25 +4833,96 @@ window.openAddArtist = function(){
   openModal('addArtistModal');
 };
 
+/* ══════════════════════════════════════
+   FIREBASE AUTH SYNC FOR ARTISTS
+   Uses a secondary app so admin is never signed out
+══════════════════════════════════════ */
+const ARTIST_AUTH_DOMAIN = 'artist.thehappeningspace.com'; // email suffix for artist accounts
+
+async function syncArtistFirebaseAuth(username, newPass, oldPass=null){
+  const email  = `${username}@${ARTIST_AUTH_DOMAIN}`;
+  let sApp, sAuth;
+  try {
+    sApp  = initializeApp(firebaseConfig, 'artist-sync-' + Date.now());
+    sAuth = getAuth(sApp);
+
+    if(oldPass){
+      // Existing artist: sign in with old pass, delete, recreate with new pass
+      try {
+        const cred = await signInWithEmailAndPassword(sAuth, email, oldPass);
+        await deleteUser(cred.user);
+      } catch(e){
+        // User might not exist in Firebase Auth yet (pre-migration artist)
+        // That's fine — we'll create them fresh below
+        console.log('syncArtistAuth: existing user not found, creating fresh');
+      }
+    }
+
+    // Create with new password
+    await createUserWithEmailAndPassword(sAuth, email, newPass);
+    await signOut(sAuth);
+    return true;
+  } catch(e){
+    console.error('syncArtistFirebaseAuth failed:', e.code, e.message);
+    return false;
+  } finally {
+    if(sApp) await deleteApp(sApp).catch(()=>{});
+  }
+}
+
 window.saveArtistAccount = async function(){
-  const name=document.getElementById('artistNewName').value.trim();
-  const user=document.getElementById('artistNewUser').value.trim().toLowerCase().replace(/\s+/g,'');
-  const pass=document.getElementById('artistNewPass').value.trim();
-  const role=document.getElementById('artistNewRole').value;
-  const artistId=document.getElementById('artistNewId').value.trim()||user;
+  const name     = document.getElementById('artistNewName').value.trim();
+  const user     = document.getElementById('artistNewUser').value.trim().toLowerCase().replace(/\s+/g,'');
+  const pass     = document.getElementById('artistNewPass').value.trim();
+  const role     = document.getElementById('artistNewRole').value;
+  const artistId = document.getElementById('artistNewId').value.trim()||user;
   if(!name||!user||!pass){showToast('Name, username and password required','error');return;}
   if(pass.length<6){showToast('Password must be at least 6 characters','error');return;}
   if(ARTIST_ROSTER.find(a=>a.user===user)){showToast('Username already exists','error');return;}
-  ARTIST_ROSTER.push({user,pass,name,role,artistId,blocked:false});
+
+  showToast('Creating artist account…');
+  const ok = await syncArtistFirebaseAuth(user, pass);
+  if(!ok) showToast('Firebase Auth sync failed — login may not work until retried','error');
+
+  ARTIST_ROSTER.push({user, pass, name, role, artistId, blocked:false});
   await setDoc(doc(db,'settings','artistPasswords'),{artists:ARTIST_ROSTER},{merge:true});
   closeModal('addArtistModal');
   showToast(`Artist "${name}" added ✓`);
   renderArtistRoster();
 };
 
-/* ══════════════════════════════════════
-   PASSWORD VISIBILITY TOGGLE
-══════════════════════════════════════ */
+window.changeArtistPassword = async function(i){
+  const newPass = document.getElementById('anewpass-'+i).value.trim();
+  if(!newPass||newPass.length<6){showToast('Min 6 characters required','error');return;}
+  const oldPass = ARTIST_ROSTER[i].pass;
+  const username = ARTIST_ROSTER[i].user;
+
+  showToast('Updating password…');
+  const ok = await syncArtistFirebaseAuth(username, newPass, oldPass);
+  if(!ok) showToast('Firebase Auth sync failed — password update may not have taken effect','error');
+
+  ARTIST_ROSTER[i].pass = newPass;
+  await setDoc(doc(db,'settings','artistPasswords'),{artists:ARTIST_ROSTER},{merge:true});
+  document.getElementById('anewpass-'+i).value='';
+  showToast(`${ARTIST_ROSTER[i].name}'s password updated ✓`);
+  renderArtistRoster();
+};
+
+window.migrateArtistsToFirebaseAuth = async function(){
+  if(!ARTIST_ROSTER.length){
+    showToast('No artists loaded — visit Artists section first','error'); return;
+  }
+  if(!confirm(`Sync ${ARTIST_ROSTER.length} artist(s) to Firebase Auth?\n\nCreates secure login accounts. Takes a few seconds per artist.`)) return;
+  showToast(`Syncing ${ARTIST_ROSTER.length} artists…`);
+  let ok=0, fail=0;
+  for(const a of ARTIST_ROSTER){
+    if(!a.pass){ fail++; continue; }
+    const success = await syncArtistFirebaseAuth(a.user, a.pass);
+    success ? ok++ : fail++;
+  }
+  showToast(fail===0 ? `✓ All ${ok} artist(s) synced to Firebase Auth` : `${ok} synced · ${fail} failed — check console`);
+};
+
 window.togglePassVis = function(inputId, btn){
   const el = document.getElementById(inputId);
   if(!el) return;
@@ -4929,16 +5008,6 @@ window.toggleArtistPassView = function(i,pass){
   const btn=el.nextElementSibling;
   if(el.textContent==='••••••••'){el.textContent=pass;btn.textContent='Hide';}
   else{el.textContent='••••••••';btn.textContent='Show';}
-};
-
-window.changeArtistPassword = async function(i){
-  const newPass=document.getElementById('anewpass-'+i).value.trim();
-  if(!newPass||newPass.length<6){showToast('Min 6 characters required','error');return;}
-  ARTIST_ROSTER[i].pass=newPass;
-  await setDoc(doc(db,'settings','artistPasswords'),{artists:ARTIST_ROSTER},{merge:true});
-  document.getElementById('anewpass-'+i).value='';
-  showToast(`${ARTIST_ROSTER[i].name}'s password updated ✓`);
-  renderArtistRoster();
 };
 
 window.toggleArtistBlock = async function(i){
