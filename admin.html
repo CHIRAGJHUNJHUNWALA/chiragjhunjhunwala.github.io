@@ -252,7 +252,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <label class="login-label" for="loginUser">Username</label>
     <input class="login-input" id="loginUser" type="text" placeholder="admin" autocomplete="username">
     <label class="login-label" for="loginPass">Password</label>
-    <input class="login-input" id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <div style="position:relative">
+      <input class="login-input" id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:2.5rem">
+      <button type="button" onclick="togglePassVis('loginPass',this)" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0">👁</button>
+    </div>
     <button class="login-btn" onclick="doLogin()">Enter Admin Panel</button>
     <p class="login-error" id="loginError">Incorrect username or password.</p>
   </div>
@@ -451,15 +454,15 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           <p style="font-size:0.72rem;color:var(--muted);margin-bottom:1.25rem">To change any admin or artist password, go to <strong style="color:var(--text)">Admin Accounts</strong> or <strong style="color:var(--text)">Artists</strong> sections.</p>
           <div class="form-group" style="margin-bottom:1rem">
             <label>Current Password</label>
-            <input type="password" id="settingsOldPass" placeholder="Enter current password" autocomplete="current-password">
+            <div style="position:relative"><input type="password" id="settingsOldPass" placeholder="Enter current password" autocomplete="current-password" style="padding-right:2.5rem;width:100%"><button type="button" onclick="togglePassVis('settingsOldPass',this)" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0">👁</button></div>
           </div>
           <div class="form-group" style="margin-bottom:1rem">
             <label>New Password</label>
-            <input type="password" id="settingsNewPass" placeholder="Enter new password" autocomplete="new-password">
+            <div style="position:relative"><input type="password" id="settingsNewPass" placeholder="Enter new password" autocomplete="new-password" style="padding-right:2.5rem;width:100%"><button type="button" onclick="togglePassVis('settingsNewPass',this)" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0">👁</button></div>
           </div>
           <div class="form-group" style="margin-bottom:1.5rem">
             <label>Confirm New Password</label>
-            <input type="password" id="settingsConfirmPass" placeholder="Confirm new password" autocomplete="new-password">
+            <div style="position:relative"><input type="password" id="settingsConfirmPass" placeholder="Confirm new password" autocomplete="new-password" style="padding-right:2.5rem;width:100%"><button type="button" onclick="togglePassVis('settingsConfirmPass',this)" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0">👁</button></div>
           </div>
           <button class="btn btn-red" onclick="changeAdminPassword()" style="width:100%">Change My Password</button>
           <p id="settingsMsg" style="font-size:0.78rem;margin-top:0.75rem;text-align:center"></p>
@@ -555,17 +558,26 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <div class="view" id="view-gallery">
       <div class="page-header">
         <div><h1 class="page-title">Gallery</h1><p class="page-sub">Manage the moving pictures on the home page</p></div>
-        <label class="btn btn-red" style="cursor:pointer">
-          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload Photos
-          <input type="file" id="galleryUpload" multiple accept="image/*" style="display:none" onchange="handleGalleryUpload(this.files)">
-        </label>
+        <div style="display:flex;gap:0.75rem">
+          <label class="btn btn-red" style="cursor:pointer">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload Photos
+            <input type="file" id="galleryUpload" multiple accept="image/*" style="display:none" onchange="handleGalleryUpload(this.files)">
+          </label>
+          <button class="btn btn-red" onclick="saveGalleryOrder()">Save & Publish</button>
+        </div>
       </div>
-      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:1.5rem">Upload photos that will appear in the home page slideshow. Only uploaded photos are shown — no empty boxes.</p>
-      <div id="galleryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem"></div>
-      <div style="margin-top:1.5rem;display:flex;gap:0.75rem;align-items:center">
-        <button class="btn btn-red" onclick="saveGalleryOrder()">Save & Publish</button>
-        <p id="galleryStatus" style="font-size:0.8rem;color:var(--muted)"></p>
+      <!-- Drag-drop zone -->
+      <div id="galleryDropZone" style="border:2px dashed var(--border);padding:2rem;text-align:center;color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;cursor:pointer;transition:border-color 0.2s"
+        onclick="document.getElementById('galleryUpload').click()"
+        ondragover="event.preventDefault();this.style.borderColor='var(--red)'"
+        ondragleave="this.style.borderColor='var(--border)'"
+        ondrop="event.preventDefault();this.style.borderColor='var(--border)';handleGalleryUpload(event.dataTransfer.files)">
+        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none" stroke-width="1.5" style="margin-bottom:0.5rem;opacity:0.4"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <p>Drag and drop photos here, or click to browse</p>
+        <p style="font-size:0.72rem;margin-top:0.25rem">Max 20 photos · JPG, PNG, WEBP · All sizes auto-adjusted</p>
       </div>
+      <p id="galleryStatus" style="font-size:0.8rem;color:var(--muted);margin-bottom:1rem"></p>
+      <div id="galleryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.75rem"></div>
     </div>
 
     <!-- REGULAR BATCHES VIEW -->
@@ -1164,7 +1176,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
       <div class="form-group" style="margin-bottom:1rem">
         <label id="adminPassLabel">Password *</label>
-        <input type="text" id="adminNewPass" placeholder="Min 6 characters" autocomplete="new-password">
+        <div style="position:relative"><input type="password" id="adminNewPass" placeholder="Min 6 characters" autocomplete="new-password" style="padding-right:2.5rem;width:100%"><button type="button" onclick="togglePassVis('adminNewPass',this)" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0">👁</button></div>
       </div>
     </div>
     <div class="modal-foot">
@@ -2218,11 +2230,15 @@ window.addSlotRow = function(s={}){
     <button onclick="this.closest('div').remove()" style="position:absolute;top:0.6rem;right:0.6rem;background:none;border:1px solid rgba(229,115,115,0.3);color:#e57373;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.85rem;line-height:1">✕</button>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;padding-right:2rem">
       <div>
-        <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">Date</p>
+        <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">Date (display)</p>
         <input type="text" placeholder="e.g. Saturday, 7 Jun 2025" value="${s.date||''}" class="slot-date-inp" style="width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.8rem;outline:none">
       </div>
       <div>
-        <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">Time</p>
+        <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">Class Date <span style="font-weight:300;text-transform:none;letter-spacing:0;color:var(--muted)">(for schedule)</span></p>
+        <input type="date" value="${s.dateISO||''}" class="slot-date-iso" style="color-scheme:dark;width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.8rem;outline:none">
+      </div>
+      <div>
+        <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">Time (display)</p>
         <input type="text" placeholder="e.g. 11:00 AM – 1:00 PM" value="${s.time||''}" class="slot-time-inp" style="width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.8rem;outline:none">
       </div>
       <div>
@@ -2233,8 +2249,8 @@ window.addSlotRow = function(s={}){
         <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">Total Spots</p>
         <input type="number" placeholder="e.g. 20" value="${s.totalSpots||''}" min="1" class="slot-spots-inp" style="width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.8rem;outline:none">
       </div>
-      <div style="grid-column:1/-1">
-        <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">Instagram Video Link <span style="color:var(--muted);font-weight:300;text-transform:none;letter-spacing:0">(choreography preview)</span></p>
+      <div>
+        <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">Instagram Link <span style="font-weight:300;text-transform:none;letter-spacing:0">(preview)</span></p>
         <input type="url" placeholder="https://www.instagram.com/reel/..." value="${s.instaLink||''}" class="slot-insta-inp" style="width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.8rem;outline:none">
       </div>
     </div>`;
@@ -2270,14 +2286,15 @@ window.saveWorkshop = async function(saveStatus){
     const prev  = existing?.slots?.[i];
     return {
       id:'s'+(i+1),
-      date: row.querySelector('.slot-date-inp').value.trim(),
-      time: row.querySelector('.slot-time-inp').value.trim(),
-      song: row.querySelector('.slot-song-inp').value.trim(),
+      date:    row.querySelector('.slot-date-inp').value.trim(),
+      dateISO: row.querySelector('.slot-date-iso').value.trim(),
+      time:    row.querySelector('.slot-time-inp').value.trim(),
+      song:    row.querySelector('.slot-song-inp').value.trim(),
       totalSpots: total,
       spots: prev ? prev.spots : total,
       instaLink: row.querySelector('.slot-insta-inp')?.value.trim()||'',
     };
-  }).filter(s=>s.date);
+  }).filter(s=>s.date||s.dateISO);
 
   // Upload poster to Firebase Storage if new file selected
   let posterToSave = existing?.poster || '';
@@ -2315,25 +2332,34 @@ window.saveWorkshop = async function(saveStatus){
 
   try {
     await setDoc(doc(db,'workshops',id), wsData);
-    // Auto-add to schedule if time is set and it's a new workshop (not a re-edit)
-    if(wsData.timeFrom && wsData.dateFrom && saveStatus==='active' && !editId){
-      try {
-        const fmtTime = t => { if(!t) return ''; const [h,m]=t.split(':').map(Number); const ap=h>=12?'PM':'AM'; return (h>12?h-12:h||12)+(m?':'+String(m).padStart(2,'0'):'')+ap; };
-        await addDoc(collection(db,'scheduleEntries'),{
-          title: artist + (wsData.style?' – '+wsData.style:''),
-          category: 'Dance Workshop',
-          instructor: artist,
-          date: wsData.dateFrom,
-          dateEnd: wsData.dateTo || wsData.dateFrom,
-          timeFrom: wsData.timeFrom,
-          timeTo: wsData.timeTo,
-          bookingText: fmtTime(wsData.timeFrom)+(wsData.timeTo?' – '+fmtTime(wsData.timeTo):''),
-          color: '#bc1f2e',
-          source: 'workshop',
-          workshopId: id,
-          createdAt: Date.now(),
-        });
-      } catch(schedErr){ console.warn('Schedule auto-add failed',schedErr); }
+    // Auto-add each slot to schedule if publishing a new workshop
+    if(saveStatus==='active' && !editId){
+      const tf = wsData.timeFrom;
+      const tt = wsData.timeTo;
+      const fmtTime = t => { if(!t) return ''; const [h,m]=t.split(':').map(Number); const ap=h>=12?'PM':'AM'; return (h>12?h-12:h||12)+(m?':'+String(m).padStart(2,'0'):'')+ap; };
+      const slotsWithDates = wsData.slots.filter(s=>s.dateISO);
+      if(slotsWithDates.length){
+        for(const s of slotsWithDates){
+          try {
+            const d   = new Date(s.dateISO+'T00:00');
+            const day = d.toLocaleDateString('en-IN',{weekday:'long'});
+            await addDoc(collection(db,'studioSchedule'),{
+              date:      s.dateISO,
+              day,
+              timeFrom:  tf || '',
+              timeTo:    tt || '',
+              category:  'Dance Workshop',
+              artist:    artist,
+              remarks:   [wsData.style, s.song].filter(Boolean).join(' · '),
+              source:    'workshop',
+              workshopId: id,
+              slotId:    s.id,
+              createdAt: Date.now(), updatedAt: Date.now(),
+            });
+          } catch(e){ console.warn('Schedule entry failed for slot',s.id,e); }
+        }
+        showToast(`${slotsWithDates.length} class${slotsWithDates.length>1?'es':''} added to schedule ✓`);
+      }
     }
     closeModal('wsModal');
     showToast(saveStatus==='draft' ? '✓ Saved as draft — not live yet' : editId ? 'Workshop updated!' : '✓ Workshop published — now live!');
@@ -4607,37 +4633,57 @@ function renderGalleryGrid(){
   const grid = document.getElementById('galleryGrid');
   if(!galleryImages.length){
     grid.innerHTML=`<div style="padding:3rem;text-align:center;color:var(--muted);border:2px dashed var(--border);grid-column:1/-1">
-      No photos uploaded yet. Click "Upload Photos" to add images.
+      No photos uploaded yet. Use the upload area above to add images.
     </div>`;
     return;
   }
   grid.innerHTML = galleryImages.map((img,i)=>`
-    <div style="position:relative;aspect-ratio:1;overflow:hidden;background:var(--bg2)">
-      <img src="${img}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.opacity=0.3">
+    <div style="position:relative;width:100%;aspect-ratio:1;overflow:hidden;background:var(--bg2)">
+      <img src="${img}" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.style.opacity=0.3;this.style.filter='grayscale(1)'">
       <button onclick="removeGalleryImage(${i})"
-        style="position:absolute;top:0.4rem;right:0.4rem;background:rgba(0,0,0,0.7);color:#fff;border:none;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:0.8rem;display:flex;align-items:center;justify-content:center">✕</button>
-      <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);padding:0.25rem 0.5rem;font-size:0.62rem;color:var(--muted);font-family:'Syne',sans-serif">${i+1} of ${galleryImages.length}</div>
+        style="position:absolute;top:0.4rem;right:0.4rem;background:rgba(0,0,0,0.75);color:#fff;border:none;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:0.75rem;display:flex;align-items:center;justify-content:center">✕</button>
+      <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);padding:0.2rem 0.4rem;font-size:0.58rem;color:rgba(255,255,255,0.5);font-family:'Syne',sans-serif">${i+1} / ${galleryImages.length}</div>
     </div>`).join('');
 }
 
 window.handleGalleryUpload = async function(files){
   const status = document.getElementById('galleryStatus');
-  status.textContent = 'Uploading…';
-  let uploaded = 0;
-  for(const file of Array.from(files)){
-    if(galleryImages.length >= 20){ showToast('Max 20 photos','error'); break; }
+  const fileArr = Array.from(files);
+  if(!fileArr.length) return;
+
+  let uploaded = 0, failed = 0;
+  status.style.color = 'var(--muted)';
+  status.textContent = `Uploading 0 of ${fileArr.length}…`;
+
+  for(const file of fileArr){
+    if(galleryImages.length >= 20){
+      showToast('Maximum 20 photos reached','error');
+      break;
+    }
     try {
-      const ext = file.name.split('.').pop();
-      const url = await uploadToStorage(file, `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`);
+      const ext  = file.name.split('.').pop().toLowerCase();
+      const path = `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const url  = await uploadToStorage(file, path);
       galleryImages.push(url);
       uploaded++;
-      status.textContent = `Uploaded ${uploaded} of ${files.length}…`;
+      status.textContent = `Uploading ${uploaded} of ${fileArr.length}…`;
+      renderGalleryGrid();
     } catch(e){
-      showToast('Upload failed for '+file.name,'error');
+      failed++;
+      console.error('Gallery upload failed for',file.name,e);
     }
   }
-  renderGalleryGrid();
-  status.textContent = `${galleryImages.length} photo${galleryImages.length!==1?'s':''} ready — click Save to publish`;
+
+  if(failed > 0){
+    status.style.color = '#e57373';
+    status.textContent = `${uploaded} uploaded · ${failed} failed (check Storage rules or file size) — click Save to publish what was uploaded`;
+  } else {
+    status.style.color = 'var(--muted)';
+    status.textContent = `${galleryImages.length} photo${galleryImages.length!==1?'s':''} ready — click Save & Publish`;
+  }
+
+  // Reset the file input so the same files can be re-selected if needed
+  document.getElementById('galleryUpload').value = '';
 };
 
 window.removeGalleryImage = function(i){
@@ -4788,8 +4834,15 @@ window.saveArtistAccount = async function(){
 };
 
 /* ══════════════════════════════════════
-   LOGIN BLOCK CHECK FOR ADMINS
+   PASSWORD VISIBILITY TOGGLE
 ══════════════════════════════════════ */
+window.togglePassVis = function(inputId, btn){
+  const el = document.getElementById(inputId);
+  if(!el) return;
+  const isHidden = el.type === 'password';
+  el.type = isHidden ? 'text' : 'password';
+  btn.textContent = isHidden ? '🙈' : '👁';
+};
 window.changeAdminPassword = async function(){
   if(!isMaster()){ showToast('Only master admin can change passwords','error'); return; }
   const oldPass = document.getElementById('settingsOldPass').value;
@@ -4832,8 +4885,11 @@ function renderArtistRoster(){
           <button onclick="toggleArtistPassView(${i},'${a.pass}')" style="font-size:0.6rem;color:var(--muted);background:none;border:1px solid var(--border);padding:0.15rem 0.4rem;cursor:pointer;font-family:'Syne',sans-serif">Show</button>
         </div>
         <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
-          <input type="password" id="anewpass-${i}" placeholder="Set new password" autocomplete="new-password"
-            style="background:var(--bg3);border:1px solid var(--border2);padding:0.4rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.78rem;outline:none;width:180px">
+          <div style="position:relative">
+            <input type="password" id="anewpass-${i}" placeholder="Set new password" autocomplete="new-password"
+              style="background:var(--bg3);border:1px solid var(--border2);padding:0.4rem 2.2rem 0.4rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.78rem;outline:none;width:180px">
+            <button type="button" onclick="togglePassVis('anewpass-${i}',this)" style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.9rem;line-height:1;padding:0">👁</button>
+          </div>
           <button onclick="changeArtistPassword(${i})" class="btn btn-outline btn-sm">Update</button>
         </div>
       </div>

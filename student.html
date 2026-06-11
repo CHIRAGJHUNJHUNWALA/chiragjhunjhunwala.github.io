@@ -798,24 +798,51 @@ function renderHistory(expiredBatches, completedRegs){
     });
   }
 
-  // Completed workshops
+  // Completed workshops — expand each slot check-in as its own entry
   if(completedRegs.length){
     html += `<p class="section-eyebrow" style="margin-top:2rem">Attended Workshops</p>`;
     completedRegs.forEach(r => {
-      html += `<div class="booking-card" style="opacity:0.7">
-        <div class="booking-card-header">
-          <div>
-            <p class="booking-artist">${r.workshop||'—'}</p>
-            <p class="booking-style">${r.style||'Workshop'}</p>
+      const checkedInSlots = r.checkedInSlots || {};
+      const slotParts = (r.slots||'').split('|').map(s=>s.trim()).filter(Boolean);
+      const hasMulti = slotParts.length > 1;
+
+      if(hasMulti && Object.keys(checkedInSlots).length){
+        // Show one card per checked-in slot
+        slotParts.forEach((sp, idx) => {
+          const key  = 's'+(idx+1);
+          const time = checkedInSlots[key];
+          if(!time) return; // skip slots not scanned yet
+          html += `<div class="booking-card" style="opacity:0.75">
+            <div class="booking-card-header">
+              <div>
+                <p class="booking-artist">${r.workshop||'—'}</p>
+                <p class="booking-style">${sp}</p>
+              </div>
+              <span class="pill pill-green">✓ Scanned</span>
+            </div>
+            <div class="booking-body">
+              <div class="info-item"><strong>Checked In At</strong><span style="color:var(--green)">${time}</span></div>
+              <div class="info-item"><strong>Amount Paid</strong><span>₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</span></div>
+            </div>
+          </div>`;
+        });
+      } else {
+        // Single-slot or legacy check-in
+        html += `<div class="booking-card" style="opacity:0.7">
+          <div class="booking-card-header">
+            <div>
+              <p class="booking-artist">${r.workshop||'—'}</p>
+              <p class="booking-style">${r.style||'Workshop'}</p>
+            </div>
+            <span class="pill pill-green">✓ Attended</span>
           </div>
-          <span class="pill pill-green">✓ Attended</span>
-        </div>
-        <div class="booking-body">
-          <div class="info-item"><strong>Slot / Song</strong><span style="color:var(--yellow)">${r.slots||'—'}</span></div>
-          <div class="info-item"><strong>Checked In</strong><span style="color:var(--green)">${r.checkedInAt||'—'}</span></div>
-          <div class="info-item"><strong>Amount Paid</strong><span>₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</span></div>
-        </div>
-      </div>`;
+          <div class="booking-body">
+            <div class="info-item"><strong>Slot / Song</strong><span style="color:var(--yellow)">${r.slots||'—'}</span></div>
+            <div class="info-item"><strong>Checked In</strong><span style="color:var(--green)">${r.checkedInAt||Object.values(checkedInSlots)[0]||'—'}</span></div>
+            <div class="info-item"><strong>Amount Paid</strong><span>₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</span></div>
+          </div>
+        </div>`;
+      }
     });
   }
 

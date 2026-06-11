@@ -357,7 +357,7 @@ async function loadBatches(){
         </div>
         <div class="batch-days">${getDayChips(b.days)}</div>
         ${b.desc?`<p style="font-size:0.8rem;color:rgba(245,245,240,0.5);margin:0.75rem 0;line-height:1.6">${b.desc}</p>`:''}
-        <a href="https://wa.me/919057975755?text=Hi!%20I%27d%20like%20to%20enquire%20about%20the%20${encodeURIComponent(b.name||'batch')}%20(${encodeURIComponent(b.time||'')}%2C%20by%20${encodeURIComponent(b.trainer||'')})%20at%20The%20Happening%20Space.%20Could%20you%20share%20details%20about%20fees%20and%20availability%3F" class="batch-enquire" target="_blank">
+        <a href="https://wa.me/${(b.contact||'919057975755').replace(/[^0-9]/g,'')}?text=Hi!%20I%27d%20like%20to%20enquire%20about%20the%20${encodeURIComponent(b.name||'batch')}%20(${encodeURIComponent(b.time||'')}%2C%20by%20${encodeURIComponent(b.trainer||'')})%20at%20The%20Happening%20Space.%20Could%20you%20share%20details%20about%20fees%20and%20availability%3F" class="batch-enquire" target="_blank">
           Enquire on WhatsApp
           <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </a>

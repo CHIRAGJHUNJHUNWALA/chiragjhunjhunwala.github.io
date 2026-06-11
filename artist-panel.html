@@ -188,7 +188,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <label class="login-label">Username</label>
     <input class="login-input" id="loginUser" type="text" placeholder="your username" autocomplete="username">
     <label class="login-label">Password</label>
-    <input class="login-input" id="loginPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    <div style="position:relative">
+      <input class="login-input" id="loginPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:2.5rem">
+      <button type="button" id="loginEyeBtn" onclick="(function(){var e=document.getElementById('loginPass'),b=document.getElementById('loginEyeBtn'),s=e.type==='password';e.type=s?'text':'password';b.textContent=s?'🙈':'👁';})()" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:1rem;line-height:1;padding:0">👁</button>
+    </div>
     <button class="login-btn" onclick="doLogin()">Enter Artist Panel</button>
     <p class="login-error" id="loginError">Incorrect username or password.</p>
   </div>
@@ -394,6 +397,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
       <div class="form-row full">
         <div class="form-group"><label>Notes</label><textarea id="sNotes" placeholder="Any notes about this student…"></textarea></div>
+        <div class="form-group">
+          <label>Days Attended <span style="font-weight:300;color:var(--muted);font-size:0.75em">(override if needed)</span></label>
+          <input type="number" id="sDaysAttended" min="0" placeholder="e.g. 24">
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -416,23 +423,59 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 // All credentials loaded from Firebase — no hardcoded passwords in frontend
 
 async function doLogin(){
-  const u = document.getElementById('loginUser').value.trim();
+  const u = document.getElementById('loginUser').value.trim().toLowerCase();
   const p = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+  errEl.classList.remove('show');
 
-  // Always check Firebase for credentials (no hardcoded fallback for security)
+  if(!u||!p){ errEl.textContent='Enter username and password.'; errEl.classList.add('show'); return; }
+
+  // Wait up to 3 seconds for module to expose db
+  let waited = 0;
+  while(!window._thsDb && waited < 30){ await new Promise(r=>setTimeout(r,100)); waited++; }
+
+  if(!window._thsDb){
+    errEl.textContent = 'Connection error. Please refresh and try again.';
+    errEl.classList.add('show');
+    return;
+  }
+
   let match = null;
   try {
-    const mod  = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    const mod2 = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    const apps = mod2.getApps ? mod2.getApps() : [];
-    const fapp = apps.length ? apps[0] : mod2.initializeApp({apiKey:"AIzaSyCvGMYRUhDAr4r2zoTbnRJ3PiCwhCWxLFs",projectId:"the-happening-space",appId:"1:834905576967:web:b16776452b9111b6483ca2"});
-    const fdb  = mod.getFirestore(fapp);
-    const snap = await mod.getDoc(mod.doc(fdb,'settings','artistPasswords'));
+    const snap = await window._thsGetDoc(window._thsDoc(window._thsDb,'settings','artistPasswords'));
     if(snap.exists()){
-      const live = (snap.data().artists||[]).find(a=>a.user===u);
-      if(live) match = live;
+      const found = (snap.data().artists||[]).find(a=>a.user===u);
+      if(found) match = found;
     }
-  } catch(e){ console.log('Firebase check failed:',e); }
+  } catch(e){
+    console.warn('Firebase credential check failed:',e);
+    errEl.textContent = 'Connection error — check your internet and try again.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  if(!match){
+    errEl.textContent = 'Incorrect username or password.';
+    errEl.classList.add('show');
+    return;
+  }
+  if(match.blocked){
+    errEl.textContent = 'Your access has been blocked. Please contact admin.';
+    errEl.classList.add('show');
+    return;
+  }
+  if(p !== match.pass){
+    errEl.textContent = 'Incorrect username or password.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  // Login successful
+  sessionStorage.setItem('ths_artist', JSON.stringify({user:match.user, name:match.name, role:match.role}));
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display    = 'block';
+  document.dispatchEvent(new CustomEvent('artistLoggedIn', {detail: {...match, pass: p}}));
+}
 
   if(!match){
     document.getElementById('loginError').textContent='Incorrect username or password.';
@@ -476,6 +519,11 @@ const firebaseConfig = {
 const app  = initializeApp(firebaseConfig);
 const db   = getFirestore(app);
 const auth = getAuth(app);
+
+// Expose db so the non-module login script can use it directly
+window._thsDb = db;
+window._thsGetDoc = getDoc;
+window._thsDoc    = doc;
 
 /* ══════════════════════════════════════
    ARTISTS CONFIG — batch assignments only
@@ -974,7 +1022,6 @@ function renderStudentsTable(){
           <button class="btn btn-ghost btn-sm" onclick="openEditStudent('${s.id}')">
             <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
-          <button onclick="openEditDays('${s.id}','${(s.name||'').replace(/'/g,"\\'")}',${s.daysAttended||0})" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--mid);background:rgba(255,255,255,0.05);border:1px solid var(--border2);padding:0.25rem 0.5rem;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap">Days</button>
           ${!act?`
           <button onclick="extendStudent('${s.id}','${(s.name||'').replace(/'/g,"\\'")}','${s.subscription||'Monthly'}')" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--yellow);background:rgba(245,230,66,0.1);border:1px solid rgba(245,230,66,0.3);padding:0.25rem 0.5rem;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap">Extend ↻</button>
           <button onclick="notifyExpiredStudent('${s.id}')" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#25d366;background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.3);padding:0.25rem 0.5rem;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap">Notify</button>
@@ -1026,6 +1073,7 @@ window.openAddStudent = function(){
   document.getElementById('sPhone').value     = '';
   document.getElementById('sFee').value       = '';
   document.getElementById('sNotes').value     = '';
+  document.getElementById('sDaysAttended').value = '';
   document.getElementById('sJoinDate').value  = new Date().toISOString().split('T')[0];
   document.getElementById('sSubscription').value = 'Monthly';
   document.getElementById('sPayMode').value   = 'Cash';
@@ -1043,6 +1091,7 @@ window.openEditStudent = function(id){
   document.getElementById('sPhone').value     = (s.phone||'').replace(/^\+91/,'').replace(/\D/g,'');
   document.getElementById('sFee').value       = s.fee||'';
   document.getElementById('sNotes').value     = s.notes||'';
+  document.getElementById('sDaysAttended').value = s.daysAttended !== undefined ? s.daysAttended : '';
   document.getElementById('sJoinDate').value  = s.joinDate||'';
   document.getElementById('sSubscription').value = s.subscription||'Monthly';
   document.getElementById('sPayMode').value   = s.payMode||'Cash';
@@ -1084,6 +1133,8 @@ window.saveStudent = async function(){
     artistName:   currentArtist.name,
     updatedAt:    Date.now(),
   };
+  const daysVal = document.getElementById('sDaysAttended').value;
+  if(daysVal !== '') data.daysAttended = parseInt(daysVal)||0;
   if(!editId) data.createdAt = Date.now();
   const ref = editId ? doc(db,'batchStudents',editId) : doc(collection(db,'batchStudents'));
   await setDoc(ref, data, {merge:true});
@@ -1145,55 +1196,122 @@ window.updateExportDates = function(){
 window.generateAttendanceReport = async function(){
   const from = document.getElementById('exportDateFrom').value;
   const to   = document.getElementById('exportDateTo').value;
+  const type = document.getElementById('exportType').value;
   if(!from||!to){ showToast('Select date range','error'); return; }
   showToast('Building report…');
   try {
-    // Fetch all attendance docs in range
-    const snap = await getDocs(collection(db,'attendance'));
-    const docs  = snap.docs.map(d=>({id:d.id,...d.data()}));
-    const filtered = docs.filter(a=>{
-      const d=a.date||a.weekStart||'';
-      return d >= from && d <= to;
-    });
-    // Get students list
-    const stSnap = await getDocs(collection(db,'batchStudents'));
-    const stMap  = {};
-    stSnap.docs.forEach(d=>{ stMap[d.id]={...d.data()}; });
+    // Fetch all attendance docs
+    const attSnap = await getDocs(collection(db,'attendance'));
+    const allAtt  = attSnap.docs.map(d=>({id:d.id,...d.data()}));
 
-    // Build print HTML
-    const typeLabel = document.getElementById('exportType').value;
-    const html = `<!DOCTYPE html><html><head><title>Attendance Report — THS</title><style>
+    // Get all students for this artist
+    const stSnap = await getDocs(query(collection(db,'batchStudents'), where('artistId','==',currentArtist.user)));
+    const students = stSnap.docs.map(d=>({id:d.id,...d.data()}));
+
+    // Group students by batch
+    const batchMap = {};
+    currentArtist.batches.forEach(b=>{ batchMap[b.id]={...b,students:[]}; });
+    students.forEach(s=>{ if(batchMap[s.batchId]) batchMap[s.batchId].students.push(s); });
+
+    // For each batch, get attendance records in date range
+    const pad = n=>String(n).padStart(2,'0');
+    const now = new Date();
+
+    // Build sections per batch
+    let bodyHTML = '';
+    const batches = Object.values(batchMap);
+    if(!batches.length){ showToast('No batches found','error'); return; }
+
+    batches.forEach(batch=>{
+      const batchAtt = allAtt.filter(a=>{
+        const d = a.date||a.weekStart||'';
+        return (a.batchId===batch.id) && d>=from && d<=to;
+      });
+
+      // Collect all dates taught in this period
+      const dateSet = new Set(batchAtt.map(a=>a.date||a.weekStart||'').filter(Boolean));
+      const sortedDates = [...dateSet].sort();
+
+      if(!batch.students.length){ return; }
+
+      // For each student, compute: active/expired in period, days present, days absent
+      const rows = batch.students.map(s=>{
+        // Is student active during this period?
+        const expDate = s.expiryDate||'';
+        const joinDate= s.joinDate||'';
+        const isExpired = expDate && expDate < from;
+        const notJoined = joinDate && joinDate > to;
+
+        let presentDays = 0;
+        let absentDays  = 0;
+        sortedDates.forEach(d=>{
+          const attDoc = batchAtt.find(a=>(a.date||a.weekStart||'')=== d);
+          if(!attDoc) return;
+          const status = attDoc[s.id];
+          if(status === 'present') presentDays++;
+          else if(isExpired || notJoined) {} // don't count absent if not enrolled
+          else absentDays++;
+        });
+
+        const rowClass = isExpired ? 'expired' : notJoined ? 'not-joined' : '';
+        const statusBadge = isExpired ? '<span style="color:#c00;font-size:0.7em">EXPIRED</span>'
+                          : notJoined ? '<span style="color:#999;font-size:0.7em">NOT JOINED</span>'
+                          : '<span style="color:green;font-size:0.7em">ACTIVE</span>';
+        return `<tr class="${rowClass}">
+          <td>${s.name||'—'}</td>
+          <td>${s.phone||'—'}</td>
+          <td style="text-align:center">${statusBadge}</td>
+          <td style="text-align:center;color:green;font-weight:700">${presentDays}</td>
+          <td style="text-align:center;color:#c00">${absentDays}</td>
+          <td style="text-align:center">${sortedDates.length}</td>
+          ${sortedDates.map(d=>{
+            const attDoc = batchAtt.find(a=>(a.date||a.weekStart||'')=== d);
+            const status = attDoc ? attDoc[s.id] : null;
+            return `<td style="text-align:center">${status==='present'?'<span style="color:green">✓</span>':isExpired||notJoined?'<span style="color:#ddd">–</span>':'<span style="color:#e57373">✗</span>'}</td>`;
+          }).join('')}
+        </tr>`;
+      }).join('');
+
+      bodyHTML += `
+        <h2 style="margin:2rem 0 0.25rem;font-size:1.1rem">${batch.name}</h2>
+        <p style="color:#666;font-size:0.8rem;margin-bottom:0.75rem">${batch.time||''} · ${batch.days||''} · ${batch.students.length} students · ${sortedDates.length} classes in period</p>
+        <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Student</th><th>Phone</th><th>Status</th><th>Present</th><th>Absent</th><th>Classes</th>
+              ${sortedDates.map(d=>`<th style="font-size:0.6rem;white-space:nowrap">${d.slice(5)}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>${rows||'<tr><td colspan="6" style="color:#999;text-align:center">No students</td></tr>'}</tbody>
+        </table>
+        </div>`;
+    });
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Attendance Report — THS</title><style>
       body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:2rem}
       h1{font-size:1.4rem;margin-bottom:0.25rem}
-      p{color:#666;margin-bottom:1.5rem}
-      table{width:100%;border-collapse:collapse}
-      th{background:#0a0a0a;color:#fff;padding:0.5rem 0.75rem;text-align:left;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em}
-      td{padding:0.5rem 0.75rem;border-bottom:1px solid #eee}
-      tr:nth-child(even) td{background:#f9f9f9}
-      .present{color:green;font-weight:700}
-      .absent{color:#ccc}
+      h2{font-size:1rem;border-bottom:2px solid #000;padding-bottom:0.3rem}
+      p.sub{color:#666;margin-bottom:0.25rem}
+      table{width:100%;border-collapse:collapse;font-size:11px}
+      th{background:#111;color:#fff;padding:0.4rem 0.5rem;text-align:left;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap}
+      td{padding:0.4rem 0.5rem;border-bottom:1px solid #eee;white-space:nowrap}
+      tr.expired td{opacity:0.5;background:#fff5f5}
+      tr.not-joined td{opacity:0.4}
+      @media print{h2{page-break-before:always}h2:first-of-type{page-break-before:avoid}}
     </style></head><body>
       <h1>The Happening Space — Attendance Report</h1>
-      <p>Period: ${from} to ${to} · Type: ${typeLabel} · Generated: ${new Date().toLocaleDateString('en-IN')}</p>
-      <table>
-        <thead><tr><th>Student</th><th>Batch</th><th>Date</th><th>Status</th></tr></thead>
-        <tbody>
-          ${filtered.length ? filtered.map(a=>{
-            const entries = Object.entries(a).filter(([k])=>k!=='date'&&k!=='weekStart'&&k!=='batchId');
-            return entries.map(([sid,status])=>{
-              const st = stMap[sid]||{};
-              return `<tr><td>${st.name||sid}</td><td>${st.batchId||a.batchId||'—'}</td><td>${a.date||a.weekStart||'—'}</td><td class="${status==='present'?'present':'absent'}">${status||'—'}</td></tr>`;
-            }).join('');
-          }).join('') : '<tr><td colspan="4" style="text-align:center;color:#999;padding:2rem">No attendance records found for this period</td></tr>'}
-        </tbody>
-      </table>
+      <p class="sub">Period: <strong>${from}</strong> to <strong>${to}</strong> &nbsp;·&nbsp; Type: ${type} &nbsp;·&nbsp; Artist: ${currentArtist.name}</p>
+      <p class="sub" style="margin-bottom:1.5rem">Generated: ${now.toLocaleDateString('en-IN')} at ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</p>
+      ${bodyHTML||'<p>No attendance data found for this period.</p>'}
     </body></html>`;
+
     const win = window.open('','_blank');
     win.document.write(html);
     win.document.close();
-    win.print();
+    setTimeout(()=>win.print(), 600);
     document.getElementById('exportPanel').style.display='none';
-  } catch(e){ showToast('Export failed: '+e.message,'error'); }
+  } catch(e){ showToast('Export failed: '+e.message,'error'); console.error(e); }
 };
 
 /* ══════════════════════════════════════
