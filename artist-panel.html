@@ -454,27 +454,33 @@ async function sendArtistOtp(){
   const btn   = document.getElementById('sendArtistOtpBtn');
   btn.textContent = 'Sending…'; btn.disabled = true;
 
-  // Wait for module Firebase instances
+  // Wait for module to expose OTP function (max 5s)
   let waited = 0;
-  while(!window._thsAuth && waited < 40){ await new Promise(r=>setTimeout(r,100)); waited++; }
-  if(!window._thsAuth){
+  while(!window._thsSendOtp && waited < 50){ await new Promise(r=>setTimeout(r,100)); waited++; }
+  if(!window._thsSendOtp){
     errEl.textContent = 'Connection error. Refresh and try again.';
     btn.textContent = 'Send OTP'; btn.disabled = false; return;
   }
 
   try {
-    if(!window.artistRecaptcha){
-      window.artistRecaptcha = new window._thsRecaptchaVerifier(window._thsAuth, 'artist-recaptcha-container', {size:'invisible'});
-    }
-    artistConfirmationResult = await window._thsSignInWithPhone(window._thsAuth, phone, window.artistRecaptcha);
+    artistConfirmationResult = await window._thsSendOtp(phone, 'artist-recaptcha-container');
     document.getElementById('artistOtpPhone').textContent = '+91 ' + raw.replace(/(\d{5})(\d{5})/,'$1 $2');
     document.getElementById('artistStepPhone').style.display = 'none';
     document.getElementById('artistStepOtp').style.display   = 'block';
     document.getElementById('artistOtpInput').focus();
   } catch(e){
-    errEl.textContent = 'Failed to send OTP — ' + (e.message||'try again');
+    console.error('sendArtistOtp error:', e.code, e.message);
+    if(e.code === 'auth/invalid-phone-number'){
+      errEl.textContent = 'Invalid phone number format.';
+    } else if(e.code === 'auth/too-many-requests'){
+      errEl.textContent = 'Too many attempts. Please wait a few minutes and try again.';
+    } else if(e.code === 'auth/captcha-check-failed'){
+      errEl.textContent = 'Security check failed. Please refresh and try again.';
+    } else {
+      errEl.textContent = 'Failed to send OTP: ' + (e.message||e.code||'unknown error');
+    }
     btn.textContent = 'Send OTP'; btn.disabled = false;
-    if(window.artistRecaptcha){ try{window.artistRecaptcha.clear();}catch(x){} window.artistRecaptcha=null; }
+    if(window._thsClearRecaptcha) window._thsClearRecaptcha();
   }
 }
 
@@ -527,6 +533,7 @@ function artistBackToPhone(){
   document.getElementById('artistStepPhone').style.display = 'block';
   document.getElementById('artistPhoneInput').focus();
   artistConfirmationResult = null;
+  if(window._thsClearRecaptcha) window._thsClearRecaptcha();
 }
 
 function doLogout(){
@@ -564,12 +571,23 @@ const auth = getAuth(app);
 window._thsDb                 = db;
 window._thsGetDoc             = getDoc;
 window._thsDoc                = doc;
-window._thsAuth               = auth;
-window._thsSignIn             = (email, pass) => signInWithEmailAndPassword(auth, email, pass);
-window._thsSignInAnon         = () => signInAnonymously(auth);
 window._thsSignOut            = () => signOut(auth);
-window._thsRecaptchaVerifier  = RecaptchaVerifier;
-window._thsSignInWithPhone    = signInWithPhoneNumber;
+
+// OTP send — runs entirely inside module scope so RecaptchaVerifier
+// has full Firebase context. Returns a confirmation result.
+window._thsSendOtp = async function(phone, containerId){
+  if(!window._artistRecaptchaInstance){
+    window._artistRecaptchaInstance = new RecaptchaVerifier(auth, containerId, {size:'invisible'});
+  }
+  return await signInWithPhoneNumber(auth, phone, window._artistRecaptchaInstance);
+};
+
+window._thsClearRecaptcha = function(){
+  if(window._artistRecaptchaInstance){
+    try { window._artistRecaptchaInstance.clear(); } catch(e){}
+    window._artistRecaptchaInstance = null;
+  }
+};
 
 /* ══════════════════════════════════════
    ARTISTS CONFIG — batch assignments only

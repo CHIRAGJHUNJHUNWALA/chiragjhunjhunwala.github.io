@@ -454,18 +454,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <!-- ARTISTS -->
     <div class="view" id="view-artists">
       <div class="page-header">
-        <div><h1 class="page-title">Artists</h1><p class="page-sub">Manage artist logins, passwords and access</p></div>
-        <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
-          <button class="btn btn-outline btn-sm" onclick="migrateArtistsToFirebaseAuth()" style="border-color:rgba(245,230,66,0.4);color:var(--yellow)">
-            ⚡ Sync to Firebase Auth
-          </button>
-          <button class="btn btn-red" onclick="openAddArtist()">
-            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Artist
-          </button>
-        </div>
-      </div>
-      <div style="background:rgba(245,230,66,0.06);border:1px solid rgba(245,230,66,0.2);padding:0.85rem 1rem;margin-bottom:1.25rem;font-size:0.78rem;color:var(--muted)">
-        <strong style="color:var(--yellow)">Security:</strong> Artist passwords are verified by Firebase Auth — not read from Firestore during login. Click <strong style="color:var(--text)">Sync to Firebase Auth</strong> once to migrate existing artists. After that, only new/changed passwords need syncing (happens automatically).
+        <div><h1 class="page-title">Artists</h1><p class="page-sub">Manage artist access via phone OTP</p></div>
+        <button class="btn btn-red" onclick="openAddArtist()">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Artist
+        </button>
       </div>
       <div id="artistRosterList"></div>
     </div>
@@ -478,30 +470,15 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <!-- Master sees change password form -->
       <div id="settingsMasterView" style="display:none;max-width:420px">
         <div style="background:var(--bg2);border:1px solid var(--border);padding:1.5rem">
-          <p style="font-size:0.72rem;color:var(--muted);margin-bottom:1.25rem">To change any admin or artist password, go to <strong style="color:var(--text)">Admin Accounts</strong> or <strong style="color:var(--text)">Artists</strong> sections.</p>
-          <div class="form-group" style="margin-bottom:1rem">
-            <label>Current Password</label>
-            <div style="position:relative"><input type="password" id="settingsOldPass" placeholder="Enter current password" autocomplete="current-password" style="padding-right:2.5rem;width:100%"><button type="button" onclick="togglePassVis('settingsOldPass',this)" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0">👁</button></div>
-          </div>
-          <div class="form-group" style="margin-bottom:1rem">
-            <label>New Password</label>
-            <div style="position:relative"><input type="password" id="settingsNewPass" placeholder="Enter new password" autocomplete="new-password" style="padding-right:2.5rem;width:100%"><button type="button" onclick="togglePassVis('settingsNewPass',this)" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0">👁</button></div>
-          </div>
-          <div class="form-group" style="margin-bottom:1.5rem">
-            <label>Confirm New Password</label>
-            <div style="position:relative"><input type="password" id="settingsConfirmPass" placeholder="Confirm new password" autocomplete="new-password" style="padding-right:2.5rem;width:100%"><button type="button" onclick="togglePassVis('settingsConfirmPass',this)" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0">👁</button></div>
-          </div>
-          <button class="btn btn-red" onclick="changeAdminPassword()" style="width:100%">Change My Password</button>
-          <p id="settingsMsg" style="font-size:0.78rem;margin-top:0.75rem;text-align:center"></p>
+          <p style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem;font-family:'Syne',sans-serif">Admin Access</p>
+          <p style="font-size:0.82rem;color:var(--text);margin-bottom:0.5rem;line-height:1.6">Login is now via <strong>Phone OTP</strong> — no passwords needed.</p>
+          <p style="font-size:0.75rem;color:var(--muted);line-height:1.7">To add or remove an admin, update the <code style="background:var(--bg3);padding:0.1rem 0.3rem;font-size:0.7rem">ADMIN_PHONES</code> object in admin.html and the Firestore security rules in Firebase Console.</p>
         </div>
       </div>
-      <!-- Non-master sees info only -->
       <div id="settingsStaffView" style="display:none;max-width:420px">
-        <div style="background:var(--bg2);border:1px solid var(--border);padding:1.5rem;text-align:center">
-          <svg viewBox="0 0 24 24" width="36" height="36" stroke="var(--muted)" fill="none" stroke-width="1.5" style="margin-bottom:1rem"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          <p style="font-size:0.88rem;color:var(--text);margin-bottom:0.5rem;font-weight:500">Password changes are managed by the master admin.</p>
-          <p style="font-size:0.78rem;color:var(--muted);line-height:1.6">To change your password, contact <strong style="color:var(--text)">Chikki</strong> who can update it from the Admin Accounts section.</p>
-          <p style="font-size:0.72rem;color:var(--muted);margin-top:1rem">📞 +91 90579 75755</p>
+        <div style="background:var(--bg2);border:1px solid var(--border);padding:1.5rem">
+          <p style="font-size:0.88rem;color:var(--text);margin-bottom:0.5rem;font-weight:500">You're signed in via Phone OTP.</p>
+          <p style="font-size:0.78rem;color:var(--muted);line-height:1.6">Admin access is managed by phone number. Contact Chirag to update access.</p>
         </div>
       </div>
     </div>
@@ -1184,13 +1161,6 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           <span style="background:var(--bg3);padding:0.55rem 0.75rem;color:var(--muted);font-size:0.82rem;border-right:1px solid var(--border2);white-space:nowrap">+91</span>
           <input type="tel" id="artistNewPhone" maxlength="10" placeholder="10-digit mobile number"
             style="background:var(--bg2);border:none;padding:0.55rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;flex:1">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Password * <span style="font-weight:300;color:var(--muted);font-size:0.75em">— will be replaced by OTP login soon</span></label>
-        <div style="position:relative">
-          <input type="password" id="artistNewPass" placeholder="Min 6 characters" autocomplete="new-password" style="padding-right:2.5rem;width:100%">
-          <button type="button" onclick="togglePassVis('artistNewPass',this)" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0">👁</button>
         </div>
       </div>
     </div>
@@ -4817,64 +4787,30 @@ function applyMasterAccess(){
 ══════════════════════════════════════ */
 function renderAdminAccounts(){
   if(!isMaster()) return;
-  // If ADMINS is empty, reload from Firebase first
-  if(!ADMINS.length){
-    getDoc(doc(db,'settings','adminPasswords')).then(snap=>{
-      if(snap.exists()) ADMINS = snap.data().admins || [];
-      _renderAdminAccountsHTML();
-    }).catch(()=>_renderAdminAccountsHTML());
-    return;
-  }
-  _renderAdminAccountsHTML();
-}
-
-function _renderAdminAccountsHTML(){
-  document.getElementById('adminAccountsList').innerHTML = ADMINS.map((a,i)=>`
-    <div style="background:var(--bg2);border:1px solid ${a.blocked?'rgba(229,115,115,0.3)':'var(--border)'};padding:1.25rem;margin-bottom:0.75rem;display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:center;${a.blocked?'opacity:0.6':''}">
-      <div>
-        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;flex-wrap:wrap">
-          <p style="font-weight:600;color:var(--text);font-size:0.95rem">${a.user}</p>
-          ${a.user===MASTER_USER?`<span class="pill pill-red" style="font-size:0.6rem">MASTER</span>`:'<span class="pill pill-blue" style="font-size:0.6rem">Admin</span>'}
-          ${a.blocked?`<span class="pill" style="background:rgba(229,115,115,0.15);color:#e57373;border:1px solid rgba(229,115,115,0.3);font-size:0.6rem">BLOCKED</span>`:''}
+  document.getElementById('adminAccountsList').innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem;margin-bottom:0.75rem">
+      <p style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;font-family:'Syne',sans-serif">Admin Access — Phone OTP</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div style="background:var(--bg3);border:1px solid var(--border);padding:1rem">
+          <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.4rem">
+            <span class="pill pill-red" style="font-size:0.55rem">MASTER</span>
+            <p style="font-weight:600;color:var(--text)">Chirag</p>
+          </div>
+          <p style="font-family:monospace;font-size:0.85rem;color:var(--text)">+91 79844 48750</p>
+          <p style="font-size:0.7rem;color:var(--green);margin-top:0.3rem">✓ Full access</p>
         </div>
-        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem">
-          <span style="font-size:0.75rem;color:var(--muted)">Password:</span>
-          <span id="adpass-${i}" style="font-family:monospace;font-size:0.78rem;color:var(--text)">••••••••</span>
-          <button onclick="toggleAdminPassView(${i},'${a.pass}')" style="font-size:0.6rem;color:var(--muted);background:none;border:1px solid var(--border);padding:0.15rem 0.4rem;cursor:pointer;font-family:'Syne',sans-serif">Show</button>
+        <div style="background:var(--bg3);border:1px solid var(--border);padding:1rem">
+          <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.4rem">
+            <span class="pill pill-blue" style="font-size:0.55rem">ADMIN</span>
+            <p style="font-weight:600;color:var(--text)">Govind</p>
+          </div>
+          <p style="font-family:monospace;font-size:0.85rem;color:var(--text)">+91 92745 98929</p>
+          <p style="font-size:0.7rem;color:var(--mid);margin-top:0.3rem">Staff access</p>
         </div>
-        ${a.user!==MASTER_USER?`<div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
-          <input type="text" id="adnewpass-${i}" placeholder="Set new password"
-            style="background:var(--bg3);border:1px solid var(--border2);padding:0.4rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.78rem;outline:none;width:180px">
-          <button onclick="changeAdminAccountPassword(${i})" class="btn btn-outline btn-sm">Update</button>
-        </div>`:'<p style="font-size:0.72rem;color:var(--muted)">Change your password from My Password section</p>'}
       </div>
-      ${a.user!==MASTER_USER?`<div style="display:flex;flex-direction:column;gap:0.5rem;align-items:flex-end">
-        <button onclick="toggleAdminBlock(${i})" class="btn btn-sm" style="${a.blocked?'background:rgba(92,184,122,0.12);border:1px solid rgba(92,184,122,0.35);color:var(--green)':'background:rgba(229,115,115,0.1);border:1px solid rgba(229,115,115,0.35);color:#e57373'}">
-          ${a.blocked?'✓ Unblock':'⊘ Block'}
-        </button>
-        <button onclick="deleteAdminAccount(${i})" class="btn btn-sm" style="background:rgba(229,115,115,0.08);border:1px solid rgba(229,115,115,0.2);color:#e57373;font-size:0.6rem">
-          Delete
-        </button>
-      </div>`:'<div></div>'}
-    </div>`).join('') || `<div style="padding:2rem;text-align:center;color:var(--muted);border:1px dashed var(--border)">No admin accounts found. Click "Add Admin" to create one.</div>`;
+      <p style="font-size:0.72rem;color:var(--muted);margin-top:1rem;line-height:1.6">Admin access is controlled by phone numbers hardcoded in Firestore security rules. To add or remove admins, update the rules in Firebase Console and the <code style="font-size:0.7rem;background:var(--bg3);padding:0.1rem 0.3rem">ADMIN_PHONES</code> object in admin.html.</p>
+    </div>`;
 }
-
-window.toggleAdminPassView = function(i,pass){
-  const el=document.getElementById('adpass-'+i);
-  const btn=el.nextElementSibling;
-  if(el.textContent==='••••••••'){el.textContent=pass;btn.textContent='Hide';}
-  else{el.textContent='••••••••';btn.textContent='Show';}
-};
-
-window.changeAdminAccountPassword = async function(i){
-  const newPass=document.getElementById('adnewpass-'+i).value.trim();
-  if(!newPass||newPass.length<6){showToast('Min 6 characters required','error');return;}
-  ADMINS[i].pass=newPass;
-  await setDoc(doc(db,'settings','adminPasswords'),{admins:ADMINS},{merge:true});
-  document.getElementById('adnewpass-'+i).value='';
-  showToast(`${ADMINS[i].user}'s password updated ✓`);
-  renderAdminAccounts();
-};
 
 window.toggleAdminBlock = async function(i){
   if(ADMINS[i].user===MASTER_USER){showToast('Cannot block master account','error');return;}
@@ -4920,7 +4856,7 @@ window.saveAdminAccount = async function(){
 window.openAddArtist = function(){
   document.getElementById('addArtistTitle').textContent='Add Artist';
   document.getElementById('artistEditIdx').value='';
-  ['artistNewName','artistNewUser','artistNewPass','artistNewId','artistNewPhone'].forEach(id=>{
+  ['artistNewName','artistNewUser','artistNewId','artistNewPhone'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('artistNewRole').value='trainer';
@@ -4931,57 +4867,18 @@ window.openAddArtist = function(){
    FIREBASE AUTH SYNC FOR ARTISTS
    Uses a secondary app so admin is never signed out
 ══════════════════════════════════════ */
-const ARTIST_AUTH_DOMAIN = 'artist.thehappeningspace.com'; // email suffix for artist accounts
-
-async function syncArtistFirebaseAuth(username, newPass, oldPass=null){
-  const email  = `${username}@${ARTIST_AUTH_DOMAIN}`;
-  let sApp, sAuth;
-  try {
-    sApp  = initializeApp(firebaseConfig, 'artist-sync-' + Date.now());
-    sAuth = getAuth(sApp);
-
-    if(oldPass){
-      // Existing artist: sign in with old pass, delete, recreate with new pass
-      try {
-        const cred = await signInWithEmailAndPassword(sAuth, email, oldPass);
-        await deleteUser(cred.user);
-      } catch(e){
-        // User might not exist in Firebase Auth yet (pre-migration artist)
-        // That's fine — we'll create them fresh below
-        console.log('syncArtistAuth: existing user not found, creating fresh');
-      }
-    }
-
-    // Create with new password
-    await createUserWithEmailAndPassword(sAuth, email, newPass);
-    await signOut(sAuth);
-    return true;
-  } catch(e){
-    console.error('syncArtistFirebaseAuth failed:', e.code, e.message);
-    return false;
-  } finally {
-    if(sApp) await deleteApp(sApp).catch(()=>{});
-  }
-}
-
 window.saveArtistAccount = async function(){
   const name     = document.getElementById('artistNewName').value.trim();
   const user     = document.getElementById('artistNewUser').value.trim().toLowerCase().replace(/\s+/g,'');
-  const pass     = document.getElementById('artistNewPass').value.trim();
   const role     = document.getElementById('artistNewRole').value;
-  const artistId = user; // username IS the artist ID — same value always
+  const artistId = user;
   const rawPhone = document.getElementById('artistNewPhone').value.trim().replace(/\D/g,'');
   const phone    = rawPhone ? '+91' + rawPhone.slice(-10) : '';
-  if(!name||!user||!pass){showToast('Name, username and password required','error');return;}
-  if(pass.length<6){showToast('Password must be at least 6 characters','error');return;}
-  if(!phone){showToast('Phone number required for OTP login','error');return;}
-  if(ARTIST_ROSTER.find(a=>a.user===user)){showToast('Username already exists','error');return;}
+  if(!name||!user){ showToast('Name and username are required','error'); return; }
+  if(!phone){ showToast('Phone number is required for OTP login','error'); return; }
+  if(ARTIST_ROSTER.find(a=>a.user===user)){ showToast('Username already exists','error'); return; }
 
-  showToast('Creating artist account…');
-  const ok = await syncArtistFirebaseAuth(user, pass);
-  if(!ok) showToast('Firebase Auth sync failed — password login may not work until synced','error');
-
-  ARTIST_ROSTER.push({user, pass, name, role, artistId, phone, blocked:false});
+  ARTIST_ROSTER.push({user, name, role, artistId, phone, blocked:false});
   await setDoc(doc(db,'settings','artistPasswords'),{artists:ARTIST_ROSTER},{merge:true});
   closeModal('addArtistModal');
   showToast(`Artist "${name}" added ✓`);
@@ -4998,68 +4895,6 @@ window.editArtistPhone = async function(i){
   await setDoc(doc(db,'settings','artistPasswords'),{artists:ARTIST_ROSTER},{merge:true});
   showToast(`${ARTIST_ROSTER[i].name}'s phone updated ✓`);
   renderArtistRoster();
-};
-
-window.changeArtistPassword = async function(i){
-  const newPass = document.getElementById('anewpass-'+i).value.trim();
-  if(!newPass||newPass.length<6){showToast('Min 6 characters required','error');return;}
-  const oldPass = ARTIST_ROSTER[i].pass;
-  const username = ARTIST_ROSTER[i].user;
-
-  showToast('Updating password…');
-  const ok = await syncArtistFirebaseAuth(username, newPass, oldPass);
-  if(!ok) showToast('Firebase Auth sync failed — password update may not have taken effect','error');
-
-  ARTIST_ROSTER[i].pass = newPass;
-  await setDoc(doc(db,'settings','artistPasswords'),{artists:ARTIST_ROSTER},{merge:true});
-  document.getElementById('anewpass-'+i).value='';
-  showToast(`${ARTIST_ROSTER[i].name}'s password updated ✓`);
-  renderArtistRoster();
-};
-
-window.migrateArtistsToFirebaseAuth = async function(){
-  if(!ARTIST_ROSTER.length){
-    showToast('No artists loaded — visit Artists section first','error'); return;
-  }
-  if(!confirm(`Sync ${ARTIST_ROSTER.length} artist(s) to Firebase Auth?\n\nCreates secure login accounts. Takes a few seconds per artist.`)) return;
-  showToast(`Syncing ${ARTIST_ROSTER.length} artists…`);
-  let ok=0, fail=0;
-  for(const a of ARTIST_ROSTER){
-    if(!a.pass){ fail++; continue; }
-    const success = await syncArtistFirebaseAuth(a.user, a.pass);
-    success ? ok++ : fail++;
-  }
-  showToast(fail===0 ? `✓ All ${ok} artist(s) synced to Firebase Auth` : `${ok} synced · ${fail} failed — check console`);
-};
-
-window.togglePassVis = function(inputId, btn){
-  const el = document.getElementById(inputId);
-  if(!el) return;
-  const isHidden = el.type === 'password';
-  el.type = isHidden ? 'text' : 'password';
-  btn.textContent = isHidden ? '🙈' : '👁';
-};
-window.changeAdminPassword = async function(){
-  if(!isMaster()){ showToast('Only master admin can change passwords','error'); return; }
-  const oldPass = document.getElementById('settingsOldPass').value;
-  const newPass = document.getElementById('settingsNewPass').value;
-  const confirm = document.getElementById('settingsConfirmPass').value;
-  const msg     = document.getElementById('settingsMsg');
-
-  const me = ADMINS.find(a=>a.user===currentAdminUser);
-  if(!me||me.pass!==oldPass){
-    msg.style.color='#e57373'; msg.textContent='Current password is incorrect.'; return;
-  }
-  if(!newPass||newPass.length<6){
-    msg.style.color='#e57373'; msg.textContent='New password must be at least 6 characters.'; return;
-  }
-  if(newPass!==confirm){
-    msg.style.color='#e57373'; msg.textContent='Passwords do not match.'; return;
-  }
-  me.pass = newPass;
-  await setDoc(doc(db,'settings','adminPasswords'),{admins:ADMINS},{merge:true});
-  msg.style.color='var(--green)'; msg.textContent='Password changed ✓';
-  ['settingsOldPass','settingsNewPass','settingsConfirmPass'].forEach(id=>document.getElementById(id).value='');
 };
 
 /* ══════════════════════════════════════
@@ -5094,23 +4929,10 @@ function _renderArtistRosterHTML(){
           </div>
           <div>
             <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.15rem">Phone (OTP Login)</p>
-            <p style="font-size:0.82rem;color:var(--text);font-weight:500">${a.phone||'<span style="color:var(--muted);font-style:italic">Not set</span>'}</p>
+            <p style="font-size:0.82rem;color:${a.phone?'var(--text)':'var(--muted)'};font-weight:${a.phone?'500':'400'};font-style:${a.phone?'normal':'italic'}">${a.phone||'Not set — add phone to enable login'}</p>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem">
-          <span style="font-size:0.75rem;color:var(--muted)">Password:</span>
-          <span id="apass-${i}" style="font-family:monospace;font-size:0.78rem;color:var(--text)">••••••••</span>
-          <button onclick="toggleArtistPassView(${i},'${a.pass}')" style="font-size:0.6rem;color:var(--muted);background:none;border:1px solid var(--border);padding:0.15rem 0.4rem;cursor:pointer;font-family:'Syne',sans-serif">Show</button>
-        </div>
-        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
-          <div style="position:relative">
-            <input type="password" id="anewpass-${i}" placeholder="Set new password" autocomplete="new-password"
-              style="background:var(--bg3);border:1px solid var(--border2);padding:0.4rem 2.2rem 0.4rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.78rem;outline:none;width:180px">
-            <button type="button" onclick="togglePassVis('anewpass-${i}',this)" style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.9rem;line-height:1;padding:0">👁</button>
-          </div>
-          <button onclick="changeArtistPassword(${i})" class="btn btn-outline btn-sm">Update</button>
-          <button onclick="editArtistPhone(${i})" class="btn btn-outline btn-sm" style="border-color:rgba(100,180,255,0.4);color:#6ab0f5">📱 Phone</button>
-        </div>
+        <button onclick="editArtistPhone(${i})" class="btn btn-outline btn-sm" style="border-color:rgba(100,180,255,0.4);color:#6ab0f5;margin-top:0.25rem">📱 Edit Phone</button>
       </div>
       <div style="display:flex;gap:0.5rem;flex-direction:column;align-items:flex-end">
         <button onclick="toggleArtistBlock(${i})" class="btn btn-sm" style="${a.blocked?'background:rgba(92,184,122,0.12);border:1px solid rgba(92,184,122,0.35);color:var(--green)':'background:rgba(229,115,115,0.1);border:1px solid rgba(229,115,115,0.35);color:#e57373'}">
@@ -5122,13 +4944,6 @@ function _renderArtistRosterHTML(){
       </div>
     </div>`).join('') || `<div style="padding:2rem;text-align:center;color:var(--muted);border:1px dashed var(--border)">No artists found. Click "Add New Artist" to create one.</div>`;
 }
-
-window.toggleArtistPassView = function(i,pass){
-  const el=document.getElementById('apass-'+i);
-  const btn=el.nextElementSibling;
-  if(el.textContent==='••••••••'){el.textContent=pass;btn.textContent='Hide';}
-  else{el.textContent='••••••••';btn.textContent='Show';}
-};
 
 window.toggleArtistBlock = async function(i){
   ARTIST_ROSTER[i].blocked=!ARTIST_ROSTER[i].blocked;
