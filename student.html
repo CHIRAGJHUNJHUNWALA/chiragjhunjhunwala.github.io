@@ -499,14 +499,14 @@ function getExpiryDate(s){
 async function loadStudentData(phone){
   try {
     const normPhone = normalisePhone(phone);
+    // Use WHERE queries — reads only this student's data
+    // This satisfies Firestore security rules AND is faster
     const [regSnap, batchSnap] = await Promise.all([
-      getDocs(collection(db,'registrations')),
-      getDocs(collection(db,'batchStudents')),
+      getDocs(query(collection(db,'registrations'), where('phone','==',normPhone))),
+      getDocs(query(collection(db,'batchStudents'),  where('phone','==',normPhone))),
     ]);
-    const regs    = regSnap.docs.map(d=>({id:d.id,...d.data()}))
-                      .filter(r=>normalisePhone(r.phone||'')===normPhone);
-    const batches = batchSnap.docs.map(d=>({id:d.id,...d.data()}))
-                      .filter(s=>normalisePhone(s.phone||'')===normPhone);
+    const regs    = regSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const batches = batchSnap.docs.map(d=>({id:d.id,...d.data()}));
     const name = (regs[0]?.name || batches[0]?.name || 'Student').trim();
     sessionStorage.setItem('ths_student', JSON.stringify({phone:normPhone, name}));
     showApp(normPhone, name, regs, batches);
@@ -611,13 +611,17 @@ async function renderBatches(batches, phone){
 
 async function renderAttendance(s, phone){
   try {
-    // Get all attendance docs for this batch and artist
-    const attSnap = await getDocs(collection(db,'attendance'));
-    const docs    = attSnap.docs
+    // Query only this student's batch attendance — not the whole collection
+    const attSnap = await getDocs(
+      query(collection(db,'attendance'),
+        where('batchId','==', s.batchId),
+        where('artistId','==', s.artistId)
+      )
+    );
+    const docs = attSnap.docs
       .map(d=>({id:d.id,...d.data()}))
-      .filter(d=>d.batchId===s.batchId && d.artistId===s.artistId)
       .sort((a,b)=>b.weekKey.localeCompare(a.weekKey))
-      .slice(0,8); // Last 8 weeks
+      .slice(0,8);
 
     if(!docs.length) return `<div style="padding:1rem 1.5rem 1.5rem"><p style="font-size:0.82rem;color:var(--text-muted)">No attendance recorded yet.</p></div>`;
 
@@ -798,51 +802,24 @@ function renderHistory(expiredBatches, completedRegs){
     });
   }
 
-  // Completed workshops — expand each slot check-in as its own entry
+  // Completed workshops
   if(completedRegs.length){
     html += `<p class="section-eyebrow" style="margin-top:2rem">Attended Workshops</p>`;
     completedRegs.forEach(r => {
-      const checkedInSlots = r.checkedInSlots || {};
-      const slotParts = (r.slots||'').split('|').map(s=>s.trim()).filter(Boolean);
-      const hasMulti = slotParts.length > 1;
-
-      if(hasMulti && Object.keys(checkedInSlots).length){
-        // Show one card per checked-in slot
-        slotParts.forEach((sp, idx) => {
-          const key  = 's'+(idx+1);
-          const time = checkedInSlots[key];
-          if(!time) return; // skip slots not scanned yet
-          html += `<div class="booking-card" style="opacity:0.75">
-            <div class="booking-card-header">
-              <div>
-                <p class="booking-artist">${r.workshop||'—'}</p>
-                <p class="booking-style">${sp}</p>
-              </div>
-              <span class="pill pill-green">✓ Scanned</span>
-            </div>
-            <div class="booking-body">
-              <div class="info-item"><strong>Checked In At</strong><span style="color:var(--green)">${time}</span></div>
-              <div class="info-item"><strong>Amount Paid</strong><span>₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</span></div>
-            </div>
-          </div>`;
-        });
-      } else {
-        // Single-slot or legacy check-in
-        html += `<div class="booking-card" style="opacity:0.7">
-          <div class="booking-card-header">
-            <div>
-              <p class="booking-artist">${r.workshop||'—'}</p>
-              <p class="booking-style">${r.style||'Workshop'}</p>
-            </div>
-            <span class="pill pill-green">✓ Attended</span>
+      html += `<div class="booking-card" style="opacity:0.7">
+        <div class="booking-card-header">
+          <div>
+            <p class="booking-artist">${r.workshop||'—'}</p>
+            <p class="booking-style">${r.style||'Workshop'}</p>
           </div>
-          <div class="booking-body">
-            <div class="info-item"><strong>Slot / Song</strong><span style="color:var(--yellow)">${r.slots||'—'}</span></div>
-            <div class="info-item"><strong>Checked In</strong><span style="color:var(--green)">${r.checkedInAt||Object.values(checkedInSlots)[0]||'—'}</span></div>
-            <div class="info-item"><strong>Amount Paid</strong><span>₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</span></div>
-          </div>
-        </div>`;
-      }
+          <span class="pill pill-green">✓ Attended</span>
+        </div>
+        <div class="booking-body">
+          <div class="info-item"><strong>Slot / Song</strong><span style="color:var(--yellow)">${r.slots||'—'}</span></div>
+          <div class="info-item"><strong>Checked In</strong><span style="color:var(--green)">${r.checkedInAt||'—'}</span></div>
+          <div class="info-item"><strong>Amount Paid</strong><span>₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</span></div>
+        </div>
+      </div>`;
     });
   }
 
