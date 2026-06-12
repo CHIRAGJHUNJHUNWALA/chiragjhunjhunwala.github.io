@@ -1509,11 +1509,29 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 
       <!-- Student count table -->
       <div style="padding:1.25rem 1.5rem 0.75rem;border-bottom:1px solid var(--border)">
-        <p style="font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.6rem">Student Count</p>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem">
+          <p style="font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin:0">Student Count</p>
+          <div style="display:flex;gap:0.4rem;font-size:0.6rem;color:var(--muted);font-family:'Syne',sans-serif">
+            <span style="color:var(--text)">REG</span>
+            <span>/</span>
+            <span style="color:var(--green)">ATT</span>
+          </div>
+        </div>
         <div id="wsSettleSlotCounts" style="font-size:0.85rem;color:var(--text)"></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.75rem;padding-top:0.6rem;border-top:1px solid var(--border)">
-          <span style="font-size:0.75rem;color:var(--muted)">Total Revenue</span>
-          <span id="wsSettleGross" style="font-size:1.1rem;font-weight:700;color:var(--text);font-family:'Syne',sans-serif">₹0</span>
+        <div style="margin-top:0.75rem;padding-top:0.6rem;border-top:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.65rem">
+            <span style="font-size:0.75rem;color:var(--muted)">Total Revenue</span>
+            <span id="wsSettleGross" style="font-size:1.1rem;font-weight:700;color:var(--text);font-family:'Syne',sans-serif">₹0</span>
+          </div>
+          <!-- Exclude non-attended toggle -->
+          <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;padding:0.6rem 0.75rem;background:var(--bg3);border:1px solid var(--border)">
+            <input type="checkbox" id="wsExcludeNonAtt" onchange="recalcSettlement()" style="width:15px;height:15px;accent-color:var(--red);cursor:pointer">
+            <div>
+              <p style="font-size:0.78rem;font-weight:600;color:var(--text);margin:0">Exclude non-attended students</p>
+              <p style="font-size:0.68rem;color:var(--muted);margin:0">Settlement based on attended only — non-attended amount adds to studio</p>
+            </div>
+            <span id="wsNonAttAmt" style="font-size:0.75rem;color:var(--muted);margin-left:auto;white-space:nowrap"></span>
+          </label>
         </div>
       </div>
 
@@ -1582,6 +1600,11 @@ tr:hover td{background:rgba(255,255,255,0.02)}
             <div style="display:flex;justify-content:space-between">
               <span style="color:var(--muted)">Studio Payout</span>
               <span id="sc-studio" style="color:var(--text)">₹0</span>
+            </div>
+            <div id="sc-studio-extra-row" style="display:none;flex-direction:column;gap:0.1rem;background:rgba(100,180,255,0.06);border:1px solid rgba(100,180,255,0.15);padding:0.4rem 0.6rem;margin-top:0.25rem;font-size:0.75rem">
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">↳ Base studio</span><span id="sc-studio-base" style="color:var(--muted)">₹0</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:#6ab0f5">+ Non-attended extra</span><span id="sc-studio-nonatt" style="color:#6ab0f5">₹0</span></div>
+              <div style="display:flex;justify-content:space-between;border-top:1px solid rgba(100,180,255,0.2);padding-top:0.25rem;font-weight:700"><span style="color:var(--text)">Total Studio</span><span id="sc-studio-total" style="color:var(--text)">₹0</span></div>
             </div>
           </div>
         </div>
@@ -2185,8 +2208,9 @@ window.sortAndRenderWorkshops = function(){ renderWorkshopGrid(); };
 ══════════════════════════════════════ */
 let _wsSettleCurrentId  = null;
 let _wsSettleGross      = 0;
+let _wsSettleAttRev     = 0; // attended-only revenue
 let _wsSettleIsPaid     = false;
-let _wsSettleSlotData   = []; // [{song, date, time, count}]
+let _wsSettleSlotData   = [];
 let _wsSettleArtistName = '';
 let _wsSettleDate       = '';
 
@@ -2209,55 +2233,68 @@ window.openWsSettlement = async function(wId){
   document.getElementById('wsSettleTitleStyle').textContent  = [w.style, _wsSettleDate].filter(Boolean).join(' · ');
 
   const wsRegs = registrations.filter(r=>r.workshop===w.artist||r.workshopId===wId);
+  const isAtt  = r => r.checkedIn===true || Object.keys(r.checkedInSlots||{}).length>0;
   const slots  = w.slots||[];
-  let totalRev = 0;
+  let totalRev=0, totalAttRev=0;
   _wsSettleSlotData = [];
 
-  // Build slot count display
   let slotCountHTML = '';
+
   if(slots.length > 0){
     slots.forEach((s,i)=>{
-      const slotRegs = slots.length===1 ? wsRegs : wsRegs.filter(r=>{
+      const useRegs = slots.length===1 ? wsRegs : wsRegs.filter(r=>{
         const parts=(r.slots||'').split('|').map(x=>x.trim());
         return parts.some(p=>p.includes(s.song||`Slot ${i+1}`)||p.includes(s.id||''));
       });
-      const useRegs = slots.length===1 ? wsRegs : slotRegs;
-      const count   = useRegs.length;
-      const rev     = useRegs.reduce((sum,r)=>sum+parseFloat(r.amount_paid||r.price||0),0);
-      totalRev += rev;
-      const label = s.song || `Slot ${i+1}`;
-      _wsSettleSlotData.push({label, date:s.date||'', time:s.time||'', count});
-      slotCountHTML += `<div style="display:flex;justify-content:space-between;padding:0.2rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+      const reg    = useRegs.length;
+      const att    = useRegs.filter(isAtt).length;
+      const rev    = useRegs.reduce((sum,r)=>sum+parseFloat(r.amount_paid||r.price||0),0);
+      const attRev = useRegs.filter(isAtt).reduce((sum,r)=>sum+parseFloat(r.amount_paid||r.price||0),0);
+      totalRev    += rev;
+      totalAttRev += attRev;
+      const label  = s.song || `Slot ${i+1}`;
+      _wsSettleSlotData.push({label, date:s.date||'', time:s.time||'', count:reg, attended:att, revenue:rev, attendedRevenue:attRev});
+      slotCountHTML += `<div style="display:flex;justify-content:space-between;padding:0.25rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
         <span style="color:var(--muted)">${label}</span>
-        <span style="color:var(--text);font-weight:600">${count}</span>
+        <span style="font-size:0.82rem"><span style="color:var(--text);font-weight:600">${reg}</span><span style="color:var(--muted);font-size:0.72rem"> reg</span>&nbsp;&nbsp;<span style="color:var(--green);font-weight:600">${att}</span><span style="color:var(--muted);font-size:0.72rem"> att</span></span>
       </div>`;
     });
   } else {
-    const count = wsRegs.length;
-    const rev   = wsRegs.reduce((sum,r)=>sum+parseFloat(r.amount_paid||r.price||0),0);
-    totalRev = rev;
-    _wsSettleSlotData = [{label:'All Slots', date:'', time:'', count}];
-    slotCountHTML = `<div style="display:flex;justify-content:space-between;padding:0.2rem 0">
+    const reg    = wsRegs.length;
+    const att    = wsRegs.filter(isAtt).length;
+    const rev    = wsRegs.reduce((sum,r)=>sum+parseFloat(r.amount_paid||r.price||0),0);
+    const attRev = wsRegs.filter(isAtt).reduce((sum,r)=>sum+parseFloat(r.amount_paid||r.price||0),0);
+    totalRev = rev; totalAttRev = attRev;
+    _wsSettleSlotData = [{label:'All Slots', date:'', time:'', count:reg, attended:att, revenue:rev, attendedRevenue:attRev}];
+    slotCountHTML = `<div style="display:flex;justify-content:space-between;padding:0.25rem 0">
       <span style="color:var(--muted)">Total Students</span>
-      <span style="color:var(--text);font-weight:600">${count}</span>
+      <span style="font-size:0.82rem"><span style="color:var(--text);font-weight:600">${reg}</span><span style="color:var(--muted);font-size:0.72rem"> reg</span>&nbsp;&nbsp;<span style="color:var(--green);font-weight:600">${att}</span><span style="color:var(--muted);font-size:0.72rem"> att</span></span>
     </div>`;
   }
 
-  const totalStudents = _wsSettleSlotData.reduce((s,r)=>s+r.count,0);
-  slotCountHTML += `<div style="display:flex;justify-content:space-between;padding:0.4rem 0;font-size:0.8rem;font-weight:700;border-top:1px solid var(--border);margin-top:0.3rem">
+  // Totals row
+  const totalReg = _wsSettleSlotData.reduce((s,r)=>s+r.count,0);
+  const totalAtt = _wsSettleSlotData.reduce((s,r)=>s+r.attended,0);
+  slotCountHTML += `<div style="display:flex;justify-content:space-between;padding:0.35rem 0;font-weight:700;border-top:1px solid var(--border);margin-top:0.2rem">
     <span style="color:var(--text)">Total</span>
-    <span style="color:var(--text)">${totalStudents}</span>
+    <span style="font-size:0.82rem"><span style="color:var(--text)">${totalReg}</span><span style="color:var(--muted);font-size:0.72rem"> reg</span>&nbsp;&nbsp;<span style="color:var(--green)">${totalAtt}</span><span style="color:var(--muted);font-size:0.72rem"> att</span></span>
   </div>`;
 
   document.getElementById('wsSettleSlotCounts').innerHTML = slotCountHTML;
-  _wsSettleGross = totalRev;
+  _wsSettleGross    = totalRev;
+  _wsSettleAttRev   = totalAttRev;
   document.getElementById('wsSettleGross').textContent = '₹'+totalRev.toLocaleString('en-IN');
+
+  // Non-attended hint
+  const nonAttRev = totalRev - totalAttRev;
+  document.getElementById('wsNonAttAmt').textContent = nonAttRev>0 ? `+₹${nonAttRev.toLocaleString('en-IN')} to studio` : '';
 
   // Restore saved settlement
   const saved = wsSettlements[wId];
-  document.getElementById('wsSettleGstPct').value      = saved?.gstPercent  ?? 6;
-  document.getElementById('wsSettleArtistPct').value   = saved?.artistPercent ?? 70;
-  document.getElementById('wsSettleRemarks').value     = saved?.remarks || '';
+  document.getElementById('wsSettleGstPct').value    = saved?.gstPercent  ?? 6;
+  document.getElementById('wsSettleArtistPct').value = saved?.artistPercent ?? 70;
+  document.getElementById('wsSettleRemarks').value   = saved?.remarks || '';
+  document.getElementById('wsExcludeNonAtt').checked = saved?.excludeNonAtt || false;
 
   // Restore expenses
   document.getElementById('wsSettleExpenses').innerHTML = '';
@@ -2294,39 +2331,63 @@ window.addExpenseRow = function(desc='', amount=''){
 };
 
 window.recalcSettlement = function(){
+  const excludeNonAtt = document.getElementById('wsExcludeNonAtt')?.checked || false;
   const gross    = _wsSettleGross;
-  const gstPct   = parseFloat(document.getElementById('wsSettleGstPct').value)||0;
-  const artPct   = parseFloat(document.getElementById('wsSettleArtistPct').value)||0;
+  const attRev   = _wsSettleAttRev;
+  const nonAttRev = Math.max(gross - attRev, 0);
 
-  const gstAmt   = Math.round(gross * gstPct / 100);
-  const afterGst = gross - gstAmt;
+  // Revenue base depends on exclude toggle
+  const base   = excludeNonAtt ? attRev : gross;
+  const gstPct = parseFloat(document.getElementById('wsSettleGstPct').value)||0;
+  const artPct = parseFloat(document.getElementById('wsSettleArtistPct').value)||0;
+
+  const gstAmt   = Math.round(base * gstPct / 100);
+  const afterGst = base - gstAmt;
   const artRaw   = Math.round(afterGst * artPct / 100);
 
-  // Expenses
-  const expRows  = Array.from(document.querySelectorAll('#wsSettleExpenses > div'));
-  let totalExp   = 0;
+  // Expenses — FIX: only 2 inputs per row (text + number)
+  const expRows = Array.from(document.querySelectorAll('#wsSettleExpenses > div'));
+  let totalExp  = 0;
   const expLines = expRows.map(row=>{
-    const [descEl,,amtEl] = row.querySelectorAll('input');
-    const amt = parseFloat(amtEl?.value)||0;
-    totalExp += amt;
+    const inputs = row.querySelectorAll('input');
+    const descEl = inputs[0];
+    const amtEl  = inputs[1]; // was [,,amtEl] before — BUG FIXED
+    const amt    = parseFloat(amtEl?.value)||0;
+    totalExp    += amt;
     return {desc: descEl?.value.trim()||'Expense', amount: amt};
   }).filter(e=>e.amount>0);
   document.getElementById('wsExpenseTotal').textContent = '₹'+totalExp.toLocaleString('en-IN');
 
   const artAfterExp  = artRaw - totalExp;
-  const tdsAmt       = Math.round(artAfterExp * 1 / 100);
-  const artistPayout = artAfterExp - tdsAmt;
-  const studioPayout = afterGst - artRaw;
+  const tdsAmt       = Math.round(Math.max(artAfterExp,0) * 1 / 100);
+  const artistPayout = Math.max(artAfterExp - tdsAmt, 0);
+  const studioBase   = afterGst - artRaw;
+  const studioExtra  = excludeNonAtt ? nonAttRev : 0;
+  const studioTotal  = studioBase + studioExtra;
+
+  // Update left side total label
+  document.getElementById('wsSettleGross').textContent = '₹'+(excludeNonAtt?attRev:gross).toLocaleString('en-IN');
 
   // Update live panel
-  document.getElementById('sc-total').textContent     = '₹'+gross.toLocaleString('en-IN');
-  document.getElementById('sc-gst').textContent       = '− ₹'+gstAmt.toLocaleString('en-IN');
-  document.getElementById('sc-aftergst').textContent  = '₹'+afterGst.toLocaleString('en-IN');
-  document.getElementById('sc-artpct').textContent    = artPct;
-  document.getElementById('sc-artist').textContent    = '₹'+artRaw.toLocaleString('en-IN');
-  document.getElementById('sc-tds').textContent       = '− ₹'+tdsAmt.toLocaleString('en-IN');
+  document.getElementById('sc-total').textContent        = '₹'+base.toLocaleString('en-IN');
+  document.getElementById('sc-gst').textContent          = '− ₹'+gstAmt.toLocaleString('en-IN');
+  document.getElementById('sc-aftergst').textContent     = '₹'+afterGst.toLocaleString('en-IN');
+  document.getElementById('sc-artpct').textContent       = artPct;
+  document.getElementById('sc-artist').textContent       = '₹'+artRaw.toLocaleString('en-IN');
+  document.getElementById('sc-tds').textContent          = '− ₹'+tdsAmt.toLocaleString('en-IN');
   document.getElementById('sc-artistpayout').textContent = '₹'+artistPayout.toLocaleString('en-IN');
-  document.getElementById('sc-studio').textContent    = '₹'+studioPayout.toLocaleString('en-IN');
+  document.getElementById('sc-studio').textContent       = '₹'+studioBase.toLocaleString('en-IN');
+
+  // Studio extra row
+  const extraRow = document.getElementById('sc-studio-extra-row');
+  if(excludeNonAtt && studioExtra > 0){
+    extraRow.style.display   = 'flex';
+    document.getElementById('sc-studio-base').textContent   = '₹'+studioBase.toLocaleString('en-IN');
+    document.getElementById('sc-studio-nonatt').textContent = '₹'+studioExtra.toLocaleString('en-IN');
+    document.getElementById('sc-studio-total').textContent  = '₹'+studioTotal.toLocaleString('en-IN');
+  } else {
+    extraRow.style.display = 'none';
+  }
 
   // Expense rows in panel
   let expPanelHTML = '';
@@ -2335,16 +2396,21 @@ window.recalcSettlement = function(){
   });
   document.getElementById('sc-expense-rows').innerHTML = expPanelHTML;
 
-  // Store for WhatsApp
-  window._wsSettleCalcData = {gross,gstPct,gstAmt,afterGst,artPct,artRaw,expLines,totalExp,artAfterExp,tdsAmt,artistPayout,studioPayout};
+  // Store for WhatsApp + save
+  window._wsSettleCalcData = {
+    gross: base, gstPct, gstAmt, afterGst, artPct, artRaw,
+    expLines, totalExp, artAfterExp, tdsAmt, artistPayout,
+    studioBase, studioExtra, studioTotal, excludeNonAtt,
+    nonAttRev, totalRevenue: gross
+  };
 };
 
 window.saveWsSettlement = async function(){
   if(!_wsSettleCurrentId) return;
   const c = window._wsSettleCalcData || {};
   const expRows = Array.from(document.querySelectorAll('#wsSettleExpenses > div')).map(row=>{
-    const [descEl,,amtEl]=row.querySelectorAll('input');
-    return {desc:descEl?.value.trim()||'',amount:parseFloat(amtEl?.value)||0};
+    const inputs = row.querySelectorAll('input');
+    return {desc:inputs[0]?.value.trim()||'', amount:parseFloat(inputs[1]?.value)||0};
   }).filter(e=>e.amount>0);
   const w = workshops.find(x=>x.id===_wsSettleCurrentId);
   const data = {
@@ -2358,7 +2424,10 @@ window.saveWsSettlement = async function(){
     expenses:      expRows,
     tdsAmount:     c.tdsAmt||0,
     artistPayout:  c.artistPayout||0,
-    studioPayout:  c.studioPayout||0,
+    studioBase:    c.studioBase||0,
+    studioExtra:   c.studioExtra||0,
+    studioPayout:  c.studioTotal||0,
+    excludeNonAtt: c.excludeNonAtt||false,
     artistPaid:    _wsSettleIsPaid,
     paidAt:        wsSettlements[_wsSettleCurrentId]?.paidAt||null,
     remarks:       document.getElementById('wsSettleRemarks').value.trim(),
