@@ -110,9 +110,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
 .strip-section{padding:4rem 0;overflow:hidden;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--off-black);position:relative}
 .strip-track{display:flex;gap:1rem;animation:stripScroll 30s linear infinite;width:max-content}
 .strip-track:hover{animation-play-state:paused}
-.strip-photo{width:280px;height:190px;flex-shrink:0;overflow:hidden;position:relative;border-radius:2px}
-.strip-photo .ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.25);font-weight:500;transition:transform 0.4s ease}
-.strip-photo:hover .ph{transform:scale(1.04)}
+.strip-photo{width:280px;height:190px;flex-shrink:0;overflow:hidden;position:relative;border-radius:2px;background:#111}
+.strip-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.strip-photo .ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.25);font-weight:500}
 @keyframes stripScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .strip-label{position:absolute;top:50%;left:2rem;transform:translateY(-50%);font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-muted);z-index:2;writing-mode:vertical-rl}
 
@@ -701,27 +701,36 @@ async function loadGallery(){
     const images = (snap.data().images||[]).filter(Boolean);
     if(!images.length) return;
 
-    const track = document.getElementById('stripTrack');
+    const track  = document.getElementById('stripTrack');
     if(!track) return;
 
-    // Duplicate for seamless CSS loop (same pattern as the placeholders)
-    const doubled = [...images, ...images];
-    track.innerHTML = doubled.map(src=>`
-      <div class="strip-photo" style="background:#111">
-        <img src="${src}" loading="lazy" alt="The Happening Space"
-          style="width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.4s ease"
-          onmouseover="this.style.transform='scale(1.04)'"
-          onmouseout="this.style.transform='scale(1)'"
-          onerror="this.parentElement.style.display='none'">
+    const photoW = 296; // 280px + 16px gap
+    const viewW  = Math.max(window.innerWidth || 800, 800);
+
+    // Repeat images enough so the strip is much wider than the viewport
+    // (so you never see both halves at once)
+    const minCopiesPerHalf = Math.ceil(viewW / (images.length * photoW)) + 1;
+    const totalCopies      = Math.max(minCopiesPerHalf * 2, 4); // always even for clean loop
+
+    // Build the repeated set
+    const allImgs = [];
+    for(let i = 0; i < totalCopies; i++) allImgs.push(...images);
+
+    // Render — eager loading + explicit dimensions so no layout reflow
+    track.innerHTML = allImgs.map((src, i) => `
+      <div class="strip-photo">
+        <img src="${src}" alt="The Happening Space"
+          loading="${i < images.length * 2 ? 'eager' : 'lazy'}"
+          width="280" height="190"
+          style="width:100%;height:100%;object-fit:cover;display:block"
+          onerror="this.closest('.strip-photo').style.display='none'">
       </div>`).join('');
 
-    // Adjust animation speed based on number of photos
-    const totalPx = images.length * 296; // 280px + 16px gap
-    const speed   = Math.max(15, images.length * 3.5); // ~3.5s per photo
+    // Speed: ~4s per photo width, range 12–60s
+    const speed = Math.min(Math.max(images.length * 4, 12), 60);
     track.style.animationDuration = speed + 's';
-  } catch(e){
-    console.warn('Gallery load failed:', e);
-  }
+
+  } catch(e){ console.warn('Gallery load failed:', e); }
 }
 loadGallery();
 </script>
