@@ -303,6 +303,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="nav-item" onclick="showView('checkins')">
         <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Check-ins
       </div>
+      <div class="nav-item" onclick="showView('artistpayments')" style="border-left:2px solid transparent">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Artist Payments
+        <span id="artistPayPendingBadge" class="badge" style="display:none">0</span>
+      </div>
       <div class="nav-section-title">Regular Batches</div>
       <div class="nav-item" onclick="showView('batches')">
         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>All Batches
@@ -1495,6 +1499,43 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   </div>
 </div>
 
+    <!-- ARTIST PAYMENTS -->
+    <div class="view" id="view-artistpayments">
+      <div class="page-header">
+        <div><h1 class="page-title">Artist Payments</h1><p class="page-sub">Settlement status for all workshops</p></div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
+          <div class="filter-tabs" id="apFilterTabs" style="margin:0">
+            <button class="filter-tab active" onclick="filterArtistPayments('all',this)">All</button>
+            <button class="filter-tab" onclick="filterArtistPayments('pending',this)" style="color:#e57373">Pending</button>
+            <button class="filter-tab" onclick="filterArtistPayments('settled',this)" style="color:var(--yellow)">Settled</button>
+            <button class="filter-tab" onclick="filterArtistPayments('paid',this)" style="color:var(--green)">Paid</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary stats -->
+      <div class="stats-grid" id="apStatsGrid" style="margin-bottom:1.5rem"></div>
+
+      <!-- Table -->
+      <div class="table-wrap" style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;min-width:720px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th style="padding:0.75rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Workshop</th>
+              <th style="padding:0.75rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Date</th>
+              <th style="padding:0.75rem 1rem;text-align:right;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Revenue</th>
+              <th style="padding:0.75rem 1rem;text-align:right;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Artist Payout</th>
+              <th style="padding:0.75rem 1rem;text-align:right;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Studio</th>
+              <th style="padding:0.75rem 1rem;text-align:center;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Status</th>
+              <th style="padding:0.75rem 1rem;text-align:center;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Paid On</th>
+              <th style="padding:0.75rem 1rem"></th>
+            </tr>
+          </thead>
+          <tbody id="apTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
 <!-- WORKSHOP SETTLEMENT MODAL -->
 <div class="modal-backdrop" id="wsSettlementModal">
   <div class="modal" style="max-width:680px">
@@ -1912,7 +1953,8 @@ window.showView = function(id){
   if(id==='editbatches') renderEditBatches();
   if(id==='gallery')     renderGallery();
   if(id==='checkins')    renderCheckinsView();
-  if(id==='payments')    renderAllPayments();
+  if(id==='payments')        renderAllPayments();
+  if(id==='artistpayments')  renderArtistPaymentsView();
   if(id==='schedule')  { goScheduleToday(); }
   if(id==='monthschedule'){ initMonthViewSelectors(); renderMonthSchedule(); }
   if(id==='rentals')     renderRentals();
@@ -2219,8 +2261,114 @@ async function loadWsSettlements(){
     const snap = await getDocs(collection(db,'workshopSettlements'));
     wsSettlements = {};
     snap.docs.forEach(d=>{ wsSettlements[d.id] = {id:d.id,...d.data()}; });
+    updateArtistPayBadge();
   } catch(e){ console.warn('loadWsSettlements:', e); }
 }
+
+function updateArtistPayBadge(){
+  const completedWs = workshops.filter(w=>w.status==='completed'||w.status==='full');
+  const pending     = completedWs.filter(w=>!wsSettlements[w.id]?.artistPaid).length;
+  const badge       = document.getElementById('artistPayPendingBadge');
+  if(!badge) return;
+  if(pending > 0){ badge.textContent = pending; badge.style.display='inline'; }
+  else { badge.style.display='none'; }
+}
+
+let _apFilter = 'all';
+window.filterArtistPayments = function(f, el){
+  _apFilter = f;
+  document.querySelectorAll('#apFilterTabs .filter-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderArtistPaymentsView();
+};
+
+window.renderArtistPaymentsView = function(){
+  // Only completed and full workshops
+  let data = workshops.filter(w=>w.status==='completed'||w.status==='full');
+
+  if(_apFilter==='pending')  data = data.filter(w=>!wsSettlements[w.id]);
+  if(_apFilter==='settled')  data = data.filter(w=>wsSettlements[w.id] && !wsSettlements[w.id].artistPaid);
+  if(_apFilter==='paid')     data = data.filter(w=>wsSettlements[w.id]?.artistPaid);
+
+  // Sort: pending first, then settled, then paid, newest first within each
+  data.sort((a,b)=>{
+    const sa = wsSettlements[a.id];
+    const sb = wsSettlements[b.id];
+    const ra = sa?.artistPaid ? 2 : sa ? 1 : 0;
+    const rb = sb?.artistPaid ? 2 : sb ? 1 : 0;
+    if(ra !== rb) return ra - rb;
+    return (b.createdAt||0) - (a.createdAt||0);
+  });
+
+  // Stats
+  const all      = workshops.filter(w=>w.status==='completed'||w.status==='full');
+  const nPending = all.filter(w=>!wsSettlements[w.id]).length;
+  const nSettled = all.filter(w=>wsSettlements[w.id]&&!wsSettlements[w.id].artistPaid).length;
+  const nPaid    = all.filter(w=>wsSettlements[w.id]?.artistPaid).length;
+  const totalArtist = Object.values(wsSettlements).reduce((s,x)=>s+(x.artistPayout||0),0);
+  const paidArtist  = Object.values(wsSettlements).filter(x=>x.artistPaid).reduce((s,x)=>s+(x.artistPayout||0),0);
+  const pendingAmt  = totalArtist - paidArtist;
+
+  document.getElementById('apStatsGrid').innerHTML = `
+    <div class="stat-card"><p class="stat-label">Total Workshops</p><p class="stat-val">${all.length}</p></div>
+    <div class="stat-card"><p class="stat-label">Pending Settlement</p><p class="stat-val" style="color:#e57373">${nPending}</p></div>
+    <div class="stat-card"><p class="stat-label">Settled (Unpaid)</p><p class="stat-val" style="color:var(--yellow)">${nSettled}</p></div>
+    <div class="stat-card"><p class="stat-label">Fully Paid</p><p class="stat-val" style="color:var(--green)">${nPaid}</p></div>
+    <div class="stat-card"><p class="stat-label">Total Artist Payouts</p><p class="stat-val yellow">₹${totalArtist.toLocaleString('en-IN')}</p></div>
+    <div class="stat-card"><p class="stat-label">Pending Payout</p><p class="stat-val" style="color:#e57373">₹${pendingAmt.toLocaleString('en-IN')}</p></div>`;
+
+  if(!data.length){
+    document.getElementById('apTableBody').innerHTML =
+      `<tr><td colspan="8" style="padding:3rem;text-align:center;color:var(--muted)">No workshops in this category.</td></tr>`;
+    return;
+  }
+
+  document.getElementById('apTableBody').innerHTML = data.map(w=>{
+    const s   = wsSettlements[w.id];
+    const rev = s?.grossRevenue ?? registrations.filter(r=>r.workshop===w.artist)
+                  .reduce((sum,r)=>sum+parseFloat(r.amount_paid||r.price||0),0);
+    const artistPayout = s?.artistPayout || 0;
+    const studioPayout = s?.studioPayout || 0;
+    const dateStr = w.dateFrom||(w.slots?.[0]?.date)||'—';
+
+    // Status badge
+    let statusBadge, rowStyle='';
+    if(s?.artistPaid){
+      statusBadge = `<span class="pill" style="background:rgba(92,184,122,0.15);color:var(--green);border:1px solid rgba(92,184,122,0.3);font-size:0.6rem">✓ PAID</span>`;
+    } else if(s){
+      statusBadge = `<span class="pill" style="background:rgba(245,230,66,0.12);color:var(--yellow);border:1px solid rgba(245,230,66,0.3);font-size:0.6rem">SETTLED</span>`;
+      rowStyle = 'background:rgba(245,230,66,0.02)';
+    } else {
+      statusBadge = `<span class="pill" style="background:rgba(229,115,115,0.1);color:#e57373;border:1px solid rgba(229,115,115,0.25);font-size:0.6rem">PENDING</span>`;
+      rowStyle = 'background:rgba(229,115,115,0.02)';
+    }
+
+    return `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);${rowStyle}">
+      <td style="padding:0.85rem 1rem">
+        <p style="font-weight:600;color:var(--text);font-size:0.88rem;margin-bottom:0.1rem">${w.artist||'—'}</p>
+        <p style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">${w.style||'—'}</p>
+      </td>
+      <td style="padding:0.85rem 1rem;font-size:0.78rem;color:var(--muted);white-space:nowrap">${dateStr}</td>
+      <td style="padding:0.85rem 1rem;text-align:right;font-weight:500;color:var(--text)">₹${Math.round(rev).toLocaleString('en-IN')}</td>
+      <td style="padding:0.85rem 1rem;text-align:right;font-weight:600;color:${artistPayout?'var(--yellow)':'var(--muted)'}">
+        ${artistPayout ? '₹'+artistPayout.toLocaleString('en-IN') : '—'}
+      </td>
+      <td style="padding:0.85rem 1rem;text-align:right;color:var(--muted)">
+        ${studioPayout ? '₹'+studioPayout.toLocaleString('en-IN') : '—'}
+      </td>
+      <td style="padding:0.85rem 1rem;text-align:center">${statusBadge}</td>
+      <td style="padding:0.85rem 1rem;text-align:center;font-size:0.75rem;color:var(--muted)">${s?.paidAt||'—'}</td>
+      <td style="padding:0.85rem 1rem;text-align:center">
+        <button onclick="openWsSettlement('${w.id}')" class="btn btn-sm"
+          style="font-size:0.65rem;${s?.artistPaid?'background:rgba(92,184,122,0.12);border:1px solid rgba(92,184,122,0.3);color:var(--green)':'background:rgba(245,230,66,0.1);border:1px solid rgba(245,230,66,0.3);color:var(--yellow)'}">
+          ${s?.artistPaid ? '✓ View' : s ? 'Mark Paid' : '💰 Settle'}
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  updateArtistPayBadge();
+};
 
 window.openWsSettlement = async function(wId){
   const w = workshops.find(x=>x.id===wId);
@@ -2439,6 +2587,7 @@ window.saveWsSettlement = async function(){
   closeModal('wsSettlementModal');
   showToast('Settlement saved ✓');
   renderWorkshopGrid();
+  if(document.getElementById('view-artistpayments')?.classList.contains('active')) renderArtistPaymentsView();
 };
 
 window.toggleArtistPaid = async function(){
