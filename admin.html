@@ -892,6 +892,39 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
     </div>
 
+    <!-- ARTIST PAYMENTS -->
+    <div class="view" id="view-artistpayments">
+      <div class="page-header">
+        <div><h1 class="page-title">Artist Payments</h1><p class="page-sub">Settlement status for all workshops</p></div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
+          <div class="filter-tabs" id="apFilterTabs" style="margin:0">
+            <button class="filter-tab active" onclick="filterArtistPayments('all',this)">All</button>
+            <button class="filter-tab" onclick="filterArtistPayments('pending',this)" style="color:#e57373">Pending</button>
+            <button class="filter-tab" onclick="filterArtistPayments('settled',this)" style="color:var(--yellow)">Settled</button>
+            <button class="filter-tab" onclick="filterArtistPayments('paid',this)" style="color:var(--green)">Paid</button>
+          </div>
+        </div>
+      </div>
+      <div class="stats-grid" id="apStatsGrid" style="margin-bottom:1.5rem"></div>
+      <div class="table-wrap" style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;min-width:720px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th style="padding:0.75rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Workshop</th>
+              <th style="padding:0.75rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Date</th>
+              <th style="padding:0.75rem 1rem;text-align:right;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Revenue</th>
+              <th style="padding:0.75rem 1rem;text-align:right;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Artist Payout</th>
+              <th style="padding:0.75rem 1rem;text-align:right;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Studio</th>
+              <th style="padding:0.75rem 1rem;text-align:center;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Status</th>
+              <th style="padding:0.75rem 1rem;text-align:center;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Paid On</th>
+              <th style="padding:0.75rem 1rem"></th>
+            </tr>
+          </thead>
+          <tbody id="apTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1498,43 +1531,6 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
   </div>
 </div>
-
-    <!-- ARTIST PAYMENTS -->
-    <div class="view" id="view-artistpayments">
-      <div class="page-header">
-        <div><h1 class="page-title">Artist Payments</h1><p class="page-sub">Settlement status for all workshops</p></div>
-        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
-          <div class="filter-tabs" id="apFilterTabs" style="margin:0">
-            <button class="filter-tab active" onclick="filterArtistPayments('all',this)">All</button>
-            <button class="filter-tab" onclick="filterArtistPayments('pending',this)" style="color:#e57373">Pending</button>
-            <button class="filter-tab" onclick="filterArtistPayments('settled',this)" style="color:var(--yellow)">Settled</button>
-            <button class="filter-tab" onclick="filterArtistPayments('paid',this)" style="color:var(--green)">Paid</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Summary stats -->
-      <div class="stats-grid" id="apStatsGrid" style="margin-bottom:1.5rem"></div>
-
-      <!-- Table -->
-      <div class="table-wrap" style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;min-width:720px">
-          <thead>
-            <tr style="border-bottom:1px solid var(--border)">
-              <th style="padding:0.75rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Workshop</th>
-              <th style="padding:0.75rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Date</th>
-              <th style="padding:0.75rem 1rem;text-align:right;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Revenue</th>
-              <th style="padding:0.75rem 1rem;text-align:right;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Artist Payout</th>
-              <th style="padding:0.75rem 1rem;text-align:right;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Studio</th>
-              <th style="padding:0.75rem 1rem;text-align:center;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Status</th>
-              <th style="padding:0.75rem 1rem;text-align:center;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Paid On</th>
-              <th style="padding:0.75rem 1rem"></th>
-            </tr>
-          </thead>
-          <tbody id="apTableBody"></tbody>
-        </table>
-      </div>
-    </div>
 
 <!-- WORKSHOP SETTLEMENT MODAL -->
 <div class="modal-backdrop" id="wsSettlementModal">
