@@ -426,6 +426,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <button class="filter-tab" onclick="filterWorkshops('cancelled',this)">Cancelled</button>
         <button class="filter-tab" onclick="filterWorkshops('completed',this)">Completed</button>
         <button class="filter-tab" onclick="filterWorkshops('draft',this)">Drafts</button>
+        <button class="filter-tab" onclick="filterWorkshops('payments',this)" style="border-color:rgba(245,230,66,0.35);color:var(--yellow)">💰 Artist Payments</button>
         <div style="margin-left:auto;display:flex;align-items:center;gap:0.5rem">
           <span style="font-size:0.7rem;color:var(--muted)">Sort:</span>
           <select id="wsSortSelect" onchange="sortAndRenderWorkshops()" style="background:var(--bg3);border:1px solid var(--border2);padding:0.35rem 0.65rem;color:var(--text);font-family:'Syne',sans-serif;font-size:0.72rem;outline:none">
@@ -1494,6 +1495,98 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   </div>
 </div>
 
+<!-- WORKSHOP SETTLEMENT MODAL -->
+<div class="modal-backdrop" id="wsSettlementModal">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-head">
+      <div>
+        <h2 class="modal-title" id="wsSettleTitleArtist">Settlement</h2>
+        <p style="font-size:0.75rem;color:var(--muted);margin-top:0.15rem" id="wsSettleTitleStyle"></p>
+      </div>
+      <button class="modal-close" onclick="closeModal('wsSettlementModal')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+
+      <!-- Slot breakdown table -->
+      <div style="padding:1.25rem 1.5rem 0">
+        <p style="font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.75rem">Slot Breakdown</p>
+      </div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <table style="width:100%;border-collapse:collapse;min-width:560px">
+          <thead>
+            <tr style="background:var(--bg3)">
+              <th style="padding:0.65rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;white-space:nowrap">Slot / Song</th>
+              <th style="padding:0.65rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;white-space:nowrap">Date · Time</th>
+              <th style="padding:0.65rem 1rem;text-align:center;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Registered</th>
+              <th style="padding:0.65rem 1rem;text-align:center;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Attended</th>
+              <th style="padding:0.65rem 1rem;text-align:right;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Revenue</th>
+            </tr>
+          </thead>
+          <tbody id="wsSettleSlotTable"></tbody>
+          <tfoot id="wsSettleSlotFoot"></tfoot>
+        </table>
+      </div>
+
+      <!-- Settlement form -->
+      <div style="padding:1.25rem 1.5rem;border-top:1px solid var(--border)">
+        <p style="font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:1rem">Settlement Accounts</p>
+        <div style="background:var(--bg3);padding:1rem;margin-bottom:1rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem">
+          <span style="font-size:0.78rem;color:var(--muted)">Gross Revenue</span>
+          <span id="wsSettleGross" style="font-weight:700;color:var(--text);font-size:0.9rem">₹0</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+          <div class="form-group" style="margin:0">
+            <label>GST % <span style="font-weight:300;color:var(--muted);font-size:0.72em">(deducted from gross)</span></label>
+            <input type="number" id="wsSettleGstPct" min="0" max="100" step="0.5" placeholder="e.g. 18" oninput="recalcSettlement()">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>TDS % <span style="font-weight:300;color:var(--muted);font-size:0.72em">(deducted from gross)</span></label>
+            <input type="number" id="wsSettleTdsPct" min="0" max="100" step="0.5" placeholder="e.g. 10" oninput="recalcSettlement()">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Artist Payout ₹</label>
+            <input type="number" id="wsSettleArtistPayout" min="0" placeholder="e.g. 25000" oninput="recalcSettlement()">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Studio Payout ₹ <span style="font-weight:300;color:var(--muted);font-size:0.72em">(auto)</span></label>
+            <input type="number" id="wsSettleStudioPayout" min="0" placeholder="Auto-calculated" style="background:var(--bg3)">
+          </div>
+        </div>
+        <!-- Live breakdown -->
+        <div id="wsSettleCalc" style="background:var(--bg3);padding:1rem;font-size:0.78rem;border:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;margin-bottom:0.35rem"><span style="color:var(--muted)">Gross Revenue</span><span id="sc-gross" style="color:var(--text)">₹0</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:0.35rem"><span style="color:var(--muted)">GST Deduction</span><span id="sc-gst" style="color:#e57373">− ₹0</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:0.35rem"><span style="color:var(--muted)">TDS Deduction</span><span id="sc-tds" style="color:#e57373">− ₹0</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:0.35rem"><span style="color:var(--muted)">Artist Payout</span><span id="sc-artist" style="color:var(--yellow)">₹0</span></div>
+          <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:0.5rem;margin-top:0.35rem;font-weight:600"><span style="color:var(--text)">Studio Retained</span><span id="sc-studio" style="color:var(--green)">₹0</span></div>
+        </div>
+        <div class="form-group" style="margin-top:1rem;margin-bottom:0">
+          <label>Remarks / Notes</label>
+          <input type="text" id="wsSettleRemarks" placeholder="e.g. Paid via bank transfer on 15 Jun">
+        </div>
+      </div>
+
+      <!-- Paid status -->
+      <div id="wsSettlePaidSection" style="padding:1rem 1.5rem;border-top:1px solid var(--border);background:rgba(92,184,122,0.04)">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem">
+          <div>
+            <p style="font-size:0.8rem;font-weight:600;color:var(--text);margin-bottom:0.2rem">Artist Payment</p>
+            <p id="wsSettlePaidStatus" style="font-size:0.75rem;color:var(--muted)">Not yet marked as paid</p>
+          </div>
+          <button id="wsSettleMarkPaidBtn" class="btn btn-sm" onclick="toggleArtistPaid()" style="background:rgba(92,184,122,0.15);border:1px solid rgba(92,184,122,0.4);color:var(--green)">
+            Mark Artist as Paid ✓
+          </button>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('wsSettlementModal')">Close</button>
+      <button class="btn btn-red" onclick="saveWsSettlement()">Save Settlement</button>
+    </div>
+  </div>
+</div>
+
 <!-- CONFIRM DELETE -->
 <div class="confirm-backdrop" id="confirmBackdrop">
   <div class="confirm-box">
@@ -1553,6 +1646,7 @@ const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbysvGH62COvPcA6m0J-z
 ══════════════════════════════════════ */
 let workshops      = [];
 let registrations  = [];
+let wsSettlements  = {}; // keyed by workshopId
 let deleteTargetId = null;
 let editingSpotsId = null;
 let manualWsId     = null;
@@ -1718,7 +1812,7 @@ async function initApp(){
     if(lbl) lbl.textContent = monthNames[now.getMonth()] + ' ' + now.getFullYear();
   }, 100);
   showToast('Loading data…');
-  await Promise.all([listenWorkshops(), listenRegistrations()]);
+  await Promise.all([listenWorkshops(), listenRegistrations(), loadWsSettlements()]);
   listenBatchStudents();
   listenSchedule();
   listenRentals();
@@ -1954,6 +2048,16 @@ function wsCardHTML(w){
   const minPrice = packages.length ? Math.min(...packages.map(p=>parseInt(p.price)||0)) : 0;
   const statusColors = {active:'pill-green',full:'pill-red',cancelled:'pill-orange',completed:'pill-grey',draft:'pill-blue'};
   const statusPill = statusColors[w.status]||'pill-grey';
+
+  // Payment badge for completed workshops
+  const settle    = wsSettlements[w.id];
+  const paidBadge = w.status==='completed'
+    ? settle?.artistPaid
+      ? `<span class="pill" style="background:rgba(92,184,122,0.15);color:var(--green);border:1px solid rgba(92,184,122,0.3);font-size:0.55rem">✓ PAID</span>`
+      : settle
+        ? `<span class="pill" style="background:rgba(245,230,66,0.12);color:var(--yellow);border:1px solid rgba(245,230,66,0.3);font-size:0.55rem">SETTLED</span>`
+        : `<span class="pill" style="background:rgba(229,115,115,0.1);color:#e57373;border:1px solid rgba(229,115,115,0.25);font-size:0.55rem">PAYMENT PENDING</span>`
+    : '';
   const bgStyle  = w.poster && w.poster.startsWith('data:')
     ? `background-image:url('${w.poster}');background-size:cover;background-position:center`
     : `background:${w.posterBg||'linear-gradient(135deg,#1a0407,#bc1f2e)'}`;
@@ -1972,6 +2076,7 @@ function wsCardHTML(w){
         <span class="pill ${statusPill}" style="font-size:0.6rem">${w.status}</span>
         <span style="color:var(--muted);font-size:0.72rem">${dateStr}</span>
         <span style="color:var(--muted);font-size:0.72rem">· ${slots.length} slot${slots.length!==1?'s':''}</span>
+        ${paidBadge}
       </div>
       <p style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);font-size:0.9rem;line-height:1.2;margin-bottom:0.15rem">${w.artist||'—'}</p>
       <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.06em">${w.style||'—'}</p>
@@ -1995,6 +2100,11 @@ function wsCardHTML(w){
         <button class="btn btn-outline btn-sm" onclick="openStatusMenu('${w.id}',this)">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>Status
         </button>
+        ${w.status==='completed'||w.status==='full'?`
+        <button class="btn btn-sm" onclick="openWsSettlement('${w.id}')"
+          style="background:${wsSettlements[w.id]?.artistPaid?'rgba(92,184,122,0.15)':'rgba(245,230,66,0.12)'};border:1px solid ${wsSettlements[w.id]?.artistPaid?'rgba(92,184,122,0.4)':'rgba(245,230,66,0.4)'};color:${wsSettlements[w.id]?.artistPaid?'var(--green)':'var(--yellow)'};font-size:0.65rem;font-weight:700;letter-spacing:0.06em;white-space:nowrap">
+          ${wsSettlements[w.id]?.artistPaid?'✓ Paid':'💰 Settle'}
+        </button>`:''}
         ${w.status==='draft'?`<button class="btn btn-green btn-sm" onclick="publishDraft('${w.id}')">
           <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Publish
         </button>`:''}
@@ -2010,7 +2120,21 @@ function wsCardHTML(w){
    WORKSHOPS GRID
 ══════════════════════════════════════ */
 function renderWorkshopGrid(){
-  const filtered = currentWsFilter==='all' ? workshops : workshops.filter(w=>w.status===currentWsFilter);
+  let filtered;
+  if(currentWsFilter === 'payments'){
+    // Show completed and full workshops with payment status
+    filtered = workshops.filter(w=>w.status==='completed'||w.status==='full');
+    // Sort: unpaid first, then pending, then paid
+    filtered.sort((a,b)=>{
+      const sa = wsSettlements[a.id];
+      const sb = wsSettlements[b.id];
+      const rankA = sa?.artistPaid ? 2 : sa ? 1 : 0;
+      const rankB = sb?.artistPaid ? 2 : sb ? 1 : 0;
+      return rankA - rankB;
+    });
+  } else {
+    filtered = currentWsFilter==='all' ? workshops : workshops.filter(w=>w.status===currentWsFilter);
+  }
   const sort = document.getElementById('wsSortSelect')?.value || 'newest';
   const sorted = [...filtered].sort((a,b)=>{
     if(sort==='oldest') return (a.createdAt||0)-(b.createdAt||0);
@@ -2034,6 +2158,180 @@ function renderWorkshopGrid(){
 
 window.sortAndRenderWorkshops = function(){ renderWorkshopGrid(); };
 
+/* ══════════════════════════════════════
+   WORKSHOP SETTLEMENTS / ARTIST PAYMENTS
+══════════════════════════════════════ */
+let _wsSettleCurrentId  = null;
+let _wsSettleGross      = 0;
+let _wsSettleIsPaid     = false;
+
+async function loadWsSettlements(){
+  try {
+    const snap = await getDocs(collection(db,'workshopSettlements'));
+    wsSettlements = {};
+    snap.docs.forEach(d=>{ wsSettlements[d.id] = {id:d.id,...d.data()}; });
+  } catch(e){ console.warn('loadWsSettlements:', e); }
+}
+
+window.openWsSettlement = async function(wId){
+  const w = workshops.find(x=>x.id===wId);
+  if(!w) return;
+  _wsSettleCurrentId = wId;
+
+  document.getElementById('wsSettleTitleArtist').textContent = w.artist || '—';
+  document.getElementById('wsSettleTitleStyle').textContent  = [w.style, w.dateFrom?(w.dateFrom+(w.dateTo&&w.dateTo!==w.dateFrom?' → '+w.dateTo:'')):''].filter(Boolean).join(' · ');
+
+  // Gather registrations for this workshop
+  const wsRegs = registrations.filter(r => r.workshop === w.artist || r.workshopId === wId);
+
+  // Build per-slot breakdown
+  const slots  = w.slots || [];
+  let totalReg = 0, totalAtt = 0, totalRev = 0;
+
+  const slotRows = slots.map((s, i) => {
+    // Registrations that include this slot
+    const slotRegs = wsRegs.filter(r => {
+      const slotParts = (r.slots||'').split('|').map(x=>x.trim());
+      return slotParts.some(sp => sp.includes(s.song||`Slot ${i+1}`) || sp.includes(s.date||'') || sp.includes(s.id||''));
+    });
+    // If no slot filtering matches, include all regs for single-slot workshops
+    const useRegs  = slots.length <= 1 ? wsRegs : slotRegs;
+
+    const reg = useRegs.length;
+    const att = useRegs.filter(r => {
+      const cis = r.checkedInSlots||{};
+      return r.checkedIn===true || Object.keys(cis).length>0;
+    }).length;
+    const rev = useRegs.reduce((sum,r)=>sum+parseFloat(r.amount_paid||r.price||0),0);
+
+    totalReg += reg; totalAtt += att; totalRev += rev;
+
+    return `<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">
+      <td style="padding:0.7rem 1rem;font-size:0.8rem;color:var(--text)">${s.song||'Slot '+(i+1)}</td>
+      <td style="padding:0.7rem 1rem;font-size:0.75rem;color:var(--muted)">${s.date||'—'}${s.time?' · '+s.time:''}</td>
+      <td style="padding:0.7rem 1rem;text-align:center;font-weight:600;color:var(--text)">${reg}</td>
+      <td style="padding:0.7rem 1rem;text-align:center;font-weight:600;color:var(--green)">${att}</td>
+      <td style="padding:0.7rem 1rem;text-align:right;color:var(--yellow);font-weight:500">₹${rev.toLocaleString('en-IN')}</td>
+    </tr>`;
+  });
+
+  // For workshops with no slot-level data, show one summary row
+  if(!slots.length){
+    const reg = wsRegs.length;
+    const att = wsRegs.filter(r=>r.checkedIn===true||Object.keys(r.checkedInSlots||{}).length>0).length;
+    const rev = wsRegs.reduce((sum,r)=>sum+parseFloat(r.amount_paid||r.price||0),0);
+    totalReg=reg; totalAtt=att; totalRev=rev;
+    slotRows.push(`<tr><td style="padding:0.7rem 1rem;color:var(--muted)" colspan="2">All Slots</td>
+      <td style="padding:0.7rem 1rem;text-align:center;font-weight:600">${reg}</td>
+      <td style="padding:0.7rem 1rem;text-align:center;color:var(--green);font-weight:600">${att}</td>
+      <td style="padding:0.7rem 1rem;text-align:right;color:var(--yellow)">₹${rev.toLocaleString('en-IN')}</td>
+    </tr>`);
+  }
+
+  document.getElementById('wsSettleSlotTable').innerHTML = slotRows.join('');
+  document.getElementById('wsSettleSlotFoot').innerHTML  = `
+    <tr style="background:var(--bg3);border-top:2px solid var(--border)">
+      <td colspan="2" style="padding:0.7rem 1rem;font-size:0.72rem;font-family:'Syne',sans-serif;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">TOTAL</td>
+      <td style="padding:0.7rem 1rem;text-align:center;font-weight:700;color:var(--text)">${totalReg}</td>
+      <td style="padding:0.7rem 1rem;text-align:center;font-weight:700;color:var(--green)">${totalAtt}</td>
+      <td style="padding:0.7rem 1rem;text-align:right;font-weight:700;color:var(--yellow)">₹${totalRev.toLocaleString('en-IN')}</td>
+    </tr>`;
+
+  _wsSettleGross = totalRev;
+  document.getElementById('wsSettleGross').textContent = '₹' + totalRev.toLocaleString('en-IN');
+
+  // Restore saved settlement if exists
+  const saved = wsSettlements[wId];
+  document.getElementById('wsSettleGstPct').value      = saved?.gstPercent  || '';
+  document.getElementById('wsSettleTdsPct').value      = saved?.tdsPercent  || '';
+  document.getElementById('wsSettleArtistPayout').value = saved?.artistPayout || '';
+  document.getElementById('wsSettleRemarks').value     = saved?.remarks      || '';
+
+  _wsSettleIsPaid = saved?.artistPaid || false;
+  const paidStatus = document.getElementById('wsSettlePaidStatus');
+  const paidBtn    = document.getElementById('wsSettleMarkPaidBtn');
+  if(_wsSettleIsPaid){
+    paidStatus.innerHTML = `<span style="color:var(--green)">✓ Paid on ${saved.paidAt||'—'}</span>`;
+    paidBtn.textContent  = '✓ Marked as Paid';
+    paidBtn.style.background = 'rgba(92,184,122,0.25)';
+  } else {
+    paidStatus.textContent = 'Not yet marked as paid';
+    paidBtn.textContent    = 'Mark Artist as Paid ✓';
+    paidBtn.style.background = 'rgba(92,184,122,0.15)';
+  }
+
+  recalcSettlement();
+  openModal('wsSettlementModal');
+};
+
+window.recalcSettlement = function(){
+  const gross      = _wsSettleGross;
+  const gstPct     = parseFloat(document.getElementById('wsSettleGstPct').value)||0;
+  const tdsPct     = parseFloat(document.getElementById('wsSettleTdsPct').value)||0;
+  const artistPay  = parseFloat(document.getElementById('wsSettleArtistPayout').value)||0;
+  const gstAmt     = Math.round(gross * gstPct / 100);
+  const tdsAmt     = Math.round(gross * tdsPct / 100);
+  const studioAmt  = gross - gstAmt - tdsAmt - artistPay;
+  document.getElementById('wsSettleStudioPayout').value = studioAmt > 0 ? studioAmt : 0;
+  document.getElementById('sc-gross').textContent  = '₹' + gross.toLocaleString('en-IN');
+  document.getElementById('sc-gst').textContent    = '− ₹' + gstAmt.toLocaleString('en-IN') + (gstPct?` (${gstPct}%)`:'');
+  document.getElementById('sc-tds').textContent    = '− ₹' + tdsAmt.toLocaleString('en-IN') + (tdsPct?` (${tdsPct}%)`:'');
+  document.getElementById('sc-artist').textContent = '₹' + artistPay.toLocaleString('en-IN');
+  document.getElementById('sc-studio').textContent = '₹' + Math.max(studioAmt,0).toLocaleString('en-IN');
+};
+
+window.saveWsSettlement = async function(){
+  if(!_wsSettleCurrentId) return;
+  const gross     = _wsSettleGross;
+  const gstPct    = parseFloat(document.getElementById('wsSettleGstPct').value)||0;
+  const tdsPct    = parseFloat(document.getElementById('wsSettleTdsPct').value)||0;
+  const artistPay = parseFloat(document.getElementById('wsSettleArtistPayout').value)||0;
+  const gstAmt    = Math.round(gross * gstPct / 100);
+  const tdsAmt    = Math.round(gross * tdsPct / 100);
+  const studioAmt = Math.max(gross - gstAmt - tdsAmt - artistPay, 0);
+  const w         = workshops.find(x=>x.id===_wsSettleCurrentId);
+  const data = {
+    workshopId:    _wsSettleCurrentId,
+    artistName:    w?.artist || '—',
+    workshopStyle: w?.style  || '—',
+    grossRevenue:  gross,
+    gstPercent:    gstPct,  gstAmount:    gstAmt,
+    tdsPercent:    tdsPct,  tdsAmount:    tdsAmt,
+    artistPayout:  artistPay,
+    studioPayout:  studioAmt,
+    artistPaid:    _wsSettleIsPaid,
+    paidAt:        wsSettlements[_wsSettleCurrentId]?.paidAt || null,
+    remarks:       document.getElementById('wsSettleRemarks').value.trim(),
+    updatedAt:     Date.now(),
+    updatedBy:     currentAdminUser || 'admin',
+  };
+  await setDoc(doc(db,'workshopSettlements',_wsSettleCurrentId), data);
+  wsSettlements[_wsSettleCurrentId] = data;
+  closeModal('wsSettlementModal');
+  showToast('Settlement saved ✓');
+  renderWorkshopGrid();
+};
+
+window.toggleArtistPaid = async function(){
+  _wsSettleIsPaid = !_wsSettleIsPaid;
+  const paidStatus = document.getElementById('wsSettlePaidStatus');
+  const paidBtn    = document.getElementById('wsSettleMarkPaidBtn');
+  const today      = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  if(_wsSettleIsPaid){
+    paidStatus.innerHTML     = `<span style="color:var(--green)">✓ Paid on ${today}</span>`;
+    paidBtn.textContent      = '✓ Marked as Paid';
+    paidBtn.style.background = 'rgba(92,184,122,0.25)';
+    if(!wsSettlements[_wsSettleCurrentId]) wsSettlements[_wsSettleCurrentId] = {};
+    wsSettlements[_wsSettleCurrentId].paidAt = today;
+  } else {
+    paidStatus.textContent   = 'Not yet marked as paid';
+    paidBtn.textContent      = 'Mark Artist as Paid ✓';
+    paidBtn.style.background = 'rgba(92,184,122,0.15)';
+  }
+  // Auto-save the paid status immediately
+  await saveWsSettlement();
+};
+
 window.filterWorkshops = function(f,el){
   currentWsFilter=f;
   document.querySelectorAll('#workshopFilters .filter-tab').forEach(t=>t.classList.remove('active'));
@@ -2049,7 +2347,7 @@ window.openStatusMenu = function(id, btn){
   if(statusMenuOpen===id){ statusMenuOpen=null; return; }
   statusMenuOpen = id;
   const w = workshops.find(x=>x.id===id);
-  const statuses = ['active','full','cancelled','completed','draft'];
+  const statuses = ['all','active','full','cancelled','completed','draft','payments'];
   const menu = document.createElement('div');
   menu.className = 'status-dropdown';
   menu.style.cssText = 'position:absolute;background:var(--bg2);border:1px solid var(--border2);z-index:999;min-width:140px;box-shadow:0 8px 24px rgba(0,0,0,0.4)';
