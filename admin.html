@@ -2717,19 +2717,22 @@ window.addExpenseRow = function(desc='', amount=''){
 };
 
 window.recalcSettlement = function(){
-  const gross    = _wsSettleGross; // ALWAYS actual total revenue
+  const excludeNonAtt = document.getElementById('wsExcludeNonAtt')?.checked || false;
+  const gross    = _wsSettleGross;
+  const attRev   = _wsSettleAttRev || gross;
+  const nonAttRev = Math.max(gross - attRev, 0);
+  const base     = excludeNonAtt ? attRev : gross;
+
   const gstPct   = parseFloat(document.getElementById('wsSettleGstPct').value)||0;
   const artPct   = parseFloat(document.getElementById('wsSettleArtistPct').value)||0;
   const deductTds = document.getElementById('wsDeductTds')?.checked !== false;
 
-  // Always use actual gross — exclude non-attended is WhatsApp-only
-  document.getElementById('wsSettleGross').textContent = '₹'+gross.toLocaleString('en-IN');
+  document.getElementById('wsSettleGross').textContent = '\u20b9'+gross.toLocaleString('en-IN');
 
-  const gstAmt   = Math.round(gross * gstPct / 100);
-  const afterGst = gross - gstAmt;
+  const gstAmt   = Math.round(base * gstPct / 100);
+  const afterGst = base - gstAmt;
   const artRaw   = Math.round(afterGst * artPct / 100);
 
-  // Expenses — inputs[0]=desc, inputs[1]=amount
   const expRows = Array.from(document.querySelectorAll('#wsSettleExpenses > div'));
   let totalExp  = 0;
   const expLines = expRows.map(row=>{
@@ -2738,41 +2741,54 @@ window.recalcSettlement = function(){
     totalExp    += amt;
     return {desc: inputs[0]?.value.trim()||'Expense', amount: amt};
   }).filter(e=>e.amount>0);
-  document.getElementById('wsExpenseTotal').textContent = '₹'+totalExp.toLocaleString('en-IN');
+  document.getElementById('wsExpenseTotal').textContent = '\u20b9'+totalExp.toLocaleString('en-IN');
 
   const artAfterExp  = artRaw - totalExp;
-  const tdsAmt       = deductTds ? Math.round(Math.max(artAfterExp,0) * 1 / 100) : 0;
+  const tdsAmt       = deductTds ? Math.round(Math.max(artAfterExp,0) / 100) : 0;
   const artistPayout = Math.max(artAfterExp - tdsAmt, 0);
-  const studioPayout = afterGst - artRaw;
+  const studioBase   = afterGst - artRaw;
+  const studioExtra  = excludeNonAtt ? nonAttRev : 0;
+  const studioTotal  = studioBase + studioExtra;
 
-  // Update live panel
-  document.getElementById('sc-total').textContent        = '₹'+gross.toLocaleString('en-IN');
-  document.getElementById('sc-gst').textContent          = '− ₹'+gstAmt.toLocaleString('en-IN');
-  document.getElementById('sc-aftergst').textContent     = '₹'+afterGst.toLocaleString('en-IN');
-  document.getElementById('sc-artpct').textContent       = artPct;
-  document.getElementById('sc-artist').textContent       = '₹'+artRaw.toLocaleString('en-IN');
-  document.getElementById('sc-tds').textContent          = deductTds ? '− ₹'+tdsAmt.toLocaleString('en-IN') : 'Not deducted';
-  document.getElementById('sc-artistpayout').textContent = '₹'+artistPayout.toLocaleString('en-IN');
-  document.getElementById('sc-studio').textContent       = '₹'+studioPayout.toLocaleString('en-IN');
+  const fmtI = n => '\u20b9'+n.toLocaleString('en-IN');
+  const sc = id => document.getElementById(id);
+  sc('sc-total').innerHTML = excludeNonAtt
+    ? fmtI(attRev)+'<span style="font-size:0.7rem;color:var(--muted)"> (attended only)</span>'
+    : fmtI(gross);
+  sc('sc-gst').textContent          = '\u2212 '+fmtI(gstAmt);
+  sc('sc-aftergst').textContent     = fmtI(afterGst);
+  sc('sc-artpct').textContent       = artPct;
+  sc('sc-artist').textContent       = fmtI(artRaw);
+  sc('sc-tds').textContent          = deductTds ? '\u2212 '+fmtI(tdsAmt) : 'Not deducted';
+  sc('sc-artistpayout').textContent = fmtI(artistPayout);
+  sc('sc-studio').textContent       = fmtI(studioBase);
 
-  // Studio extra (non-attended) only for display context, not in the calc
-  const nonAttRev = Math.max(_wsSettleGross - (_wsSettleAttRev||_wsSettleGross), 0);
-  document.getElementById('sc-studio-extra-row').style.display = 'none'; // not used in settlement
+  const extraRow = sc('sc-studio-extra-row');
+  if(excludeNonAtt && nonAttRev > 0){
+    extraRow.style.display = 'flex';
+    sc('sc-studio-base').textContent   = fmtI(studioBase);
+    sc('sc-studio-nonatt').textContent = fmtI(nonAttRev);
+    sc('sc-studio-total').textContent  = fmtI(studioTotal);
+  } else {
+    extraRow.style.display = 'none';
+  }
 
-  // Expense rows in panel
+  const nonAttEl = sc('wsNonAttAmt');
+  if(nonAttEl) nonAttEl.textContent = nonAttRev>0
+    ? (excludeNonAtt ? 'Non-att \u20b9'+nonAttRev.toLocaleString('en-IN')+'\u2192 studio' : '\u20b9'+nonAttRev.toLocaleString('en-IN')+' non-attended')
+    : '';
+
   let expPanelHTML = '';
   expLines.forEach(e=>{
-    expPanelHTML += `<div style="display:flex;justify-content:space-between"><span style="color:var(--muted);padding-left:0.75rem">↳ ${e.desc}</span><span style="color:#e57373">− ₹${e.amount.toLocaleString('en-IN')}</span></div>`;
+    expPanelHTML += '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted);padding-left:0.75rem">\u21b3 '+e.desc+'</span><span style="color:#e57373">\u2212 \u20b9'+e.amount.toLocaleString('en-IN')+'</span></div>';
   });
-  document.getElementById('sc-expense-rows').innerHTML = expPanelHTML;
+  sc('sc-expense-rows').innerHTML = expPanelHTML;
 
   window._wsSettleCalcData = {
-    gross, gstPct, gstAmt, afterGst, artPct, artRaw,
+    gross, base, gstPct, gstAmt, afterGst, artPct, artRaw,
     expLines, totalExp, artAfterExp, tdsAmt, artistPayout,
-    studioBase: studioPayout, studioTotal: studioPayout,
-    deductTds,
-    attRev: _wsSettleAttRev||gross, nonAttRev,
-    totalRevenue: gross
+    studioBase, studioExtra, studioTotal, deductTds,
+    attRev, nonAttRev, excludeNonAtt, totalRevenue: gross
   };
 };
 
@@ -3838,6 +3854,37 @@ window.generateReport = function(){
   });
   const trainers = Object.values(trainerMap).sort((a,b)=>b.revenue-a.revenue);
 
+  // Filter staff payments for this month
+  const monthStaff = staffPayments.filter(p=>{
+    if(!p.date) return false;
+    const d = new Date(p.date+'T00:00');
+    return d>=from && d<=to;
+  });
+  const totalStaffCost = monthStaff.reduce((s,p)=>s+parseFloat(p.amount||0),0);
+
+  // Filter expenses for this month
+  const monthExpenses = expenses.filter(e=>{
+    if(!e.date) return false;
+    const d = new Date(e.date+'T00:00');
+    return d>=from && d<=to;
+  });
+  const totalExpenses = monthExpenses.reduce((s,e)=>s+parseFloat(e.amount||0),0);
+
+  // Cash vs Online across all revenue
+  const wsCashAmt    = monthRegs.filter(r=>r.payment_type!=='Online').reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
+  const wsOnlineAmt  = monthRegs.filter(r=>r.payment_type==='Online').reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
+  const batchCashAmt = monthBatchStudents.filter(s=>s.payMode==='Cash').reduce((s,x)=>s+parseFloat(x.fee||0),0);
+  const batchOnlineAmt = monthBatchStudents.filter(s=>s.payMode!=='Cash').reduce((s,x)=>s+parseFloat(x.fee||0),0);
+  const rentalCashAmt  = monthRentals.filter(r=>r.payMode==='Cash').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const rentalOnlineAmt= monthRentals.filter(r=>r.payMode==='Online').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const totalCash   = wsCashAmt + batchCashAmt + rentalCashAmt;
+  const totalOnline = wsOnlineAmt + batchOnlineAmt + rentalOnlineAmt;
+
+  // P&L
+  const totalIncome  = totalRevenue;
+  const totalCosts   = totalStaffCost + totalExpenses;
+  const netPL        = totalIncome - totalCosts;
+
   const now = new Date();
   document.getElementById('reportContent').innerHTML = `
     <div id="printReport" style="font-family:'DM Sans',sans-serif;max-width:900px;margin:0 auto;color:var(--text)">
@@ -3851,41 +3898,90 @@ window.generateReport = function(){
         </div>
         <div style="text-align:right;font-size:0.75rem;color:var(--muted)">
           <p>Generated: ${now.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}</p>
-          <p>311 – International Wealth Center, VIP Road, Surat</p>
+          <p>The Happening Space · Surat</p>
         </div>
       </div>
 
-      <!-- REVENUE OVERVIEW -->
-      <div style="margin-bottom:2rem">
-        <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--red);margin-bottom:0.85rem;font-family:'Syne',sans-serif;font-weight:700">Revenue Overview</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem">
+      <!-- ══════════ SECTION 1: OVERALL SUMMARY ══════════ -->
+      <div style="margin-bottom:2.5rem">
+        <p style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--red);margin-bottom:1rem;font-family:'Syne',sans-serif;font-weight:700;border-bottom:1px solid var(--red);padding-bottom:0.4rem">1 — Overall Summary</p>
+
+        <!-- Revenue breakdown -->
+        <p style="font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;font-family:'Syne',sans-serif">Income</p>
+        <div style="background:var(--bg2);border:1px solid var(--border);padding:1rem 1.25rem;margin-bottom:1rem">
           ${[
-            {label:'Total Revenue',    val:'₹'+totalRevenue.toLocaleString('en-IN'),  color:'var(--green)'},
-            {label:'Workshop Revenue', val:'₹'+wsRevenue.toLocaleString('en-IN'),     color:'var(--red)'},
-            {label:'Batch Revenue',    val:'₹'+batchRevenue.toLocaleString('en-IN'),  color:'var(--green)'},
-            {label:'Studio Revenue',   val:'₹'+rentalRevenue.toLocaleString('en-IN'), color:'var(--blue)'},
-            {label:'Studio Pending',   val:'₹'+rentalPending.toLocaleString('en-IN'), color:'#e57373'},
-            {label:'Workshop Students',val:monthRegs.length,                          color:'var(--text)'},
-            {label:'Batch Students',   val:monthBatchStudents.length,                 color:'var(--text)'},
-            {label:'Studio Bookings',  val:monthRentals.length,                       color:'var(--text)'},
-            {label:'Studio Hours',     val:totalHours,                                color:'var(--text)'},
-            {label:'Workshops Held',   val:monthWorkshops.length,                     color:'var(--text)'},
-          ].map(s=>`<div style="background:var(--bg2);border:1px solid var(--border);padding:1rem 1.25rem">
-            <p style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">${s.label}</p>
-            <p style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:0.04em;color:${s.color};line-height:1">${s.val}</p>
+            {l:'Workshops',     v:wsRevenue,     c:'var(--red)'},
+            {l:'Regular Batches',v:batchRevenue,  c:'var(--green)'},
+            {l:'Studio Rentals',v:rentalRevenue, c:'#6ab0f5'},
+            {l:'Studio Pending',v:rentalPending, c:'#e57373'},
+          ].map(r=>`<div style="display:flex;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+            <span style="font-size:0.82rem;color:var(--muted)">${r.l}</span>
+            <span style="font-size:0.88rem;font-weight:600;color:${r.c}">₹${r.v.toLocaleString('en-IN')}</span>
           </div>`).join('')}
+          <div style="display:flex;justify-content:space-between;padding:0.5rem 0;margin-top:0.25rem;border-top:2px solid var(--border)">
+            <span style="font-size:0.88rem;font-weight:700;color:var(--text)">Total Revenue</span>
+            <span style="font-size:1rem;font-weight:800;color:var(--green)">₹${totalRevenue.toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+
+        <!-- Cash / Online -->
+        <p style="font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;font-family:'Syne',sans-serif">Payment Mode</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem">
+          <div style="background:var(--bg2);border:1px solid var(--border);padding:1rem 1.25rem">
+            <p style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">Total Cash</p>
+            <p style="font-size:1.6rem;font-family:'Bebas Neue',sans-serif;color:var(--yellow);line-height:1">₹${totalCash.toLocaleString('en-IN')}</p>
+            <p style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem">WS ₹${wsCashAmt.toLocaleString('en-IN')} · Batch ₹${batchCashAmt.toLocaleString('en-IN')} · Rental ₹${rentalCashAmt.toLocaleString('en-IN')}</p>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);padding:1rem 1.25rem">
+            <p style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">Total Online</p>
+            <p style="font-size:1.6rem;font-family:'Bebas Neue',sans-serif;color:var(--green);line-height:1">₹${totalOnline.toLocaleString('en-IN')}</p>
+            <p style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem">WS ₹${wsOnlineAmt.toLocaleString('en-IN')} · Batch ₹${batchOnlineAmt.toLocaleString('en-IN')} · Rental ₹${rentalOnlineAmt.toLocaleString('en-IN')}</p>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);padding:1rem 1.25rem">
+            <p style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">Online Split</p>
+            <p style="font-size:1.6rem;font-family:'Bebas Neue',sans-serif;color:var(--text);line-height:1">${totalRevenue>0?Math.round(totalOnline/totalRevenue*100):0}%</p>
+            <p style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem">of total collected revenue</p>
+          </div>
+        </div>
+
+        <!-- Expenses -->
+        <p style="font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;font-family:'Syne',sans-serif">Expenses</p>
+        <div style="background:var(--bg2);border:1px solid var(--border);padding:1rem 1.25rem;margin-bottom:1rem">
+          ${[
+            {l:'Staff Payments',   v:totalStaffCost, c:'#e57373'},
+            {l:'Studio Expenses',  v:totalExpenses,  c:'#e57373'},
+          ].map(r=>`<div style="display:flex;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+            <span style="font-size:0.82rem;color:var(--muted)">${r.l}</span>
+            <span style="font-size:0.88rem;font-weight:600;color:${r.c}">₹${r.v.toLocaleString('en-IN')}</span>
+          </div>`).join('')}
+          <div style="display:flex;justify-content:space-between;padding:0.5rem 0;margin-top:0.25rem;border-top:2px solid var(--border)">
+            <span style="font-size:0.88rem;font-weight:700;color:var(--text)">Total Expenses</span>
+            <span style="font-size:1rem;font-weight:800;color:#e57373">₹${totalCosts.toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+
+        <!-- Profit & Loss -->
+        <div style="background:${netPL>=0?'rgba(92,184,122,0.08)':'rgba(229,115,115,0.08)'};border:2px solid ${netPL>=0?'rgba(92,184,122,0.4)':'rgba(229,115,115,0.4)'};padding:1.25rem;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <p style="font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.25rem">Studio Profit / Loss · ${monthLabel}</p>
+            <p style="font-size:0.78rem;color:var(--muted)">Revenue ₹${totalRevenue.toLocaleString('en-IN')} − Expenses ₹${totalCosts.toLocaleString('en-IN')}</p>
+          </div>
+          <div style="text-align:right">
+            <p style="font-size:2.2rem;font-family:'Bebas Neue',sans-serif;color:${netPL>=0?'var(--green)':'#e57373'};line-height:1">${netPL>=0?'+':''}₹${Math.abs(netPL).toLocaleString('en-IN')}</p>
+            <p style="font-size:0.7rem;color:${netPL>=0?'var(--green)':'#e57373'};font-weight:700">${netPL>=0?'NET PROFIT':'NET LOSS'}</p>
+          </div>
         </div>
       </div>
 
-      <!-- STUDIO HOURS -->
+      <!-- Studio Hours -->
       <div style="margin-bottom:2rem">
         <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue);margin-bottom:0.85rem;font-family:'Syne',sans-serif;font-weight:700">Studio Hours Used</p>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem">
           ${[
-            {label:'Total Hours',         val:totalSchHrs, color:'var(--text)'},
-            {label:'Dance Workshops',     val:wsHrs,       color:'var(--red)'},
-            {label:'Regular Batches',     val:regHrs,      color:'var(--green)'},
-            {label:'Rentals / Others',    val:rentalHrs,   color:'var(--blue)'},
+            {label:'Total Hours',      val:totalSchHrs, color:'var(--text)'},
+            {label:'Dance Workshops',  val:wsHrs,       color:'var(--red)'},
+            {label:'Regular Batches',  val:regHrs,      color:'var(--green)'},
+            {label:'Rentals / Others', val:rentalHrs,   color:'var(--blue)'},
           ].map(s=>`<div style="background:var(--bg2);border:1px solid var(--border);padding:1rem 1.25rem">
             <p style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">${s.label}</p>
             <p style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:0.04em;color:${s.color};line-height:1">${s.val} hrs</p>
@@ -3893,99 +3989,59 @@ window.generateReport = function(){
         </div>
       </div>
 
-      <!-- PAYMENT MODES -->
-      <div style="margin-bottom:2rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem">
-        <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem">
-          <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--red);margin-bottom:1rem;font-family:'Syne',sans-serif;font-weight:700">Workshop Payments</p>
-          <div style="display:flex;gap:1.5rem">
-            <div><p style="font-size:0.65rem;color:var(--muted)">Online</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--green)">${wsOnline}</p></div>
-            <div><p style="font-size:0.65rem;color:var(--muted)">Cash</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--yellow)">${wsCash}</p></div>
-            <div><p style="font-size:0.65rem;color:var(--muted)">Ratio</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--text)">${monthRegs.length?Math.round(wsOnline/monthRegs.length*100):0}%</p></div>
-          </div>
-        </div>
-        <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem">
-          <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--green);margin-bottom:1rem;font-family:'Syne',sans-serif;font-weight:700">Batch Payments</p>
-          <div style="display:flex;gap:1.5rem">
-            <div><p style="font-size:0.65rem;color:var(--muted)">Online</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--green)">${batchOnline}</p></div>
-            <div><p style="font-size:0.65rem;color:var(--muted)">Cash</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--yellow)">${batchCash}</p></div>
-            <div><p style="font-size:0.65rem;color:var(--muted)">Ratio</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--text)">${monthBatchStudents.length?Math.round(batchOnline/monthBatchStudents.length*100):0}%</p></div>
-          </div>
-        </div>
-        <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem">
-          <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue);margin-bottom:1rem;font-family:'Syne',sans-serif;font-weight:700">Studio Payments</p>
-          <div style="display:flex;gap:1.5rem">
-            <div><p style="font-size:0.65rem;color:var(--muted)">Cash</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--yellow)">${rentalCash}</p></div>
-            <div><p style="font-size:0.65rem;color:var(--muted)">Online</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:var(--green)">${rentalOnline}</p></div>
-            <div><p style="font-size:0.65rem;color:var(--muted)">Pending</p><p style="font-size:1.8rem;font-family:'Bebas Neue',sans-serif;color:#e57373">${monthRentals.filter(r=>r.payMode==='Pending').length}</p></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- STUDIO RENTALS -->
-      ${monthRentals.length ? `
-      <div style="margin-bottom:2rem">
-        <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue);margin-bottom:0.85rem;font-family:'Syne',sans-serif;font-weight:700">Studio Rentals (${monthRentals.length}) · ${totalHours} hrs · ₹${rentalRevenue.toLocaleString('en-IN')} collected${rentalPending?` · ₹${rentalPending.toLocaleString('en-IN')} pending`:''}</p>
-        <div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden">
-          <table style="width:100%;border-collapse:collapse">
-            <thead><tr style="background:var(--bg3)">
-              ${['Name/Brand','Purpose','Booking','Hrs','Amount','Payment','Handled By','Remarks'].map(h=>`<th style="text-align:left;padding:0.5rem 0.85rem;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">${h}</th>`).join('')}
-            </tr></thead>
-            <tbody>
-              ${monthRentals.map(r=>`<tr style="border-bottom:1px solid var(--border)">
-                <td style="padding:0.6rem 0.85rem;font-weight:500;color:var(--text)">${r.name||'—'}</td>
-                <td style="padding:0.6rem 0.85rem;font-size:0.78rem">${r.purpose||'—'}</td>
-                <td style="padding:0.6rem 0.85rem;font-size:0.75rem;color:var(--muted)">${r.booking||'—'}</td>
-                <td style="padding:0.6rem 0.85rem;text-align:center">${r.hours||'—'}</td>
-                <td style="padding:0.6rem 0.85rem;color:${r.payMode==='Pending'?'#e57373':'var(--yellow)'}">₹${parseFloat(r.amount||0).toLocaleString('en-IN')}</td>
-                <td style="padding:0.6rem 0.85rem"><span style="font-size:0.65rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:2px;background:${r.payMode==='Cash'?'rgba(245,230,66,0.15)':r.payMode==='Online'?'rgba(92,184,122,0.15)':'rgba(229,115,115,0.15)'};color:${r.payMode==='Cash'?'var(--yellow)':r.payMode==='Online'?'var(--green)':'#e57373'}">${r.payMode}</span></td>
-                <td style="padding:0.6rem 0.85rem;font-size:0.75rem;color:var(--muted)">${r.handledBy||'—'}</td>
-                <td style="padding:0.6rem 0.85rem;font-size:0.72rem;color:var(--muted)">${r.remarks||'—'}</td>
-              </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>` : ''}
-
-      <!-- WORKSHOP PERFORMANCE -->
+      <!-- ══════════ SECTION 2: WORKSHOPS ══════════ -->
       ${wsPerf.length ? `
       <div style="margin-bottom:2rem">
-        <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--red);margin-bottom:0.85rem;font-family:'Syne',sans-serif;font-weight:700">Workshop Performance Ranking</p>
-        <div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden">
+        <p style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--red);margin-bottom:1rem;font-family:'Syne',sans-serif;font-weight:700;border-bottom:1px solid var(--red);padding-bottom:0.4rem">2 — Workshops (${monthWorkshops.length})</p>
+        <div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden;margin-bottom:1.25rem">
           <table style="width:100%;border-collapse:collapse">
             <thead><tr style="background:var(--bg3)">
-              <th style="text-align:left;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">#</th>
-              <th style="text-align:left;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">Artist</th>
-              <th style="text-align:left;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">Style</th>
-              <th style="text-align:left;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">Date</th>
-              <th style="text-align:center;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">Registrations</th>
-              <th style="text-align:center;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">Spots Filled</th>
-              <th style="text-align:center;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">Checked In</th>
-              <th style="text-align:center;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">Fill %</th>
-              <th style="text-align:right;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">Revenue</th>
+              ${['#','Artist','Date','Registrations','Checked In','Fill %','Revenue'].map(h=>`<th style="text-align:left;padding:0.6rem 1rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">${h}</th>`).join('')}
             </tr></thead>
             <tbody>
               ${wsPerf.map((w,i)=>`<tr style="border-bottom:1px solid var(--border)">
                 <td style="padding:0.75rem 1rem;font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:${i===0?'var(--yellow)':i===1?'rgba(200,200,200,0.6)':i===2?'rgba(180,140,80,0.7)':'var(--muted)'}">${i+1}</td>
-                <td style="padding:0.75rem 1rem;font-weight:500;color:var(--text)">${w.name}</td>
-                <td style="padding:0.75rem 1rem;font-size:0.78rem;color:var(--muted)">${w.style}</td>
-                <td style="padding:0.75rem 1rem;font-size:0.75rem;color:var(--muted)">${w.dateFrom||'—'}${w.dateTo&&w.dateTo!==w.dateFrom?' → '+w.dateTo:''}</td>
-                <td style="padding:0.75rem 1rem;text-align:center;font-weight:600">${w.regs}</td>
-                <td style="padding:0.75rem 1rem;text-align:center;font-size:0.82rem">${w.filled}/${w.totalSpots}</td>
-                <td style="padding:0.75rem 1rem;text-align:center;color:var(--green)">${w.checkedIn}</td>
-                <td style="padding:0.75rem 1rem;text-align:center">
-                  <span style="font-size:0.75rem;font-weight:700;color:${w.fillPct>=80?'var(--green)':w.fillPct>=50?'var(--yellow)':'#e57373'}">${w.fillPct}%</span>
+                <td style="padding:0.75rem 1rem">
+                  <p style="font-weight:600;color:var(--text)">${w.name}</p>
+                  <p style="font-size:0.72rem;color:var(--muted)">${w.style}</p>
                 </td>
-                <td style="padding:0.75rem 1rem;text-align:right;color:var(--yellow);font-weight:600">₹${w.revenue.toLocaleString('en-IN')}</td>
+                <td style="padding:0.75rem 1rem;font-size:0.75rem;color:var(--muted)">${w.dateFrom||'—'}${w.dateTo&&w.dateTo!==w.dateFrom?' → '+w.dateTo:''}</td>
+                <td style="padding:0.75rem 1rem;font-weight:600;text-align:center">${w.regs}</td>
+                <td style="padding:0.75rem 1rem;text-align:center;color:var(--green)">${w.checkedIn}</td>
+                <td style="padding:0.75rem 1rem;text-align:center"><span style="font-size:0.75rem;font-weight:700;color:${w.fillPct>=80?'var(--green)':w.fillPct>=50?'var(--yellow)':'#e57373'}">${w.fillPct}%</span></td>
+                <td style="padding:0.75rem 1rem;color:var(--yellow);font-weight:600">₹${w.revenue.toLocaleString('en-IN')}</td>
               </tr>`).join('')}
             </tbody>
           </table>
         </div>
+        ${monthRegs.length ? `
+        <p style="font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;font-family:'Syne',sans-serif">Registrations (${monthRegs.length})</p>
+        <div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden">
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr style="background:var(--bg3)">
+              ${['#','Name','Phone','Workshop','Package','Slot / Song','Amount','Type','Checked In'].map(h=>`<th style="text-align:left;padding:0.5rem 0.85rem;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">${h}</th>`).join('')}
+            </tr></thead>
+            <tbody>
+              ${monthRegs.map((r,i)=>`<tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:0.5rem 0.85rem;font-size:0.72rem;color:var(--muted)">${i+1}</td>
+                <td style="padding:0.5rem 0.85rem;font-weight:500;color:var(--text)">${r.name||'—'}</td>
+                <td style="padding:0.5rem 0.85rem;font-size:0.75rem">${r.phone||'—'}</td>
+                <td style="padding:0.5rem 0.85rem;font-size:0.78rem">${r.workshop||'—'}</td>
+                <td style="padding:0.5rem 0.85rem;font-size:0.78rem">${r.package||'—'}</td>
+                <td style="padding:0.5rem 0.85rem;font-size:0.72rem;color:var(--yellow)">${getSlotDisplayForReg(r)}</td>
+                <td style="padding:0.5rem 0.85rem;color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
+                <td style="padding:0.5rem 0.85rem">${payTypePill(r.payment_type)}</td>
+                <td style="padding:0.5rem 0.85rem;font-size:0.72rem;color:${r.checkedIn?'var(--green)':'var(--muted)'}">${r.checkedIn?'✓ '+r.checkedInAt:'—'}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>` : ''}
       </div>` : `<div style="background:var(--bg2);border:1px solid var(--border);padding:1.5rem;margin-bottom:2rem;text-align:center;color:var(--muted);font-size:0.85rem">No workshops in ${monthLabel}</div>`}
 
-      <!-- REGULAR BATCHES -->
+      <!-- ══════════ SECTION 3: REGULAR BATCHES ══════════ -->
       ${batchBreakdown.length ? `
       <div style="margin-bottom:2rem">
-        <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--green);margin-bottom:0.85rem;font-family:'Syne',sans-serif;font-weight:700">Regular Batches</p>
+        <p style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--green);margin-bottom:1rem;font-family:'Syne',sans-serif;font-weight:700;border-bottom:1px solid rgba(92,184,122,0.4);padding-bottom:0.4rem">3 — Regular Batches</p>
         <div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden;margin-bottom:1rem">
           <table style="width:100%;border-collapse:collapse">
             <thead><tr style="background:var(--bg3)">
@@ -3996,19 +4052,14 @@ window.generateReport = function(){
                 <td style="padding:0.75rem 1rem;font-weight:500;color:var(--text)">${b.name}</td>
                 <td style="padding:0.75rem 1rem;font-size:0.78rem;color:var(--muted)">${b.time}</td>
                 <td style="padding:0.75rem 1rem;font-size:0.78rem;color:var(--muted)">${b.trainer}</td>
-                <td style="padding:0.75rem 1rem;text-align:left;font-weight:600">${b.count}</td>
-                <td style="padding:0.75rem 1rem;text-align:left;color:var(--green);font-weight:600">${b.active}</td>
-                <td style="padding:0.75rem 1rem;text-align:left;color:var(--yellow);font-weight:600">₹${b.revenue.toLocaleString('en-IN')}</td>
+                <td style="padding:0.75rem 1rem;font-weight:600">${b.count}</td>
+                <td style="padding:0.75rem 1rem;color:var(--green);font-weight:600">${b.active}</td>
+                <td style="padding:0.75rem 1rem;color:var(--yellow);font-weight:600">₹${b.revenue.toLocaleString('en-IN')}</td>
               </tr>`).join('')}
             </tbody>
           </table>
         </div>
-      </div>` : ''}
-
-      <!-- TRAINER PERFORMANCE -->
-      ${trainers.length ? `
-      <div style="margin-bottom:2rem">
-        <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--green);margin-bottom:0.85rem;font-family:'Syne',sans-serif;font-weight:700">Trainer Performance</p>
+        ${trainers.length ? `
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem">
           ${trainers.map(t=>`<div style="background:var(--bg2);border:1px solid var(--border);padding:1rem 1.25rem">
             <p style="font-size:0.75rem;font-weight:600;color:var(--text);margin-bottom:0.75rem">${t.name}</p>
@@ -4017,30 +4068,84 @@ window.generateReport = function(){
               <div><p style="font-size:0.6rem;color:var(--muted)">Revenue</p><p style="font-size:1.5rem;font-family:'Bebas Neue',sans-serif;color:var(--yellow)">₹${t.revenue.toLocaleString('en-IN')}</p></div>
             </div>
           </div>`).join('')}
-        </div>
+        </div>` : ''}
       </div>` : ''}
 
-      <!-- REGISTRATION LIST -->
-      ${monthRegs.length ? `
+      <!-- ══════════ SECTION 4: STUDIO RENTALS ══════════ -->
+      ${monthRentals.length ? `
       <div style="margin-bottom:2rem">
-        <p style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--red);margin-bottom:0.85rem;font-family:'Syne',sans-serif;font-weight:700">Workshop Registrations (${monthRegs.length})</p>
+        <p style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:#6ab0f5;margin-bottom:1rem;font-family:'Syne',sans-serif;font-weight:700;border-bottom:1px solid rgba(100,180,255,0.4);padding-bottom:0.4rem">4 — Studio Rentals (${monthRentals.length}) · ${totalHours} hrs</p>
         <div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden">
           <table style="width:100%;border-collapse:collapse">
             <thead><tr style="background:var(--bg3)">
-              ${['#','Name','Phone','Workshop','Package','Slot/Song','Amount','Type','Checked In'].map(h=>`<th style="text-align:left;padding:0.5rem 0.85rem;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">${h}</th>`).join('')}
+              ${['Name / Brand','Purpose','Booking','Hrs','Amount','Mode','Remarks'].map(h=>`<th style="text-align:left;padding:0.5rem 0.85rem;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">${h}</th>`).join('')}
             </tr></thead>
             <tbody>
-              ${monthRegs.map((r,i)=>`<tr style="border-bottom:1px solid var(--border)">
-                <td style="padding:0.6rem 0.85rem;font-size:0.72rem;color:var(--muted)">${i+1}</td>
-                <td style="padding:0.6rem 0.85rem;font-weight:500;color:var(--text)">${r.name||'—'}</td>
-                <td style="padding:0.6rem 0.85rem;font-size:0.75rem">${r.phone||'—'}</td>
-                <td style="padding:0.6rem 0.85rem;font-size:0.78rem">${r.workshop||'—'}</td>
-                <td style="padding:0.6rem 0.85rem;font-size:0.78rem">${r.package||'—'}</td>
-                <td style="padding:0.6rem 0.85rem;font-size:0.72rem;color:var(--yellow)">${getSlotDisplayForReg(r)}</td>
-                <td style="padding:0.6rem 0.85rem;color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
-                <td style="padding:0.6rem 0.85rem">${payTypePill(r.payment_type)}</td>
-                <td style="padding:0.6rem 0.85rem;font-size:0.72rem;color:${r.checkedIn?'var(--green)':'var(--muted)'}">${r.checkedIn?'✓ '+r.checkedInAt:'—'}</td>
+              ${monthRentals.map(r=>`<tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:0.6rem 0.85rem;font-weight:500">${r.name||'—'}</td>
+                <td style="padding:0.6rem 0.85rem;font-size:0.78rem">${r.purpose||'—'}</td>
+                <td style="padding:0.6rem 0.85rem;font-size:0.75rem;color:var(--muted)">${r.dateFrom||'—'}</td>
+                <td style="padding:0.6rem 0.85rem;text-align:center">${r.hours||'—'}</td>
+                <td style="padding:0.6rem 0.85rem;color:${r.payMode==='Pending'?'#e57373':'var(--yellow)'}">₹${parseFloat(r.amount||0).toLocaleString('en-IN')}</td>
+                <td style="padding:0.6rem 0.85rem"><span style="font-size:0.65rem;font-weight:700;padding:0.15rem 0.5rem;background:${r.payMode==='Cash'?'rgba(245,230,66,0.15)':r.payMode==='Online'?'rgba(92,184,122,0.15)':'rgba(229,115,115,0.15)'};color:${r.payMode==='Cash'?'var(--yellow)':r.payMode==='Online'?'var(--green)':'#e57373'}">${r.payMode}</span></td>
+                <td style="padding:0.6rem 0.85rem;font-size:0.72rem;color:var(--muted)">${r.remarks||'—'}</td>
               </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>` : ''}
+
+      <!-- ══════════ SECTION 5: STAFF PAYMENTS ══════════ -->
+      ${monthStaff.length ? `
+      <div style="margin-bottom:2rem">
+        <p style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:#e57373;margin-bottom:1rem;font-family:'Syne',sans-serif;font-weight:700;border-bottom:1px solid rgba(229,115,115,0.4);padding-bottom:0.4rem">5 — Staff Payments · ₹${totalStaffCost.toLocaleString('en-IN')}</p>
+        <div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden">
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr style="background:var(--bg3)">
+              ${['Staff','Date','Salary Month','Amount','Mode','Paid By','Remarks'].map(h=>`<th style="text-align:left;padding:0.5rem 1rem;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">${h}</th>`).join('')}
+            </tr></thead>
+            <tbody>
+              ${monthStaff.map(p=>`<tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:0.6rem 1rem;font-weight:500">${p.name||'—'}</td>
+                <td style="padding:0.6rem 1rem;font-size:0.78rem;color:var(--muted)">${p.date||'—'}</td>
+                <td style="padding:0.6rem 1rem;font-size:0.75rem;color:var(--muted)">${p.salaryMonthLabel||'—'}</td>
+                <td style="padding:0.6rem 1rem;color:var(--yellow);font-weight:600">₹${parseFloat(p.amount||0).toLocaleString('en-IN')}</td>
+                <td style="padding:0.6rem 1rem;font-size:0.78rem">${p.mode||'—'}</td>
+                <td style="padding:0.6rem 1rem;font-size:0.75rem;color:var(--muted)">${p.paidBy||'—'}</td>
+                <td style="padding:0.6rem 1rem;font-size:0.72rem;color:var(--muted)">${p.remarks||'—'}</td>
+              </tr>`).join('')}
+              <tr style="background:var(--bg3)">
+                <td colspan="3" style="padding:0.75rem 1rem;font-weight:700;font-size:0.82rem">Total</td>
+                <td colspan="4" style="padding:0.75rem 1rem;font-weight:800;color:#e57373">₹${totalStaffCost.toLocaleString('en-IN')}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>` : ''}
+
+      <!-- ══════════ SECTION 6: STUDIO EXPENSES ══════════ -->
+      ${monthExpenses.length ? `
+      <div style="margin-bottom:2rem">
+        <p style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:#e57373;margin-bottom:1rem;font-family:'Syne',sans-serif;font-weight:700;border-bottom:1px solid rgba(229,115,115,0.4);padding-bottom:0.4rem">6 — Studio Expenses · ₹${totalExpenses.toLocaleString('en-IN')}</p>
+        <div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden">
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr style="background:var(--bg3)">
+              ${['Description','Category','Date','Amount','Mode','Paid By','Remarks'].map(h=>`<th style="text-align:left;padding:0.5rem 1rem;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;border-bottom:1px solid var(--border)">${h}</th>`).join('')}
+            </tr></thead>
+            <tbody>
+              ${monthExpenses.map(e=>`<tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:0.6rem 1rem;font-weight:500">${e.description||e.desc||'—'}</td>
+                <td style="padding:0.6rem 1rem;font-size:0.78rem;color:var(--muted)">${e.category||'—'}</td>
+                <td style="padding:0.6rem 1rem;font-size:0.75rem;color:var(--muted)">${e.date||'—'}</td>
+                <td style="padding:0.6rem 1rem;color:#e57373;font-weight:600">₹${parseFloat(e.amount||0).toLocaleString('en-IN')}</td>
+                <td style="padding:0.6rem 1rem;font-size:0.78rem">${e.mode||'—'}</td>
+                <td style="padding:0.6rem 1rem;font-size:0.75rem;color:var(--muted)">${e.paidBy||'—'}</td>
+                <td style="padding:0.6rem 1rem;font-size:0.72rem;color:var(--muted)">${e.remarks||'—'}</td>
+              </tr>`).join('')}
+              <tr style="background:var(--bg3)">
+                <td colspan="3" style="padding:0.75rem 1rem;font-weight:700;font-size:0.82rem">Total</td>
+                <td colspan="4" style="padding:0.75rem 1rem;font-weight:800;color:#e57373">₹${totalExpenses.toLocaleString('en-IN')}</td>
+              </tr>
             </tbody>
           </table>
         </div>
