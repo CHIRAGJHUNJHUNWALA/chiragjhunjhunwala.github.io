@@ -896,6 +896,9 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="page-header">
         <div><h1 class="page-title">Artist Payments</h1><p class="page-sub">Settlement status for all workshops</p></div>
         <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-outline btn-sm" onclick="printTdsReport()" style="border-color:rgba(245,230,66,0.4);color:var(--yellow)">
+            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>TDS Report
+          </button>
           <button class="btn btn-outline btn-sm" onclick="printArtistPaymentsSheet()" style="border-color:rgba(100,180,255,0.4);color:#6ab0f5">
             <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print Sheet
           </button>
@@ -2441,58 +2444,160 @@ window.renderArtistPaymentsView = function(){
   updateArtistPayBadge();
 };
 
-// ── Print Artist Payments Sheet ───────────────────────────────
+// ── Print Artist Payments Sheet (card layout, 2 lines per workshop) ──────
 window.printArtistPaymentsSheet = function(){
   const all = workshops.filter(w=>w.status==='completed'||w.status==='full');
   if(!all.length){ showToast('No completed workshops to print','error'); return; }
 
-  const rows = all.map(w=>{
+  all.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+
+  const cards = all.map(w=>{
     const s   = wsSettlements[w.id];
     const rev = s?.grossRevenue ?? registrations.filter(r=>r.workshop===w.artist)
                   .reduce((sum,r)=>sum+parseFloat(r.amount_paid||r.price||0),0);
-    const slots = (s?.slotData||w.slots||[]).map(sl=>
-      `${sl.label||sl.song||'Slot'}: ${sl.count||sl.totalSpots||'—'}`
-    ).join(', ');
-    const expStr = (s?.expenses||[]).map(e=>`${e.desc}: ₹${e.amount?.toLocaleString('en-IN')}`).join(', ');
-    const fmt = n=>n?'₹'+Number(n).toLocaleString('en-IN'):'—';
-    let statusStr=s?.artistPaid?`✓ PAID (${s.paidMode||''}) ${s.paidAt||''}`:s?'SETTLED':'PENDING';
-    return `<tr>
-      <td>${w.artist||'—'}</td>
-      <td>${w.style||'—'}</td>
-      <td>${w.dateFrom||'—'}</td>
-      <td style="font-size:0.72em">${slots||'—'}</td>
-      <td style="text-align:right">${fmt(rev)}</td>
-      <td style="text-align:right">${s?fmt(s.gstAmount):'-'}</td>
-      <td style="text-align:right">${s?fmt(s.afterGst):'-'}</td>
-      <td style="text-align:right">${s?fmt(s.artistAmount):'-'}</td>
-      <td style="text-align:right">${s?fmt(s.tdsAmount):'-'}</td>
-      <td style="text-align:right">${s?fmt(s.artistPayout):'-'}</td>
-      <td style="font-size:0.72em">${expStr||'—'}</td>
-      <td style="text-align:right">${s?fmt(s.studioPayout):'-'}</td>
-      <td style="font-size:0.72em">${statusStr}</td>
-    </tr>`;
+    const fmt = n => n!=null && n!=='' ? '₹'+Number(n).toLocaleString('en-IN') : '—';
+    const dateStr = w.dateFrom||(w.slots?.[0]?.date)||'—';
+
+    // Slot counts
+    const slotData = s?.slotData||w.slots||[];
+    const slotsStr = slotData.map(sl=>`${sl.label||sl.song||'Slot'}: ${sl.count||'—'}`).join(' &nbsp;·&nbsp; ');
+
+    // Status
+    let statusHTML;
+    if(s?.artistPaid){
+      statusHTML=`<span style="background:#e8f5e9;color:#2e7d32;padding:0.2rem 0.6rem;font-size:0.85rem;font-weight:700">✓ PAID · ${s.paidMode||''} · ${s.paidAt||''}</span>`;
+    } else if(s){
+      statusHTML=`<span style="background:#fff8e1;color:#f57f17;padding:0.2rem 0.6rem;font-size:0.85rem;font-weight:700">SETTLED (UNPAID)</span>`;
+    } else {
+      statusHTML=`<span style="background:#fce4ec;color:#c62828;padding:0.2rem 0.6rem;font-size:0.85rem;font-weight:700">PENDING</span>`;
+    }
+
+    // Expenses
+    const expStr = (s?.expenses||[]).filter(e=>e.amount>0).map(e=>`${e.desc}: ${fmt(e.amount)}`).join(' · ')||null;
+
+    const figures = [
+      ['Revenue',   fmt(Math.round(rev))],
+      ['GST',       s?fmt(s.gstAmount):'—'],
+      ['After GST', s?fmt(s.afterGst):'—'],
+      ['Artist Amt',s?fmt(s.artistAmount):'—'],
+      ['TDS',       s?.deductTds===false?'Not deducted':s?fmt(s.tdsAmount):'—'],
+      ['After TDS', s?fmt(s.artistPayout):'—'],
+      ['Studio',    s?fmt(s.studioPayout):'—'],
+    ];
+
+    return `
+      <div class="ws-card">
+        <div class="card-top">
+          <div>
+            <div class="artist-name">${w.artist||'—'}</div>
+            <div class="card-date">${dateStr}</div>
+          </div>
+          <div>${statusHTML}</div>
+        </div>
+        ${slotsStr ? `<div class="card-slots">${slotsStr}</div>` : ''}
+        ${expStr   ? `<div class="card-exp">Expenses: ${expStr}</div>` : ''}
+        <div class="card-figures">
+          ${figures.map(([l,v])=>`<div class="fig"><div class="fig-label">${l}</div><div class="fig-val">${v}</div></div>`).join('')}
+        </div>
+      </div>`;
   }).join('');
 
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Artist Payments — THS</title><style>
-    body{font-family:Arial,sans-serif;font-size:11px;margin:1.5rem}
-    h1{font-size:1.3rem;margin-bottom:0.2rem}p.sub{color:#666;margin-bottom:1.25rem;font-size:0.85rem}
-    table{width:100%;border-collapse:collapse;font-size:10px}
-    th{background:#111;color:#fff;padding:0.5rem 0.5rem;text-align:left;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap}
-    td{padding:0.5rem 0.5rem;border-bottom:1px solid #eee;vertical-align:top}
-    tr:nth-child(even) td{background:#fafafa}
-    @media print{@page{size:landscape}}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#111;padding:2rem;background:#fff}
+    h1{font-size:1.5rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:0.15rem}
+    .sub{color:#888;font-size:0.82rem;margin-bottom:1.75rem}
+    .ws-card{border:1px solid #ddd;padding:1.1rem 1.25rem;margin-bottom:1rem;break-inside:avoid}
+    .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.6rem}
+    .artist-name{font-size:1.15rem;font-weight:800;letter-spacing:-0.01em;color:#111;margin-bottom:0.15rem}
+    .card-date{font-size:0.85rem;color:#666}
+    .card-slots{font-size:0.85rem;color:#444;margin-bottom:0.5rem;border-left:3px solid #111;padding-left:0.6rem;line-height:1.6;text-transform:uppercase;letter-spacing:0.04em}
+    .card-exp{font-size:0.78rem;color:#888;margin-bottom:0.5rem;font-style:italic}
+    .card-figures{display:flex;gap:0;border-top:1px solid #eee;padding-top:0.7rem;margin-top:0.5rem;flex-wrap:wrap}
+    .fig{flex:1;min-width:80px;padding:0 0.75rem 0 0;border-right:1px solid #eee;margin-right:0.5rem}
+    .fig:last-child{border-right:none}
+    .fig-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:#999;margin-bottom:0.2rem;font-weight:600}
+    .fig-val{font-size:1rem;font-weight:700;color:#111}
+    .footer{text-align:center;color:#bbb;font-size:0.75rem;margin-top:2rem;padding-top:1rem;border-top:1px solid #eee}
+    @media print{body{padding:1rem}.ws-card{break-inside:avoid}}
   </style></head><body>
     <h1>The Happening Space — Artist Payments</h1>
-    <p class="sub">Generated: ${new Date().toLocaleDateString('en-IN')} at ${new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</p>
+    <p class="sub">Generated: ${new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})} at ${new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} &nbsp;·&nbsp; ${all.length} workshop${all.length!==1?'s':''}</p>
+    ${cards}
+    <div class="footer">The Happening Space · thehappeningspace.in</div>
+  </body></html>`;
+
+  const win=window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+  setTimeout(()=>win.print(), 500);
+};
+
+// ── TDS Report (paid artists only) ───────────────────────────────────────
+window.printTdsReport = function(){
+  const paid = workshops.filter(w=>
+    (w.status==='completed'||w.status==='full') && wsSettlements[w.id]?.artistPaid
+  );
+  if(!paid.length){ showToast('No paid artists found for TDS report','error'); return; }
+
+  paid.sort((a,b)=>{
+    const da = wsSettlements[a.id]?.paidAt||'';
+    const db = wsSettlements[b.id]?.paidAt||'';
+    return da.localeCompare(db);
+  });
+
+  let totalTds=0, totalPayout=0;
+  const rows = paid.map(w=>{
+    const s       = wsSettlements[w.id];
+    const tds     = s?.tdsAmount||0;
+    const payout  = s?.artistPayout||0;
+    totalTds    += tds;
+    totalPayout += payout;
+    return `<tr>
+      <td><strong>${w.artist||'—'}</strong></td>
+      <td>${s.paidAt||'—'}</td>
+      <td style="text-align:center">${s.paidMode||'—'}</td>
+      <td style="text-align:right">₹${tds.toLocaleString('en-IN')}</td>
+      <td style="text-align:right">₹${payout.toLocaleString('en-IN')}</td>
+    </tr>`;
+  }).join('');
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>TDS Report — THS</title><style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#111;padding:2.5rem}
+    h1{font-size:1.5rem;font-weight:800;margin-bottom:0.15rem}
+    .sub{color:#888;font-size:0.82rem;margin-bottom:2rem}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    thead tr{background:#111;color:#fff}
+    th{padding:0.75rem 1rem;text-align:left;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;font-weight:600}
+    td{padding:0.85rem 1rem;border-bottom:1px solid #eee;vertical-align:middle}
+    td:first-child{font-size:0.95rem}
+    tr:last-child td{border-bottom:none}
+    .subtotal{background:#f5f5f5;font-weight:800}
+    .subtotal td{padding:1rem;font-size:1rem;border-top:2px solid #111}
+    .footer{text-align:center;color:#bbb;font-size:0.75rem;margin-top:2.5rem;padding-top:1rem;border-top:1px solid #eee}
+    @media print{body{padding:1.5rem}}
+  </style></head><body>
+    <h1>The Happening Space — TDS Report</h1>
+    <p class="sub">Generated: ${new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})} &nbsp;·&nbsp; ${paid.length} paid artist${paid.length!==1?'s':''}</p>
     <table>
       <thead><tr>
-        <th>Artist</th><th>Workshop</th><th>Date</th><th>Slots / Count</th>
-        <th>Revenue</th><th>GST</th><th>After GST</th><th>Artist Amt</th>
-        <th>TDS</th><th>After TDS</th><th>Expenses</th><th>Studio</th><th>Status</th>
+        <th>Artist</th>
+        <th>Date of Payment</th>
+        <th style="text-align:center">Mode</th>
+        <th style="text-align:right">TDS Amount</th>
+        <th style="text-align:right">Artist Paid (After TDS)</th>
       </tr></thead>
-      <tbody>${rows}</tbody>
+      <tbody>
+        ${rows}
+        <tr class="subtotal">
+          <td colspan="3">SUBTOTAL</td>
+          <td style="text-align:right">₹${totalTds.toLocaleString('en-IN')}</td>
+          <td style="text-align:right">₹${totalPayout.toLocaleString('en-IN')}</td>
+        </tr>
+      </tbody>
     </table>
-    <p style="margin-top:1.5rem;font-size:0.75rem;color:#999;text-align:center">The Happening Space · thehappeningspace.in</p>
+    <div class="footer">The Happening Space · thehappeningspace.in · TDS @ 1%</div>
   </body></html>`;
 
   const win=window.open('','_blank');
