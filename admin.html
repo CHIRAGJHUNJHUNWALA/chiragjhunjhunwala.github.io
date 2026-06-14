@@ -896,6 +896,9 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="page-header">
         <div><h1 class="page-title">Artist Payments</h1><p class="page-sub">Settlement status for all workshops</p></div>
         <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-outline btn-sm" onclick="printArtistPaymentsSheet()" style="border-color:rgba(100,180,255,0.4);color:#6ab0f5">
+            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print Sheet
+          </button>
           <div class="filter-tabs" id="apFilterTabs" style="margin:0">
             <button class="filter-tab active" onclick="filterArtistPayments('all',this)">All</button>
             <button class="filter-tab" onclick="filterArtistPayments('pending',this)" style="color:#e57373">Pending</button>
@@ -904,6 +907,36 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           </div>
         </div>
       </div>
+
+      <!-- Filter + Search toolbar -->
+      <div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;margin-bottom:1.25rem">
+        <input type="text" id="apSearch" placeholder="Search artist or style…" oninput="renderArtistPaymentsView()"
+          style="background:var(--bg2);border:1px solid var(--border2);padding:0.45rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none;flex:1;min-width:160px;max-width:240px">
+        <select id="apMonthFilter" onchange="renderArtistPaymentsView()"
+          style="background:var(--bg2);border:1px solid var(--border2);padding:0.45rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none">
+          <option value="">All Months</option>
+          <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+          <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+          <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+          <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+        </select>
+        <select id="apYearFilter" onchange="renderArtistPaymentsView()"
+          style="background:var(--bg2);border:1px solid var(--border2);padding:0.45rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none">
+          <option value="">All Years</option>
+        </select>
+        <select id="apDateType" onchange="apToggleDateRange()"
+          style="background:var(--bg2);border:1px solid var(--border2);padding:0.45rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none">
+          <option value="">Any Date</option>
+          <option value="custom">Custom Range</option>
+        </select>
+        <span id="apCustomRange" style="display:none;gap:0.4rem;align-items:center">
+          <input type="date" id="apDateFrom" onchange="renderArtistPaymentsView()" style="color-scheme:dark;background:var(--bg2);border:1px solid var(--border2);padding:0.45rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.78rem;outline:none">
+          <span style="color:var(--muted);font-size:0.75rem">to</span>
+          <input type="date" id="apDateTo" onchange="renderArtistPaymentsView()" style="color-scheme:dark;background:var(--bg2);border:1px solid var(--border2);padding:0.45rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.78rem;outline:none">
+        </span>
+        <button class="btn btn-ghost btn-sm" onclick="apClearFilters()">Clear</button>
+      </div>
+
       <div class="stats-grid" id="apStatsGrid" style="margin-bottom:1.5rem"></div>
       <div class="table-wrap" style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;min-width:720px">
@@ -914,6 +947,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
               <th style="padding:0.75rem 1rem;text-align:right;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Revenue</th>
               <th style="padding:0.75rem 1rem;text-align:right;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Artist Payout</th>
               <th style="padding:0.75rem 1rem;text-align:right;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Studio</th>
+              <th style="padding:0.75rem 1rem;text-align:center;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Mode</th>
               <th style="padding:0.75rem 1rem;text-align:center;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Status</th>
               <th style="padding:0.75rem 1rem;text-align:center;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Paid On</th>
               <th style="padding:0.75rem 1rem"></th>
@@ -1563,8 +1597,8 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;padding:0.6rem 0.75rem;background:var(--bg3);border:1px solid var(--border)">
             <input type="checkbox" id="wsExcludeNonAtt" onchange="recalcSettlement()" style="width:15px;height:15px;accent-color:var(--red);cursor:pointer">
             <div>
-              <p style="font-size:0.78rem;font-weight:600;color:var(--text);margin:0">Exclude non-attended students</p>
-              <p style="font-size:0.68rem;color:var(--muted);margin:0">Settlement based on attended only — non-attended amount adds to studio</p>
+              <p style="font-size:0.78rem;font-weight:600;color:var(--text);margin:0">Exclude non-attended (WhatsApp message only)</p>
+              <p style="font-size:0.68rem;color:var(--muted);margin:0">Settlement amounts on site always use actual revenue</p>
             </div>
             <span id="wsNonAttAmt" style="font-size:0.75rem;color:var(--muted);margin-left:auto;white-space:nowrap"></span>
           </label>
@@ -1586,6 +1620,12 @@ tr:hover td{background:rgba(255,255,255,0.02)}
             <div class="form-group">
               <label>Artist Revenue % <span style="font-weight:300;color:var(--muted);font-size:0.72em">(of after-GST)</span></label>
               <input type="number" id="wsSettleArtistPct" min="0" max="100" step="1" placeholder="e.g. 70" value="70" oninput="recalcSettlement()">
+            </div>
+            <div class="form-group" style="margin-bottom:0.75rem">
+              <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+                <input type="checkbox" id="wsDeductTds" checked onchange="recalcSettlement()" style="width:14px;height:14px;accent-color:var(--red);cursor:pointer">
+                <span>Deduct TDS (1% on artist amount)</span>
+              </label>
             </div>
 
             <!-- Artist Expenses -->
@@ -2269,6 +2309,20 @@ function updateArtistPayBadge(){
   else { badge.style.display='none'; }
 }
 
+// ── Artist Payments filter helpers ────────────────────────────
+window.apToggleDateRange = function(){
+  const wrap = document.getElementById('apCustomRange');
+  if(wrap) wrap.style.display = document.getElementById('apDateType').value==='custom' ? 'flex' : 'none';
+  renderArtistPaymentsView();
+};
+window.apClearFilters = function(){
+  ['apSearch','apMonthFilter','apYearFilter','apDateType','apDateFrom','apDateTo'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  const wrap=document.getElementById('apCustomRange'); if(wrap) wrap.style.display='none';
+  renderArtistPaymentsView();
+};
+
 let _apFilter = 'all';
 window.filterArtistPayments = function(f, el){
   _apFilter = f;
@@ -2278,43 +2332,67 @@ window.filterArtistPayments = function(f, el){
 };
 
 window.renderArtistPaymentsView = function(){
-  // Only completed and full workshops
-  let data = workshops.filter(w=>w.status==='completed'||w.status==='full');
+  // Populate year dropdown
+  const yearSel = document.getElementById('apYearFilter');
+  if(yearSel && yearSel.options.length<=1){
+    const years = new Set(workshops.filter(w=>w.status==='completed'||w.status==='full')
+      .map(w=>(w.dateFrom||'').slice(0,4)).filter(Boolean));
+    const curY = new Date().getFullYear();
+    [curY-1,curY,curY+1].forEach(y=>years.add(String(y)));
+    [...years].sort((a,b)=>b-a).forEach(y=>{
+      const o=document.createElement('option'); o.value=y; o.textContent=y;
+      yearSel.appendChild(o);
+    });
+  }
 
+  let data = workshops.filter(w=>w.status==='completed'||w.status==='full');
   if(_apFilter==='pending')  data = data.filter(w=>!wsSettlements[w.id]);
   if(_apFilter==='settled')  data = data.filter(w=>wsSettlements[w.id] && !wsSettlements[w.id].artistPaid);
   if(_apFilter==='paid')     data = data.filter(w=>wsSettlements[w.id]?.artistPaid);
 
-  // Sort: pending first, then settled, then paid, newest first within each
+  // Month filter
+  const selMonth = document.getElementById('apMonthFilter')?.value;
+  if(selMonth) data = data.filter(w=>{ const d=new Date((w.dateFrom||'')+'T00:00'); return (d.getMonth()+1)===parseInt(selMonth); });
+  // Year filter
+  const selYear = document.getElementById('apYearFilter')?.value;
+  if(selYear) data = data.filter(w=>{ const d=new Date((w.dateFrom||'')+'T00:00'); return String(d.getFullYear())===selYear; });
+  // Custom date range
+  const dateType = document.getElementById('apDateType')?.value;
+  if(dateType==='custom'){
+    const from=document.getElementById('apDateFrom')?.value;
+    const to  =document.getElementById('apDateTo')?.value;
+    if(from) data=data.filter(w=>(w.dateFrom||'')>=from);
+    if(to)   data=data.filter(w=>(w.dateFrom||'')<=to);
+  }
+  // Search
+  const q=(document.getElementById('apSearch')?.value||'').toLowerCase();
+  if(q) data=data.filter(w=>(w.artist||'').toLowerCase().includes(q)||(w.style||'').toLowerCase().includes(q));
+
+  // Sort: pending first → settled → paid, newest first within group
   data.sort((a,b)=>{
-    const sa = wsSettlements[a.id];
-    const sb = wsSettlements[b.id];
-    const ra = sa?.artistPaid ? 2 : sa ? 1 : 0;
-    const rb = sb?.artistPaid ? 2 : sb ? 1 : 0;
-    if(ra !== rb) return ra - rb;
-    return (b.createdAt||0) - (a.createdAt||0);
+    const sa=wsSettlements[a.id]; const sb=wsSettlements[b.id];
+    const ra=sa?.artistPaid?2:sa?1:0; const rb=sb?.artistPaid?2:sb?1:0;
+    if(ra!==rb) return ra-rb;
+    return (b.createdAt||0)-(a.createdAt||0);
   });
 
-  // Stats
+  // Stats (always from all completed/full, not filtered)
   const all      = workshops.filter(w=>w.status==='completed'||w.status==='full');
   const nPending = all.filter(w=>!wsSettlements[w.id]).length;
   const nSettled = all.filter(w=>wsSettlements[w.id]&&!wsSettlements[w.id].artistPaid).length;
   const nPaid    = all.filter(w=>wsSettlements[w.id]?.artistPaid).length;
   const totalArtist = Object.values(wsSettlements).reduce((s,x)=>s+(x.artistPayout||0),0);
   const paidArtist  = Object.values(wsSettlements).filter(x=>x.artistPaid).reduce((s,x)=>s+(x.artistPayout||0),0);
-  const pendingAmt  = totalArtist - paidArtist;
-
   document.getElementById('apStatsGrid').innerHTML = `
     <div class="stat-card"><p class="stat-label">Total Workshops</p><p class="stat-val">${all.length}</p></div>
     <div class="stat-card"><p class="stat-label">Pending Settlement</p><p class="stat-val" style="color:#e57373">${nPending}</p></div>
     <div class="stat-card"><p class="stat-label">Settled (Unpaid)</p><p class="stat-val" style="color:var(--yellow)">${nSettled}</p></div>
     <div class="stat-card"><p class="stat-label">Fully Paid</p><p class="stat-val" style="color:var(--green)">${nPaid}</p></div>
     <div class="stat-card"><p class="stat-label">Total Artist Payouts</p><p class="stat-val yellow">₹${totalArtist.toLocaleString('en-IN')}</p></div>
-    <div class="stat-card"><p class="stat-label">Pending Payout</p><p class="stat-val" style="color:#e57373">₹${pendingAmt.toLocaleString('en-IN')}</p></div>`;
+    <div class="stat-card"><p class="stat-label">Pending Payout</p><p class="stat-val" style="color:#e57373">₹${(totalArtist-paidArtist).toLocaleString('en-IN')}</p></div>`;
 
   if(!data.length){
-    document.getElementById('apTableBody').innerHTML =
-      `<tr><td colspan="8" style="padding:3rem;text-align:center;color:var(--muted)">No workshops in this category.</td></tr>`;
+    document.getElementById('apTableBody').innerHTML=`<tr><td colspan="9" style="padding:3rem;text-align:center;color:var(--muted)">No workshops found.</td></tr>`;
     return;
   }
 
@@ -2322,21 +2400,22 @@ window.renderArtistPaymentsView = function(){
     const s   = wsSettlements[w.id];
     const rev = s?.grossRevenue ?? registrations.filter(r=>r.workshop===w.artist)
                   .reduce((sum,r)=>sum+parseFloat(r.amount_paid||r.price||0),0);
-    const artistPayout = s?.artistPayout || 0;
-    const studioPayout = s?.studioPayout || 0;
+    const artistPayout = s?.artistPayout||0;
+    const studioPayout = s?.studioPayout||0;
     const dateStr = w.dateFrom||(w.slots?.[0]?.date)||'—';
-
-    // Status badge
-    let statusBadge, rowStyle='';
+    let statusBadge,rowStyle='';
     if(s?.artistPaid){
-      statusBadge = `<span class="pill" style="background:rgba(92,184,122,0.15);color:var(--green);border:1px solid rgba(92,184,122,0.3);font-size:0.6rem">✓ PAID</span>`;
+      statusBadge=`<span class="pill" style="background:rgba(92,184,122,0.15);color:var(--green);border:1px solid rgba(92,184,122,0.3);font-size:0.6rem">✓ PAID</span>`;
     } else if(s){
-      statusBadge = `<span class="pill" style="background:rgba(245,230,66,0.12);color:var(--yellow);border:1px solid rgba(245,230,66,0.3);font-size:0.6rem">SETTLED</span>`;
-      rowStyle = 'background:rgba(245,230,66,0.02)';
+      statusBadge=`<span class="pill" style="background:rgba(245,230,66,0.12);color:var(--yellow);border:1px solid rgba(245,230,66,0.3);font-size:0.6rem">SETTLED</span>`;
+      rowStyle='background:rgba(245,230,66,0.02)';
     } else {
-      statusBadge = `<span class="pill" style="background:rgba(229,115,115,0.1);color:#e57373;border:1px solid rgba(229,115,115,0.25);font-size:0.6rem">PENDING</span>`;
-      rowStyle = 'background:rgba(229,115,115,0.02)';
+      statusBadge=`<span class="pill" style="background:rgba(229,115,115,0.1);color:#e57373;border:1px solid rgba(229,115,115,0.25);font-size:0.6rem">PENDING</span>`;
+      rowStyle='background:rgba(229,115,115,0.02)';
     }
+    const modeBadge = s?.paidMode
+      ? `<span class="pill ${s.paidMode==='Cash'?'pill-yellow':'pill-blue'}" style="font-size:0.6rem">${s.paidMode}</span>`
+      : '<span style="color:var(--muted);font-size:0.75rem">—</span>';
 
     return `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);${rowStyle}">
       <td style="padding:0.85rem 1rem">
@@ -2345,12 +2424,9 @@ window.renderArtistPaymentsView = function(){
       </td>
       <td style="padding:0.85rem 1rem;font-size:0.78rem;color:var(--muted);white-space:nowrap">${dateStr}</td>
       <td style="padding:0.85rem 1rem;text-align:right;font-weight:500;color:var(--text)">₹${Math.round(rev).toLocaleString('en-IN')}</td>
-      <td style="padding:0.85rem 1rem;text-align:right;font-weight:600;color:${artistPayout?'var(--yellow)':'var(--muted)'}">
-        ${artistPayout ? '₹'+artistPayout.toLocaleString('en-IN') : '—'}
-      </td>
-      <td style="padding:0.85rem 1rem;text-align:right;color:var(--muted)">
-        ${studioPayout ? '₹'+studioPayout.toLocaleString('en-IN') : '—'}
-      </td>
+      <td style="padding:0.85rem 1rem;text-align:right;font-weight:600;color:${artistPayout?'var(--yellow)':'var(--muted)'}">${artistPayout?'₹'+artistPayout.toLocaleString('en-IN'):'—'}</td>
+      <td style="padding:0.85rem 1rem;text-align:right;color:var(--muted)">${studioPayout?'₹'+studioPayout.toLocaleString('en-IN'):'—'}</td>
+      <td style="padding:0.85rem 1rem;text-align:center">${modeBadge}</td>
       <td style="padding:0.85rem 1rem;text-align:center">${statusBadge}</td>
       <td style="padding:0.85rem 1rem;text-align:center;font-size:0.75rem;color:var(--muted)">${s?.paidAt||'—'}</td>
       <td style="padding:0.85rem 1rem;text-align:center">
@@ -2363,6 +2439,66 @@ window.renderArtistPaymentsView = function(){
   }).join('');
 
   updateArtistPayBadge();
+};
+
+// ── Print Artist Payments Sheet ───────────────────────────────
+window.printArtistPaymentsSheet = function(){
+  const all = workshops.filter(w=>w.status==='completed'||w.status==='full');
+  if(!all.length){ showToast('No completed workshops to print','error'); return; }
+
+  const rows = all.map(w=>{
+    const s   = wsSettlements[w.id];
+    const rev = s?.grossRevenue ?? registrations.filter(r=>r.workshop===w.artist)
+                  .reduce((sum,r)=>sum+parseFloat(r.amount_paid||r.price||0),0);
+    const slots = (s?.slotData||w.slots||[]).map(sl=>
+      `${sl.label||sl.song||'Slot'}: ${sl.count||sl.totalSpots||'—'}`
+    ).join(', ');
+    const expStr = (s?.expenses||[]).map(e=>`${e.desc}: ₹${e.amount?.toLocaleString('en-IN')}`).join(', ');
+    const fmt = n=>n?'₹'+Number(n).toLocaleString('en-IN'):'—';
+    let statusStr=s?.artistPaid?`✓ PAID (${s.paidMode||''}) ${s.paidAt||''}`:s?'SETTLED':'PENDING';
+    return `<tr>
+      <td>${w.artist||'—'}</td>
+      <td>${w.style||'—'}</td>
+      <td>${w.dateFrom||'—'}</td>
+      <td style="font-size:0.72em">${slots||'—'}</td>
+      <td style="text-align:right">${fmt(rev)}</td>
+      <td style="text-align:right">${s?fmt(s.gstAmount):'-'}</td>
+      <td style="text-align:right">${s?fmt(s.afterGst):'-'}</td>
+      <td style="text-align:right">${s?fmt(s.artistAmount):'-'}</td>
+      <td style="text-align:right">${s?fmt(s.tdsAmount):'-'}</td>
+      <td style="text-align:right">${s?fmt(s.artistPayout):'-'}</td>
+      <td style="font-size:0.72em">${expStr||'—'}</td>
+      <td style="text-align:right">${s?fmt(s.studioPayout):'-'}</td>
+      <td style="font-size:0.72em">${statusStr}</td>
+    </tr>`;
+  }).join('');
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Artist Payments — THS</title><style>
+    body{font-family:Arial,sans-serif;font-size:11px;margin:1.5rem}
+    h1{font-size:1.3rem;margin-bottom:0.2rem}p.sub{color:#666;margin-bottom:1.25rem;font-size:0.85rem}
+    table{width:100%;border-collapse:collapse;font-size:10px}
+    th{background:#111;color:#fff;padding:0.5rem 0.5rem;text-align:left;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap}
+    td{padding:0.5rem 0.5rem;border-bottom:1px solid #eee;vertical-align:top}
+    tr:nth-child(even) td{background:#fafafa}
+    @media print{@page{size:landscape}}
+  </style></head><body>
+    <h1>The Happening Space — Artist Payments</h1>
+    <p class="sub">Generated: ${new Date().toLocaleDateString('en-IN')} at ${new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</p>
+    <table>
+      <thead><tr>
+        <th>Artist</th><th>Workshop</th><th>Date</th><th>Slots / Count</th>
+        <th>Revenue</th><th>GST</th><th>After GST</th><th>Artist Amt</th>
+        <th>TDS</th><th>After TDS</th><th>Expenses</th><th>Studio</th><th>Status</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p style="margin-top:1.5rem;font-size:0.75rem;color:#999;text-align:center">The Happening Space · thehappeningspace.in</p>
+  </body></html>`;
+
+  const win=window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+  setTimeout(()=>win.print(), 500);
 };
 
 window.openWsSettlement = async function(wId){
@@ -2438,6 +2574,8 @@ window.openWsSettlement = async function(wId){
   document.getElementById('wsSettleArtistPct').value = saved?.artistPercent ?? 70;
   document.getElementById('wsSettleRemarks').value   = saved?.remarks || '';
   document.getElementById('wsExcludeNonAtt').checked = saved?.excludeNonAtt || false;
+  if(document.getElementById('wsDeductTds'))
+    document.getElementById('wsDeductTds').checked   = saved?.deductTds !== false;
 
   // Restore expenses
   document.getElementById('wsSettleExpenses').innerHTML = '';
@@ -2474,63 +2612,47 @@ window.addExpenseRow = function(desc='', amount=''){
 };
 
 window.recalcSettlement = function(){
-  const excludeNonAtt = document.getElementById('wsExcludeNonAtt')?.checked || false;
-  const gross    = _wsSettleGross;
-  const attRev   = _wsSettleAttRev;
-  const nonAttRev = Math.max(gross - attRev, 0);
+  const gross    = _wsSettleGross; // ALWAYS actual total revenue
+  const gstPct   = parseFloat(document.getElementById('wsSettleGstPct').value)||0;
+  const artPct   = parseFloat(document.getElementById('wsSettleArtistPct').value)||0;
+  const deductTds = document.getElementById('wsDeductTds')?.checked !== false;
 
-  // Revenue base depends on exclude toggle
-  const base   = excludeNonAtt ? attRev : gross;
-  const gstPct = parseFloat(document.getElementById('wsSettleGstPct').value)||0;
-  const artPct = parseFloat(document.getElementById('wsSettleArtistPct').value)||0;
+  // Always use actual gross — exclude non-attended is WhatsApp-only
+  document.getElementById('wsSettleGross').textContent = '₹'+gross.toLocaleString('en-IN');
 
-  const gstAmt   = Math.round(base * gstPct / 100);
-  const afterGst = base - gstAmt;
+  const gstAmt   = Math.round(gross * gstPct / 100);
+  const afterGst = gross - gstAmt;
   const artRaw   = Math.round(afterGst * artPct / 100);
 
-  // Expenses — FIX: only 2 inputs per row (text + number)
+  // Expenses — inputs[0]=desc, inputs[1]=amount
   const expRows = Array.from(document.querySelectorAll('#wsSettleExpenses > div'));
   let totalExp  = 0;
   const expLines = expRows.map(row=>{
     const inputs = row.querySelectorAll('input');
-    const descEl = inputs[0];
-    const amtEl  = inputs[1]; // was [,,amtEl] before — BUG FIXED
-    const amt    = parseFloat(amtEl?.value)||0;
+    const amt    = parseFloat(inputs[1]?.value)||0;
     totalExp    += amt;
-    return {desc: descEl?.value.trim()||'Expense', amount: amt};
+    return {desc: inputs[0]?.value.trim()||'Expense', amount: amt};
   }).filter(e=>e.amount>0);
   document.getElementById('wsExpenseTotal').textContent = '₹'+totalExp.toLocaleString('en-IN');
 
   const artAfterExp  = artRaw - totalExp;
-  const tdsAmt       = Math.round(Math.max(artAfterExp,0) * 1 / 100);
+  const tdsAmt       = deductTds ? Math.round(Math.max(artAfterExp,0) * 1 / 100) : 0;
   const artistPayout = Math.max(artAfterExp - tdsAmt, 0);
-  const studioBase   = afterGst - artRaw;
-  const studioExtra  = excludeNonAtt ? nonAttRev : 0;
-  const studioTotal  = studioBase + studioExtra;
-
-  // Update left side total label
-  document.getElementById('wsSettleGross').textContent = '₹'+(excludeNonAtt?attRev:gross).toLocaleString('en-IN');
+  const studioPayout = afterGst - artRaw;
 
   // Update live panel
-  document.getElementById('sc-total').textContent        = '₹'+base.toLocaleString('en-IN');
+  document.getElementById('sc-total').textContent        = '₹'+gross.toLocaleString('en-IN');
   document.getElementById('sc-gst').textContent          = '− ₹'+gstAmt.toLocaleString('en-IN');
   document.getElementById('sc-aftergst').textContent     = '₹'+afterGst.toLocaleString('en-IN');
   document.getElementById('sc-artpct').textContent       = artPct;
   document.getElementById('sc-artist').textContent       = '₹'+artRaw.toLocaleString('en-IN');
-  document.getElementById('sc-tds').textContent          = '− ₹'+tdsAmt.toLocaleString('en-IN');
+  document.getElementById('sc-tds').textContent          = deductTds ? '− ₹'+tdsAmt.toLocaleString('en-IN') : 'Not deducted';
   document.getElementById('sc-artistpayout').textContent = '₹'+artistPayout.toLocaleString('en-IN');
-  document.getElementById('sc-studio').textContent       = '₹'+studioBase.toLocaleString('en-IN');
+  document.getElementById('sc-studio').textContent       = '₹'+studioPayout.toLocaleString('en-IN');
 
-  // Studio extra row
-  const extraRow = document.getElementById('sc-studio-extra-row');
-  if(excludeNonAtt && studioExtra > 0){
-    extraRow.style.display   = 'flex';
-    document.getElementById('sc-studio-base').textContent   = '₹'+studioBase.toLocaleString('en-IN');
-    document.getElementById('sc-studio-nonatt').textContent = '₹'+studioExtra.toLocaleString('en-IN');
-    document.getElementById('sc-studio-total').textContent  = '₹'+studioTotal.toLocaleString('en-IN');
-  } else {
-    extraRow.style.display = 'none';
-  }
+  // Studio extra (non-attended) only for display context, not in the calc
+  const nonAttRev = Math.max(_wsSettleGross - (_wsSettleAttRev||_wsSettleGross), 0);
+  document.getElementById('sc-studio-extra-row').style.display = 'none'; // not used in settlement
 
   // Expense rows in panel
   let expPanelHTML = '';
@@ -2539,12 +2661,13 @@ window.recalcSettlement = function(){
   });
   document.getElementById('sc-expense-rows').innerHTML = expPanelHTML;
 
-  // Store for WhatsApp + save
   window._wsSettleCalcData = {
-    gross: base, gstPct, gstAmt, afterGst, artPct, artRaw,
+    gross, gstPct, gstAmt, afterGst, artPct, artRaw,
     expLines, totalExp, artAfterExp, tdsAmt, artistPayout,
-    studioBase, studioExtra, studioTotal, excludeNonAtt,
-    nonAttRev, totalRevenue: gross
+    studioBase: studioPayout, studioTotal: studioPayout,
+    deductTds,
+    attRev: _wsSettleAttRev||gross, nonAttRev,
+    totalRevenue: gross
   };
 };
 
@@ -2566,11 +2689,12 @@ window.saveWsSettlement = async function(){
     artistPercent: c.artPct||0, artistAmount: c.artRaw||0,
     expenses:      expRows,
     tdsAmount:     c.tdsAmt||0,
+    deductTds:     c.deductTds !== false,
     artistPayout:  c.artistPayout||0,
     studioBase:    c.studioBase||0,
-    studioExtra:   c.studioExtra||0,
     studioPayout:  c.studioTotal||0,
-    excludeNonAtt: c.excludeNonAtt||false,
+    excludeNonAtt: document.getElementById('wsExcludeNonAtt')?.checked||false,
+    slotData:      _wsSettleSlotData||[],
     artistPaid:    _wsSettleIsPaid,
     paidAt:        wsSettlements[_wsSettleCurrentId]?.paidAt||null,
     remarks:       document.getElementById('wsSettleRemarks').value.trim(),
@@ -2585,22 +2709,55 @@ window.saveWsSettlement = async function(){
   if(document.getElementById('view-artistpayments')?.classList.contains('active')) renderArtistPaymentsView();
 };
 
+let _wsPaidMode = null;
+
 window.toggleArtistPaid = async function(){
-  _wsSettleIsPaid = !_wsSettleIsPaid;
   const paidBtn = document.getElementById('wsSettleMarkPaidBtn');
   const paidSt  = document.getElementById('wsSettlePaidStatus');
   const today   = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
-  if(_wsSettleIsPaid){
-    paidBtn.textContent='✓ Marked as Paid'; paidBtn.style.background='rgba(92,184,122,0.25)';
-    paidSt.innerHTML=`<span style="color:var(--green)">Paid on ${today}</span>`;
+
+  if(!_wsSettleIsPaid){
+    // Ask Cash or Online
+    const mode = await showPayModeDialog();
+    if(!mode) return; // cancelled
+    _wsSettleIsPaid = true;
+    _wsPaidMode     = mode;
+    paidBtn.textContent      = '✓ Paid · '+mode;
+    paidBtn.style.background = 'rgba(92,184,122,0.25)';
+    paidSt.innerHTML         = `<span style="color:var(--green)">Paid ${today} · ${mode}</span>`;
     if(!wsSettlements[_wsSettleCurrentId]) wsSettlements[_wsSettleCurrentId]={};
-    wsSettlements[_wsSettleCurrentId].paidAt = today;
+    wsSettlements[_wsSettleCurrentId].paidAt   = today;
+    wsSettlements[_wsSettleCurrentId].paidMode = mode;
   } else {
-    paidBtn.textContent='Mark Artist Paid ✓'; paidBtn.style.background='rgba(92,184,122,0.15)';
-    paidSt.textContent='Not yet paid';
+    _wsSettleIsPaid = false;
+    _wsPaidMode     = null;
+    paidBtn.textContent      = 'Mark Artist Paid ✓';
+    paidBtn.style.background = 'rgba(92,184,122,0.15)';
+    paidSt.textContent       = 'Not yet paid';
   }
   await saveWsSettlement();
 };
+
+function showPayModeDialog(){
+  return new Promise(resolve=>{
+    const overlay = document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:9999';
+    overlay.innerHTML=`
+      <div style="background:var(--bg2);border:1px solid var(--border);padding:2rem;min-width:290px;text-align:center">
+        <p style="font-size:0.6rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.75rem">Payment Mode</p>
+        <p style="font-size:0.92rem;color:var(--text);font-weight:600;margin-bottom:1.5rem">How was the artist paid?</p>
+        <div style="display:flex;gap:0.75rem;justify-content:center">
+          <button id="_payModeCash" class="btn btn-red" style="min-width:110px;font-size:0.88rem">💵 Cash</button>
+          <button id="_payModeOnline" class="btn btn-outline" style="min-width:110px;font-size:0.88rem">📲 Online</button>
+        </div>
+        <button id="_payModeCancel" style="display:block;margin:1.25rem auto 0;background:none;border:none;color:var(--muted);font-size:0.75rem;cursor:pointer;font-family:'Syne',sans-serif">Cancel</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#_payModeCash').onclick   = ()=>{ document.body.removeChild(overlay); resolve('Cash'); };
+    overlay.querySelector('#_payModeOnline').onclick = ()=>{ document.body.removeChild(overlay); resolve('Online'); };
+    overlay.querySelector('#_payModeCancel').onclick = ()=>{ document.body.removeChild(overlay); resolve(null); };
+  });
+}
 
 window.sendSettlementWhatsApp = function(){
   const c    = window._wsSettleCalcData;
