@@ -850,7 +850,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <!-- PAYMENTS -->
     <div class="view" id="view-payments">
       <div class="page-header">
-        <div><h1 class="page-title">All Payments</h1><p class="page-sub">Revenue from workshops and regular batches</p></div>
+        <div><h1 class="page-title">All Payments</h1><p class="page-sub">Revenue, expenses and P&amp;L across all sources</p></div>
         <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
           <button class="btn btn-outline" onclick="exportAllPaymentsCSV()">
             <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV
@@ -872,8 +872,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         </div>
         <input class="table-search" style="width:200px" placeholder="Search name / ID…" oninput="searchPayments(this.value)">
       </div>
-      <div class="table-wrap" style="margin-bottom:2rem">
-        <table><thead><tr><th>Name</th><th>Phone</th><th>Workshop</th><th>Package</th><th>Slot / Song</th><th>Amount</th><th>Type</th><th>Payment ID</th><th>Date</th></tr></thead>
+      <div class="table-wrap" style="margin-bottom:2rem;overflow-x:auto">
+        <table style="min-width:760px"><thead><tr>
+          <th>Name</th><th>Phone</th><th>Workshop</th><th>Package</th><th>Slot / Song</th><th>Amount</th><th>Type</th><th>Payment ID</th><th>Date</th>
+        </tr></thead>
         <tbody id="wsPayTable"></tbody></table>
       </div>
 
@@ -885,9 +887,59 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         </div>
         <input class="table-search" style="width:200px" placeholder="Search name…" oninput="searchBatchPayments(this.value)">
       </div>
-      <div class="table-wrap">
-        <table><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Trainer</th><th>Subscription</th><th>Fee Paid</th><th>Mode</th><th>Join Date</th></tr></thead>
+      <div class="table-wrap" style="margin-bottom:2rem;overflow-x:auto">
+        <table style="min-width:680px"><thead><tr>
+          <th>Name</th><th>Phone</th><th>Batch</th><th>Trainer</th><th>Subscription</th><th>Fee Paid</th><th>Mode</th><th>Join Date</th>
+        </tr></thead>
         <tbody id="batchPayTable"></tbody></table>
+      </div>
+
+      <!-- STUDIO RENTALS -->
+      <div style="padding:0.6rem 1rem;background:rgba(100,180,255,0.06);border:1px solid rgba(100,180,255,0.25);border-bottom:none;display:flex;align-items:center;gap:0.6rem">
+        <span style="width:8px;height:8px;border-radius:50%;background:#6ab0f5;display:inline-block"></span>
+        <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#6ab0f5;font-family:'Syne',sans-serif" id="rentalPayLabel">Studio Rentals</span>
+      </div>
+      <div class="table-wrap" style="margin-bottom:2rem;overflow-x:auto">
+        <table style="min-width:640px"><thead><tr>
+          <th>Name / Brand</th><th>Purpose</th><th>Date</th><th>Hrs</th><th>Amount</th><th>Mode</th><th>Handled By</th><th>Remarks</th>
+        </tr></thead>
+        <tbody id="rentalPayTable"></tbody></table>
+      </div>
+
+      <!-- STAFF PAYMENTS -->
+      <div style="padding:0.6rem 1rem;background:rgba(229,115,115,0.06);border:1px solid rgba(229,115,115,0.25);border-bottom:none;display:flex;align-items:center;gap:0.6rem">
+        <span style="width:8px;height:8px;border-radius:50%;background:#e57373;display:inline-block"></span>
+        <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#e57373;font-family:'Syne',sans-serif" id="staffPayLabel">Staff Payments</span>
+      </div>
+      <div class="table-wrap" style="margin-bottom:2rem;overflow-x:auto">
+        <table style="min-width:580px"><thead><tr>
+          <th>Staff</th><th>Date</th><th>Salary Month</th><th>Amount</th><th>Mode</th><th>Paid By</th><th>Remarks</th>
+        </tr></thead>
+        <tbody id="staffPayTableAll"></tbody></table>
+      </div>
+
+      <!-- STUDIO EXPENSES -->
+      <div style="padding:0.6rem 1rem;background:rgba(229,115,115,0.06);border:1px solid rgba(229,115,115,0.25);border-bottom:none;display:flex;align-items:center;gap:0.6rem">
+        <span style="width:8px;height:8px;border-radius:50%;background:#e57373;display:inline-block"></span>
+        <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#e57373;font-family:'Syne',sans-serif" id="expensesLabel">Studio Expenses</span>
+      </div>
+      <div class="table-wrap" style="margin-bottom:2rem;overflow-x:auto">
+        <table style="min-width:600px"><thead><tr>
+          <th>Description</th><th>Category</th><th>Date</th><th>Amount</th><th>Mode</th><th>Paid By</th><th>Remarks</th>
+        </tr></thead>
+        <tbody id="expensesTableAll"></tbody></table>
+      </div>
+
+      <!-- ARTIST PAYMENTS -->
+      <div style="padding:0.6rem 1rem;background:rgba(245,230,66,0.06);border:1px solid rgba(245,230,66,0.2);border-bottom:none;display:flex;align-items:center;gap:0.6rem">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--yellow);display:inline-block"></span>
+        <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--yellow);font-family:'Syne',sans-serif" id="artistPayAllLabel">Artist Payouts</span>
+      </div>
+      <div class="table-wrap" style="margin-bottom:2rem;overflow-x:auto">
+        <table style="min-width:640px"><thead><tr>
+          <th>Artist</th><th>Workshop Date</th><th>Revenue</th><th>Artist Payout</th><th>Studio</th><th>Mode</th><th>Status</th><th>Paid On</th>
+        </tr></thead>
+        <tbody id="artistPayTableAll"></tbody></table>
       </div>
     </div>
 
@@ -3671,29 +3723,46 @@ function renderAllPayments(){
     (s.name||'').toLowerCase().includes(batchPaySearch.toLowerCase())
   );
 
-  // Stats
-  const wsRev      = registrations.reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
-  const batchRev   = batchStudents.reduce((s,x)=>s+parseFloat(x.fee||0),0);
-  const rentalRev  = rentals.filter(r=>r.payMode!=='Pending').reduce((s,r)=>s+parseFloat(r.amount||0),0);
-  const rentalPend = rentals.filter(r=>r.payMode==='Pending').reduce((s,r)=>s+parseFloat(r.amount||0),0);
-  const totalRev   = wsRev + batchRev + rentalRev;
-  const online     = registrations.filter(r=>r.payment_type==='Online').length;
-  const cash       = registrations.filter(r=>r.payment_type!=='Online').length;
-  const batchCash  = batchStudents.filter(s=>s.payMode==='Cash').length;
-  const batchOnline= batchStudents.filter(s=>s.payMode==='Online').length;
+  // Revenue totals
+  const wsRev       = registrations.reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
+  const batchRev    = batchStudents.reduce((s,x)=>s+parseFloat(x.fee||0),0);
+  const rentalRev   = rentals.filter(r=>r.payMode!=='Pending').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const rentalPend  = rentals.filter(r=>r.payMode==='Pending').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const totalRev    = wsRev + batchRev + rentalRev;
 
+  // Cash / Online across all income
+  const totalCash   = registrations.filter(r=>r.payment_type!=='Online').reduce((s,r)=>s+parseFloat(r.amount_paid||0),0)
+                    + batchStudents.filter(s=>s.payMode==='Cash').reduce((s,x)=>s+parseFloat(x.fee||0),0)
+                    + rentals.filter(r=>r.payMode==='Cash').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const totalOnline = registrations.filter(r=>r.payment_type==='Online').reduce((s,r)=>s+parseFloat(r.amount_paid||0),0)
+                    + batchStudents.filter(s=>s.payMode!=='Cash').reduce((s,x)=>s+parseFloat(x.fee||0),0)
+                    + rentals.filter(r=>r.payMode==='Online').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+
+  // Expenses
+  const staffTotal   = staffPayments.reduce((s,p)=>s+parseFloat(p.amount||0),0);
+  const expTotal     = expenses.reduce((s,e)=>s+parseFloat(e.amount||0),0);
+  const artistTotal  = Object.values(wsSettlements).reduce((s,x)=>s+(x.artistPayout||0),0);
+  const totalExpAll  = staffTotal + expTotal + artistTotal;
+  const netPL        = totalRev - totalExpAll;
+
+  // Stats cards
   document.getElementById('paymentStats').innerHTML = `
     <div class="stat-card"><p class="stat-label">Total Revenue</p><p class="stat-val green">₹${totalRev.toLocaleString('en-IN')}</p></div>
+    <div class="stat-card"><p class="stat-label">Total Cash</p><p class="stat-val yellow">₹${totalCash.toLocaleString('en-IN')}</p></div>
+    <div class="stat-card"><p class="stat-label">Total Online</p><p class="stat-val" style="color:var(--green)">₹${totalOnline.toLocaleString('en-IN')}</p></div>
     <div class="stat-card"><p class="stat-label">Workshop Revenue</p><p class="stat-val red">₹${wsRev.toLocaleString('en-IN')}</p><p class="stat-meta">${registrations.length} registrations</p></div>
     <div class="stat-card"><p class="stat-label">Batch Revenue</p><p class="stat-val" style="color:var(--green)">₹${batchRev.toLocaleString('en-IN')}</p><p class="stat-meta">${batchStudents.length} students</p></div>
-    <div class="stat-card"><p class="stat-label">Studio Revenue</p><p class="stat-val" style="color:var(--blue)">₹${rentalRev.toLocaleString('en-IN')}</p><p class="stat-meta">${rentals.length} bookings</p></div>
-    <div class="stat-card"><p class="stat-label">Studio Pending</p><p class="stat-val" style="color:#e57373">₹${rentalPend.toLocaleString('en-IN')}</p></div>
-    <div class="stat-card"><p class="stat-label">Online / Cash (Workshops)</p><p class="stat-val">${online}<span style="font-size:1rem;color:var(--muted)"> / ${cash}</span></p></div>
-    <div class="stat-card"><p class="stat-label">Online / Cash (Batches)</p><p class="stat-val">${batchOnline}<span style="font-size:1rem;color:var(--muted)"> / ${batchCash}</span></p></div>
-  `;
+    <div class="stat-card"><p class="stat-label">Studio Revenue</p><p class="stat-val" style="color:#6ab0f5">₹${rentalRev.toLocaleString('en-IN')}</p><p class="stat-meta">₹${rentalPend.toLocaleString('en-IN')} pending</p></div>
+    <div class="stat-card"><p class="stat-label">Total Expenses</p><p class="stat-val" style="color:#e57373">₹${totalExpAll.toLocaleString('en-IN')}</p><p class="stat-meta">Staff · Expenses · Artists</p></div>
+    <div class="stat-card"><p class="stat-label">Net P&amp;L (All Time)</p><p class="stat-val" style="color:${netPL>=0?'var(--green)':'#e57373'}">${netPL>=0?'+':''}₹${Math.abs(netPL).toLocaleString('en-IN')}</p></div>`;
 
-  document.getElementById('wsPayLabel').textContent    = `Workshop Payments · ${wsData.length}`;
-  document.getElementById('batchPayLabel').textContent = `Regular Batch Payments · ${batchData.length}`;
+  // Labels
+  document.getElementById('wsPayLabel').textContent       = `Workshop Payments · ${registrations.length}`;
+  document.getElementById('batchPayLabel').textContent    = `Regular Batch Payments · ${batchStudents.filter(s=>parseFloat(s.fee||0)>0).length}`;
+  document.getElementById('rentalPayLabel').textContent   = `Studio Rentals · ${rentals.length}`;
+  document.getElementById('staffPayLabel').textContent    = `Staff Payments · ${staffPayments.length} · ₹${staffTotal.toLocaleString('en-IN')}`;
+  document.getElementById('expensesLabel').textContent    = `Studio Expenses · ${expenses.length} · ₹${expTotal.toLocaleString('en-IN')}`;
+  document.getElementById('artistPayAllLabel').textContent= `Artist Payouts · ${Object.values(wsSettlements).length} workshops · ₹${artistTotal.toLocaleString('en-IN')}`;
 
   // Workshop payments table
   document.getElementById('wsPayTable').innerHTML = wsData.length
@@ -3718,7 +3787,7 @@ function renderAllPayments(){
           <td style="color:var(--text);font-weight:500">${s.name||'—'}</td>
           <td style="font-size:0.78rem">${s.phone||'—'}</td>
           <td style="font-size:0.78rem">${b?.name||s.batchId} · ${b?.time||''}</td>
-          <td style="font-size:0.78rem;color:var(--mid)">${s.artistName||b?.trainer||'—'}</td>
+          <td style="font-size:0.78rem;color:var(--muted)">${s.artistName||b?.trainer||'—'}</td>
           <td><span class="pill ${s.subscription==='Monthly'?'pill-blue':'pill-yellow'}">${s.subscription||'—'}</span></td>
           <td style="color:var(--green);font-weight:500">₹${parseFloat(s.fee||0).toLocaleString('en-IN')}</td>
           <td><span class="pill ${s.payMode==='Cash'?'pill-yellow':'pill-green'}">${s.payMode||'—'}</span></td>
@@ -3726,6 +3795,74 @@ function renderAllPayments(){
         </tr>`;
       }).join('')
     : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem">No batch payments yet</td></tr>';
+
+  // Studio rentals table
+  const sortedRentals = [...rentals].sort((a,b)=>(b.dateFrom||'').localeCompare(a.dateFrom||''));
+  document.getElementById('rentalPayTable').innerHTML = sortedRentals.length
+    ? sortedRentals.map(r=>`<tr>
+        <td style="font-weight:500;color:var(--text)">${r.name||'—'}</td>
+        <td style="font-size:0.78rem">${r.purpose||'—'}</td>
+        <td style="font-size:0.75rem;color:var(--muted)">${r.dateFrom||'—'}</td>
+        <td style="text-align:center">${r.hours||'—'}</td>
+        <td style="color:${r.payMode==='Pending'?'#e57373':'var(--yellow)'};font-weight:500">₹${parseFloat(r.amount||0).toLocaleString('en-IN')}</td>
+        <td><span class="pill ${r.payMode==='Cash'?'pill-yellow':r.payMode==='Online'?'pill-green':'pill-red'}">${r.payMode||'—'}</span></td>
+        <td style="font-size:0.75rem;color:var(--muted)">${r.handledBy||'—'}</td>
+        <td style="font-size:0.72rem;color:var(--muted)">${r.remarks||'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem">No rentals yet</td></tr>';
+
+  // Staff payments table
+  const sortedStaff = [...staffPayments].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  document.getElementById('staffPayTableAll').innerHTML = sortedStaff.length
+    ? sortedStaff.map(p=>`<tr>
+        <td style="font-weight:500;color:var(--text)">${p.name||'—'}</td>
+        <td style="font-size:0.75rem;color:var(--muted)">${p.date||'—'}</td>
+        <td style="font-size:0.75rem;color:var(--muted)">${p.salaryMonthLabel||'—'}</td>
+        <td style="color:#e57373;font-weight:500">₹${parseFloat(p.amount||0).toLocaleString('en-IN')}</td>
+        <td><span class="pill ${p.mode==='Cash'?'pill-yellow':'pill-green'}">${p.mode||'—'}</span></td>
+        <td style="font-size:0.75rem;color:var(--muted)">${p.paidBy||'—'}</td>
+        <td style="font-size:0.72rem;color:var(--muted)">${p.remarks||'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem">No staff payments yet</td></tr>';
+
+  // Studio expenses table
+  const sortedExp = [...expenses].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  document.getElementById('expensesTableAll').innerHTML = sortedExp.length
+    ? sortedExp.map(e=>`<tr>
+        <td style="font-weight:500;color:var(--text)">${e.description||e.desc||'—'}</td>
+        <td style="font-size:0.75rem;color:var(--muted)">${e.category||'—'}</td>
+        <td style="font-size:0.75rem;color:var(--muted)">${e.date||'—'}</td>
+        <td style="color:#e57373;font-weight:500">₹${parseFloat(e.amount||0).toLocaleString('en-IN')}</td>
+        <td><span class="pill ${e.mode==='Cash'?'pill-yellow':'pill-green'}">${e.mode||'—'}</span></td>
+        <td style="font-size:0.75rem;color:var(--muted)">${e.paidBy||'—'}</td>
+        <td style="font-size:0.72rem;color:var(--muted)">${e.remarks||'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem">No expenses yet</td></tr>';
+
+  // Artist payouts table
+  const allWsForPayments = workshops.filter(w=>w.status==='completed'||w.status==='full')
+    .sort((a,b)=>(b.dateFrom||'').localeCompare(a.dateFrom||''));
+  document.getElementById('artistPayTableAll').innerHTML = allWsForPayments.length
+    ? allWsForPayments.map(w=>{
+        const s   = wsSettlements[w.id];
+        const rev = s?.grossRevenue ?? registrations.filter(r=>r.workshop===w.artist)
+                      .reduce((sum,r)=>sum+parseFloat(r.amount_paid||r.price||0),0);
+        let statusBadge;
+        if(s?.artistPaid) statusBadge=`<span class="pill pill-green" style="font-size:0.6rem">✓ PAID</span>`;
+        else if(s)        statusBadge=`<span class="pill pill-yellow" style="font-size:0.6rem">SETTLED</span>`;
+        else              statusBadge=`<span class="pill pill-red" style="font-size:0.6rem">PENDING</span>`;
+        return `<tr>
+          <td style="font-weight:600;color:var(--text)">${w.artist||'—'}<br><span style="font-size:0.7rem;color:var(--muted);font-weight:400">${w.style||''}</span></td>
+          <td style="font-size:0.75rem;color:var(--muted)">${w.dateFrom||'—'}</td>
+          <td style="color:var(--text)">₹${Math.round(rev).toLocaleString('en-IN')}</td>
+          <td style="color:var(--yellow);font-weight:600">${s?'₹'+s.artistPayout.toLocaleString('en-IN'):'—'}</td>
+          <td style="color:var(--muted)">${s?'₹'+s.studioPayout.toLocaleString('en-IN'):'—'}</td>
+          <td>${s?.paidMode?`<span class="pill ${s.paidMode==='Cash'?'pill-yellow':'pill-green'}" style="font-size:0.6rem">${s.paidMode}</span>`:'—'}</td>
+          <td>${statusBadge}</td>
+          <td style="font-size:0.72rem;color:var(--muted)">${s?.paidAt||'—'}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem">No completed workshops yet</td></tr>';
 }
 
 function getSlotDisplayForReg(r){
@@ -3860,7 +3997,15 @@ window.generateReport = function(){
     const d = new Date(p.date+'T00:00');
     return d>=from && d<=to;
   });
-  const totalStaffCost = monthStaff.reduce((s,p)=>s+parseFloat(p.amount||0),0);
+  // Cash vs Online across all revenue
+  const wsCashAmt      = monthRegs.filter(r=>r.payment_type!=='Online').reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
+  const wsOnlineAmt    = monthRegs.filter(r=>r.payment_type==='Online').reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
+  const batchCashAmt   = monthBatchStudents.filter(s=>s.payMode==='Cash').reduce((s,x)=>s+parseFloat(x.fee||0),0);
+  const batchOnlineAmt = monthBatchStudents.filter(s=>s.payMode!=='Cash').reduce((s,x)=>s+parseFloat(x.fee||0),0);
+  const rentalCashAmt  = monthRentals.filter(r=>r.payMode==='Cash').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const rentalOnlineAmt= monthRentals.filter(r=>r.payMode==='Online').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const totalCash      = wsCashAmt + batchCashAmt + rentalCashAmt;
+  const totalOnline    = wsOnlineAmt + batchOnlineAmt + rentalOnlineAmt;
 
   // Filter expenses for this month
   const monthExpenses = expenses.filter(e=>{
@@ -3868,22 +4013,23 @@ window.generateReport = function(){
     const d = new Date(e.date+'T00:00');
     return d>=from && d<=to;
   });
-  const totalExpenses = monthExpenses.reduce((s,e)=>s+parseFloat(e.amount||0),0);
 
-  // Cash vs Online across all revenue
-  const wsCashAmt    = monthRegs.filter(r=>r.payment_type!=='Online').reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
-  const wsOnlineAmt  = monthRegs.filter(r=>r.payment_type==='Online').reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
-  const batchCashAmt = monthBatchStudents.filter(s=>s.payMode==='Cash').reduce((s,x)=>s+parseFloat(x.fee||0),0);
-  const batchOnlineAmt = monthBatchStudents.filter(s=>s.payMode!=='Cash').reduce((s,x)=>s+parseFloat(x.fee||0),0);
-  const rentalCashAmt  = monthRentals.filter(r=>r.payMode==='Cash').reduce((s,r)=>s+parseFloat(r.amount||0),0);
-  const rentalOnlineAmt= monthRentals.filter(r=>r.payMode==='Online').reduce((s,r)=>s+parseFloat(r.amount||0),0);
-  const totalCash   = wsCashAmt + batchCashAmt + rentalCashAmt;
-  const totalOnline = wsOnlineAmt + batchOnlineAmt + rentalOnlineAmt;
+  // Artist payouts for workshops that fall in this month
+  const monthArtistPayouts = Object.values(wsSettlements).filter(s=>{
+    // include if the workshop date is in this month
+    const w = workshops.find(x=>x.id===s.workshopId);
+    if(w?.dateFrom){
+      const d = new Date(w.dateFrom+'T00:00');
+      if(d>=from && d<=to) return true;
+    }
+    return false;
+  });
+  const totalArtistPaid = monthArtistPayouts.reduce((s,x)=>s+(x.artistPayout||0),0);
 
-  // P&L
-  const totalIncome  = totalRevenue;
-  const totalCosts   = totalStaffCost + totalExpenses;
-  const netPL        = totalIncome - totalCosts;
+  const totalStaffCost = monthStaff.reduce((s,p)=>s+parseFloat(p.amount||0),0);
+  const totalExpenses  = monthExpenses.reduce((s,e)=>s+parseFloat(e.amount||0),0);
+  const totalCosts     = totalStaffCost + totalExpenses + totalArtistPaid;
+  const netPL          = totalIncome - totalCosts;
 
   const now = new Date();
   document.getElementById('reportContent').innerHTML = `
@@ -3948,8 +4094,9 @@ window.generateReport = function(){
         <p style="font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;font-family:'Syne',sans-serif">Expenses</p>
         <div style="background:var(--bg2);border:1px solid var(--border);padding:1rem 1.25rem;margin-bottom:1rem">
           ${[
-            {l:'Staff Payments',   v:totalStaffCost, c:'#e57373'},
-            {l:'Studio Expenses',  v:totalExpenses,  c:'#e57373'},
+            {l:'Staff Payments',    v:totalStaffCost,    c:'#e57373'},
+            {l:'Studio Expenses',   v:totalExpenses,     c:'#e57373'},
+            {l:'Artist Payouts',    v:totalArtistPaid,   c:'#e57373'},
           ].map(r=>`<div style="display:flex;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
             <span style="font-size:0.82rem;color:var(--muted)">${r.l}</span>
             <span style="font-size:0.88rem;font-weight:600;color:${r.c}">₹${r.v.toLocaleString('en-IN')}</span>
@@ -3964,7 +4111,7 @@ window.generateReport = function(){
         <div style="background:${netPL>=0?'rgba(92,184,122,0.08)':'rgba(229,115,115,0.08)'};border:2px solid ${netPL>=0?'rgba(92,184,122,0.4)':'rgba(229,115,115,0.4)'};padding:1.25rem;display:flex;justify-content:space-between;align-items:center">
           <div>
             <p style="font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.25rem">Studio Profit / Loss · ${monthLabel}</p>
-            <p style="font-size:0.78rem;color:var(--muted)">Revenue ₹${totalRevenue.toLocaleString('en-IN')} − Expenses ₹${totalCosts.toLocaleString('en-IN')}</p>
+            <p style="font-size:0.78rem;color:var(--muted)">Revenue ₹${totalRevenue.toLocaleString('en-IN')} − Staff ₹${totalStaffCost.toLocaleString('en-IN')} − Expenses ₹${totalExpenses.toLocaleString('en-IN')} − Artists ₹${totalArtistPaid.toLocaleString('en-IN')}</p>
           </div>
           <div style="text-align:right">
             <p style="font-size:2.2rem;font-family:'Bebas Neue',sans-serif;color:${netPL>=0?'var(--green)':'#e57373'};line-height:1">${netPL>=0?'+':''}₹${Math.abs(netPL).toLocaleString('en-IN')}</p>
