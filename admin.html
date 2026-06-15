@@ -4028,6 +4028,7 @@ window.generateReport = function(){
 
   const totalStaffCost = monthStaff.reduce((s,p)=>s+parseFloat(p.amount||0),0);
   const totalExpenses  = monthExpenses.reduce((s,e)=>s+parseFloat(e.amount||0),0);
+  const totalIncome    = totalRevenue;
   const totalCosts     = totalStaffCost + totalExpenses + totalArtistPaid;
   const netPL          = totalIncome - totalCosts;
 
@@ -4308,28 +4309,38 @@ window.generateReport = function(){
 
 window.printReport = function(){
   const content = document.getElementById('printReport')?.innerHTML;
-  if(!content) return;
+  if(!content){ showToast('Generate the report first','error'); return; }
   const win = window.open('','_blank');
+  if(!win){ showToast('Allow popups for this site to print the report','error'); return; }
   win.document.write(`<!DOCTYPE html><html><head>
     <title>THS Monthly Report</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
       *{box-sizing:border-box;margin:0;padding:0}
-      :root{--red:#bc1f2e;--green:#5cb87a;--yellow:#c8a800;--text:#111;--muted:#666;--bg2:#f8f8f6;--bg3:#f0f0ee;--border:rgba(0,0,0,0.1);--red-dim:rgba(188,31,46,0.08)}
-      body{font-family:'DM Sans',sans-serif;font-weight:300;background:#fff;color:#111;padding:2.5cm;font-size:10pt}
+      :root{--red:#bc1f2e;--green:#5cb87a;--yellow:#c8a800;--blue:#4a90d9;--text:#111;--muted:#666;--bg2:#f8f8f6;--bg3:#f0f0ee;--border:rgba(0,0,0,0.1)}
+      body{font-family:'DM Sans',sans-serif;font-weight:300;background:#fff;color:#111;padding:2rem;font-size:10pt}
       h1{font-family:'Bebas Neue',sans-serif}
       p{line-height:1.5}
       table{width:100%;border-collapse:collapse}
-      th,td{padding:0.4rem 0.75rem;font-size:8.5pt}
+      th{background:#111;color:#fff;padding:0.5rem 0.75rem;text-align:left;font-size:8pt;text-transform:uppercase;letter-spacing:0.08em}
+      td{padding:0.45rem 0.75rem;font-size:9pt;border-bottom:1px solid #eee;vertical-align:top}
+      .pill{display:inline-block;padding:0.1rem 0.4rem;font-size:7pt;font-weight:700;border-radius:2px}
+      .pill-green{background:#e8f5e9;color:#2e7d32}
+      .pill-yellow{background:#fff8e1;color:#f57f17}
+      .pill-red{background:#fce4ec;color:#c62828}
+      .pill-blue{background:#e3f2fd;color:#1565c0}
       @media print{
-        body{padding:1.5cm}
-        button{display:none!important}
+        body{padding:1cm}
+        button,nav{display:none!important}
         @page{size:A4;margin:1.5cm}
       }
     </style>
-  </head><body>${content}<br><br><p style="text-align:center;font-size:8pt;color:#999">Press Ctrl+P (or Cmd+P) to print or save as PDF</p></body></html>`);
+  </head><body>
+    ${content}
+    <p style="text-align:center;font-size:8pt;color:#999;margin-top:2rem;border-top:1px solid #eee;padding-top:1rem">Press Ctrl+P / Cmd+P to print · The Happening Space · thehappeningspace.in</p>
+  </body></html>`);
   win.document.close();
-  setTimeout(()=>win.print(), 800);
+  setTimeout(()=>{ try{ win.print(); }catch(e){ console.warn('print failed:', e); } }, 900);
 };
 
 window.exportAllPaymentsCSV = function(){
