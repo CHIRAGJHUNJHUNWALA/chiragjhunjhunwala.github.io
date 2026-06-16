@@ -1616,6 +1616,60 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   </div>
 </div>
 
+<!-- REFUND MANAGER MODAL -->
+<div class="modal-backdrop" id="refundManagerModal">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-head">
+      <div>
+        <h2 class="modal-title" id="refundModalTitle">Refund Manager</h2>
+        <p style="font-size:0.75rem;color:var(--muted);margin-top:0.15rem" id="refundModalSub"></p>
+      </div>
+      <button class="modal-close" onclick="closeModal('refundManagerModal')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+
+      <!-- Progress bar -->
+      <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);background:var(--bg3)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;flex-wrap:wrap;gap:0.5rem">
+          <div style="display:flex;gap:1.5rem">
+            <div><p style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted)">Refunded</p><p id="refundCount" style="font-size:1.3rem;font-weight:700;color:var(--green);font-family:'Syne',sans-serif">0 / 0</p></div>
+            <div><p style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted)">Amount</p><p id="refundAmount" style="font-size:1.3rem;font-weight:700;color:var(--text);font-family:'Syne',sans-serif">₹0 / ₹0</p></div>
+          </div>
+          <div style="display:flex;gap:0.6rem;flex-wrap:wrap">
+            <button onclick="refundAllCash()" class="btn btn-sm" style="background:rgba(245,230,66,0.12);border:1px solid rgba(245,230,66,0.35);color:var(--yellow);font-size:0.65rem;white-space:nowrap">Mark All Cash Refunded</button>
+            <button onclick="refundAllOnline()" class="btn btn-sm" style="background:rgba(92,184,122,0.12);border:1px solid rgba(92,184,122,0.35);color:var(--green);font-size:0.65rem;white-space:nowrap">Mark All Online Refunded</button>
+          </div>
+        </div>
+        <div style="background:var(--bg2);height:6px;border-radius:3px;overflow:hidden">
+          <div id="refundProgressBar" style="height:100%;background:var(--green);border-radius:3px;transition:width 0.4s ease;width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Student list -->
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;max-height:60vh;overflow-y:auto">
+        <table style="width:100%;border-collapse:collapse;min-width:620px">
+          <thead style="position:sticky;top:0;z-index:1">
+            <tr style="background:var(--bg3);border-bottom:1px solid var(--border)">
+              <th style="padding:0.65rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Student</th>
+              <th style="padding:0.65rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Phone</th>
+              <th style="padding:0.65rem 1rem;text-align:center;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Amount</th>
+              <th style="padding:0.65rem 1rem;text-align:center;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Method</th>
+              <th style="padding:0.65rem 1rem;text-align:center;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Status</th>
+              <th style="padding:0.65rem 1rem;text-align:center;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Refunded By / On</th>
+              <th style="padding:0.65rem 1rem"></th>
+            </tr>
+          </thead>
+          <tbody id="refundTableBody"></tbody>
+        </table>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('refundManagerModal')">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- WORKSHOP SETTLEMENT MODAL -->
 <div class="modal-backdrop" id="wsSettlementModal">
   <div class="modal" style="max-width:680px">
@@ -2222,7 +2276,7 @@ function wsCardHTML(w){
   const statusColors = {active:'pill-green',full:'pill-red',cancelled:'pill-orange',completed:'pill-grey',draft:'pill-blue'};
   const statusPill = statusColors[w.status]||'pill-grey';
 
-  // Payment badge for completed workshops
+  // Payment badge for completed/full workshops
   const settle    = wsSettlements[w.id];
   const paidBadge = w.status==='completed'
     ? settle?.artistPaid
@@ -2230,6 +2284,17 @@ function wsCardHTML(w){
       : settle
         ? `<span class="pill" style="background:rgba(245,230,66,0.12);color:var(--yellow);border:1px solid rgba(245,230,66,0.3);font-size:0.55rem">SETTLED</span>`
         : `<span class="pill" style="background:rgba(229,115,115,0.1);color:#e57373;border:1px solid rgba(229,115,115,0.25);font-size:0.55rem">PAYMENT PENDING</span>`
+    : '';
+
+  // Refund progress badge for cancelled workshops
+  const wsRegsAll = registrations.filter(r=>r.workshop===w.artist);
+  const refundBadge = w.status==='cancelled' && wsRegsAll.length
+    ? (() => {
+        const refunded = wsRegsAll.filter(r=>r.refundStatus==='refunded').length;
+        const total    = wsRegsAll.length;
+        const allDone  = refunded===total;
+        return `<span class="pill" style="background:${allDone?'rgba(92,184,122,0.15)':'rgba(229,115,115,0.1)'};color:${allDone?'var(--green)':'#e57373'};border:1px solid ${allDone?'rgba(92,184,122,0.3)':'rgba(229,115,115,0.25)'};font-size:0.55rem">${allDone?'✓ ALL REFUNDED':`REFUNDS ${refunded}/${total}`}</span>`;
+      })()
     : '';
   const bgStyle  = w.poster && w.poster.startsWith('data:')
     ? `background-image:url('${w.poster}');background-size:cover;background-position:center`
@@ -2250,6 +2315,7 @@ function wsCardHTML(w){
         <span style="color:var(--muted);font-size:0.72rem">${dateStr}</span>
         <span style="color:var(--muted);font-size:0.72rem">· ${slots.length} slot${slots.length!==1?'s':''}</span>
         ${paidBadge}
+        ${refundBadge}
       </div>
       <p style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);font-size:0.9rem;line-height:1.2;margin-bottom:0.15rem">${w.artist||'—'}</p>
       <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.06em">${w.style||'—'}</p>
@@ -2273,6 +2339,12 @@ function wsCardHTML(w){
         <button class="btn btn-outline btn-sm" onclick="openStatusMenu('${w.id}',this)">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>Status
         </button>
+        ${w.status==='cancelled'?`
+        <button class="btn btn-sm" onclick="openRefundManager('${w.id}')"
+          style="background:rgba(229,115,115,0.12);border:1px solid rgba(229,115,115,0.4);color:#e57373;font-size:0.65rem;font-weight:700;letter-spacing:0.06em;white-space:nowrap">
+          <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+          Refunds
+        </button>`:''}
         ${w.status==='completed'||w.status==='full'?`
         <button class="btn btn-sm" onclick="openWsSettlement('${w.id}')"
           style="background:${wsSettlements[w.id]?.artistPaid?'rgba(92,184,122,0.15)':'rgba(245,230,66,0.12)'};border:1px solid ${wsSettlements[w.id]?.artistPaid?'rgba(92,184,122,0.4)':'rgba(245,230,66,0.4)'};color:${wsSettlements[w.id]?.artistPaid?'var(--green)':'var(--yellow)'};font-size:0.65rem;font-weight:700;letter-spacing:0.06em;white-space:nowrap">
@@ -2329,7 +2401,192 @@ function renderWorkshopGrid(){
     : '<p style="color:var(--muted);padding:3rem;text-align:center">No workshops in this category.</p>';
 }
 
-window.sortAndRenderWorkshops = function(){ renderWorkshopGrid(); };
+/* ══════════════════════════════════════
+   REFUND MANAGER — PHASE 1
+   Manual tracking for cancelled workshops.
+   Phase 2: auto Razorpay refund via CF.
+══════════════════════════════════════ */
+let _refundWsId   = null;
+let _refundRegs   = [];
+
+window.openRefundManager = async function(wId){
+  const w = workshops.find(x=>x.id===wId);
+  if(!w) return;
+  _refundWsId = wId;
+
+  document.getElementById('refundModalTitle').textContent = `Refunds · ${w.artist||'Workshop'}`;
+  document.getElementById('refundModalSub').textContent   = [w.style, w.dateFrom].filter(Boolean).join(' · ') + ' · Cancelled';
+
+  // Get all registrations for this workshop
+  _refundRegs = registrations.filter(r=>r.workshop===w.artist||r.workshopId===wId);
+
+  renderRefundTable();
+  openModal('refundManagerModal');
+};
+
+function renderRefundTable(){
+  const regs   = _refundRegs;
+  const total  = regs.length;
+  const done   = regs.filter(r=>r.refundStatus==='refunded').length;
+  const totalAmt = regs.reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
+  const doneAmt  = regs.filter(r=>r.refundStatus==='refunded').reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
+  const pct      = total>0 ? Math.round(done/total*100) : 0;
+
+  document.getElementById('refundCount').textContent      = `${done} / ${total}`;
+  document.getElementById('refundAmount').textContent     = `₹${doneAmt.toLocaleString('en-IN')} / ₹${totalAmt.toLocaleString('en-IN')}`;
+  document.getElementById('refundProgressBar').style.width = pct+'%';
+
+  if(!regs.length){
+    document.getElementById('refundTableBody').innerHTML =
+      `<tr><td colspan="7" style="padding:3rem;text-align:center;color:var(--muted)">No registrations found for this workshop.</td></tr>`;
+    return;
+  }
+
+  document.getElementById('refundTableBody').innerHTML = regs.map((r,i)=>{
+    const amt     = parseFloat(r.amount_paid||0);
+    const method  = r.payment_type==='Online'||r.payment_type==='Razorpay' ? 'Online' : 'Cash';
+    const isDone  = r.refundStatus==='refunded';
+
+    let statusBadge;
+    if(isDone){
+      statusBadge = `<span class="pill pill-green" style="font-size:0.6rem">✓ Refunded</span>`;
+    } else {
+      statusBadge = `<span class="pill pill-red" style="font-size:0.6rem">Pending</span>`;
+    }
+
+    const refundInfo = isDone
+      ? `<span style="font-size:0.72rem;color:var(--muted)">${r.refundedBy||'—'}<br>${r.refundedAt||''}</span>`
+      : `<span style="color:var(--muted);font-size:0.72rem">—</span>`;
+
+    const actionBtn = isDone
+      ? `<button onclick="undoRefund('${r.id}')" style="background:none;border:1px solid var(--border);color:var(--muted);padding:0.3rem 0.65rem;font-size:0.65rem;cursor:pointer;font-family:'Syne',sans-serif">Undo</button>`
+      : method==='Cash'
+        ? `<button onclick="markRefunded('${r.id}','Cash')" style="background:rgba(245,230,66,0.12);border:1px solid rgba(245,230,66,0.35);color:var(--yellow);padding:0.3rem 0.65rem;font-size:0.65rem;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700">Cash Done</button>`
+        : `<button onclick="markRefunded('${r.id}','Online')" style="background:rgba(92,184,122,0.12);border:1px solid rgba(92,184,122,0.35);color:var(--green);padding:0.3rem 0.65rem;font-size:0.65rem;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700">Mark Done</button>`;
+
+    return `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);${isDone?'opacity:0.6':''}">
+      <td style="padding:0.75rem 1rem;font-weight:500;color:var(--text)">${r.name||'—'}</td>
+      <td style="padding:0.75rem 1rem;font-size:0.75rem;color:var(--muted)">${r.phone||'—'}</td>
+      <td style="padding:0.75rem 1rem;text-align:center;font-weight:600;color:var(--yellow)">₹${amt.toLocaleString('en-IN')}</td>
+      <td style="padding:0.75rem 1rem;text-align:center">
+        <span class="pill ${method==='Online'?'pill-green':'pill-yellow'}" style="font-size:0.6rem">${method}</span>
+      </td>
+      <td style="padding:0.75rem 1rem;text-align:center">${statusBadge}</td>
+      <td style="padding:0.75rem 1rem;text-align:center">${refundInfo}</td>
+      <td style="padding:0.75rem 1rem;text-align:center">${actionBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+window.markRefunded = async function(regId, method){
+  let paidBy = 'Chirag';
+
+  if(method==='Cash'){
+    // Ask who gave the cash refund
+    const choice = await showRefundByDialog();
+    if(!choice) return;
+    paidBy = choice;
+  } else {
+    // Online — confirm admin has done it in Razorpay dashboard
+    if(!confirm('Confirm you have processed this refund in the Razorpay dashboard. Once marked here it will be recorded as refunded.')) return;
+    paidBy = currentAdminUser==='govind' ? 'Govind' : 'Chirag';
+  }
+
+  const today = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  const update = {
+    refundStatus: 'refunded',
+    refundedAt:   today,
+    refundedBy:   paidBy,
+    refundMode:   method,
+    refundAmount: parseFloat(_refundRegs.find(r=>r.id===regId)?.amount_paid||0)
+  };
+
+  try {
+    await updateDoc(doc(db,'registrations',regId), update);
+    const idx = _refundRegs.findIndex(r=>r.id===regId);
+    if(idx>-1) _refundRegs[idx] = {..._refundRegs[idx], ...update};
+    // Also update global registrations array
+    const gIdx = registrations.findIndex(r=>r.id===regId);
+    if(gIdx>-1) registrations[gIdx] = {...registrations[gIdx], ...update};
+    renderRefundTable();
+    showToast(`Refund marked for ${_refundRegs.find(r=>r.id===regId)?.name||'student'} ✓`);
+  } catch(e){ showToast('Failed to update — check connection','error'); }
+};
+
+window.undoRefund = async function(regId){
+  if(!confirm('Undo this refund record?')) return;
+  const update = {refundStatus:'pending', refundedAt:null, refundedBy:null, refundMode:null, refundAmount:null};
+  try {
+    await updateDoc(doc(db,'registrations',regId), update);
+    const idx = _refundRegs.findIndex(r=>r.id===regId);
+    if(idx>-1) _refundRegs[idx] = {..._refundRegs[idx], ...update};
+    const gIdx = registrations.findIndex(r=>r.id===regId);
+    if(gIdx>-1) registrations[gIdx] = {...registrations[gIdx], ...update};
+    renderRefundTable();
+    showToast('Refund record undone');
+  } catch(e){ showToast('Failed to update','error'); }
+};
+
+window.refundAllCash = async function(){
+  const pending = _refundRegs.filter(r=>r.refundStatus!=='refunded'&&(r.payment_type==='Cash'||(!r.payment_type||r.payment_type==='cash')));
+  if(!pending.length){ showToast('No pending cash refunds','error'); return; }
+  const choice = await showRefundByDialog();
+  if(!choice) return;
+  const today = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  let done=0;
+  for(const r of pending){
+    const update={refundStatus:'refunded',refundedAt:today,refundedBy:choice,refundMode:'Cash',refundAmount:parseFloat(r.amount_paid||0)};
+    try {
+      await updateDoc(doc(db,'registrations',r.id), update);
+      const idx=_refundRegs.findIndex(x=>x.id===r.id); if(idx>-1) _refundRegs[idx]={..._refundRegs[idx],...update};
+      const gIdx=registrations.findIndex(x=>x.id===r.id); if(gIdx>-1) registrations[gIdx]={...registrations[gIdx],...update};
+      done++;
+    } catch(e){}
+  }
+  renderRefundTable();
+  showToast(`${done} cash refund${done!==1?'s':''} marked ✓`);
+};
+
+window.refundAllOnline = async function(){
+  const pending = _refundRegs.filter(r=>r.refundStatus!=='refunded'&&(r.payment_type==='Online'||r.payment_type==='Razorpay'||r.payment_type==='UPI'));
+  if(!pending.length){ showToast('No pending online refunds','error'); return; }
+  if(!confirm(`Mark ${pending.length} online payment${pending.length!==1?'s':''} as refunded?\n\nMake sure you've processed all these in the Razorpay dashboard first.`)) return;
+  const paidBy = currentAdminUser==='govind'?'Govind':'Chirag';
+  const today  = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  let done=0;
+  for(const r of pending){
+    const update={refundStatus:'refunded',refundedAt:today,refundedBy:paidBy,refundMode:'Online',refundAmount:parseFloat(r.amount_paid||0)};
+    try {
+      await updateDoc(doc(db,'registrations',r.id), update);
+      const idx=_refundRegs.findIndex(x=>x.id===r.id); if(idx>-1) _refundRegs[idx]={..._refundRegs[idx],...update};
+      const gIdx=registrations.findIndex(x=>x.id===r.id); if(gIdx>-1) registrations[gIdx]={...registrations[gIdx],...update};
+      done++;
+    } catch(e){}
+  }
+  renderRefundTable();
+  showToast(`${done} online refund${done!==1?'s':''} marked ✓`);
+};
+
+function showRefundByDialog(){
+  return new Promise(resolve=>{
+    const overlay = document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:9999';
+    overlay.innerHTML=`
+      <div style="background:var(--bg2);border:1px solid var(--border);padding:2rem;min-width:290px;text-align:center">
+        <p style="font-size:0.6rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.75rem">Cash Refund</p>
+        <p style="font-size:0.92rem;color:var(--text);font-weight:600;margin-bottom:1.5rem">Who gave the refund?</p>
+        <div style="display:flex;gap:0.75rem;justify-content:center">
+          <button id="_rfChirag" class="btn btn-red" style="min-width:110px">Chirag</button>
+          <button id="_rfGovind" class="btn btn-outline" style="min-width:110px">Govind</button>
+        </div>
+        <button id="_rfCancel" style="display:block;margin:1.25rem auto 0;background:none;border:none;color:var(--muted);font-size:0.75rem;cursor:pointer;font-family:'Syne',sans-serif">Cancel</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#_rfChirag').onclick  = ()=>{ document.body.removeChild(overlay); resolve('Chirag'); };
+    overlay.querySelector('#_rfGovind').onclick  = ()=>{ document.body.removeChild(overlay); resolve('Govind'); };
+    overlay.querySelector('#_rfCancel').onclick  = ()=>{ document.body.removeChild(overlay); resolve(null); };
+  });
+}
 
 /* ══════════════════════════════════════
    WORKSHOP SETTLEMENTS / ARTIST PAYMENTS
