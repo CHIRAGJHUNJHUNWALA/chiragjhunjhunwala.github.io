@@ -334,6 +334,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="nav-item" onclick="showView('payments')">
         <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>All Payments
       </div>
+      <div class="nav-section-title">Insights</div>
+      <div class="nav-item" onclick="showView('analysis')">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Student Analysis
+      </div>
       <div class="nav-section-title">Content</div>
       <div class="nav-item" onclick="showView('abouteditor')">
         <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit About Us
@@ -1011,6 +1015,17 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           <tbody id="apTableBody"></tbody>
         </table>
       </div>
+    </div>
+
+    <!-- STUDENT ANALYSIS -->
+    <div class="view" id="view-analysis">
+      <div class="page-header">
+        <div><h1 class="page-title">Student Analysis</h1><p class="page-sub">Behaviour, retention and conversion across all students</p></div>
+        <button class="btn btn-outline" onclick="renderAnalysis()">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Refresh
+        </button>
+      </div>
+      <div id="analysisContent"><p style="color:var(--muted);font-size:0.85rem;padding:2rem 0">Loading analysis…</p></div>
     </div>
 
   </div>
@@ -2094,7 +2109,7 @@ window.showView = function(id){
   if(id==='gallery')     renderGallery();
   if(id==='checkins')    renderCheckinsView();
   if(id==='payments')        renderAllPayments();
-  if(id==='artistpayments')  renderArtistPaymentsView();
+  if(id==='analysis')        renderAnalysis();
   if(id==='schedule')  { goScheduleToday(); }
   if(id==='monthschedule'){ initMonthViewSelectors(); renderMonthSchedule(); }
   if(id==='rentals')     renderRentals();
@@ -2400,6 +2415,178 @@ function renderWorkshopGrid(){
     ? sorted.map(wsCardHTML).join('')
     : '<p style="color:var(--muted);padding:3rem;text-align:center">No workshops in this category.</p>';
 }
+
+/* ══════════════════════════════════════
+   STUDENT ANALYSIS ENGINE
+══════════════════════════════════════ */
+function normPhone(p){
+  if(!p) return '';
+  const d = String(p).replace(/\D/g,'');
+  if(d.length===12&&d.startsWith('91')) return '+91'+d.slice(2);
+  if(d.length===10) return '+91'+d;
+  if(d.length===11&&d.startsWith('0')) return '+91'+d.slice(1);
+  return d.length>=10 ? '+91'+d.slice(-10) : '';
+}
+
+function buildStudentProfiles(){
+  const map = {};
+  registrations.forEach(r=>{
+    const p = normPhone(r.phone); if(!p) return;
+    if(!map[p]) map[p]={phone:p,name:'',wsRegs:[],batchEnrols:[]};
+    if(r.name&&!map[p].name) map[p].name=r.name;
+    map[p].wsRegs.push({workshop:r.workshop||'—',timestamp:r.timestamp||r.createdAt||'',checkedIn:r.checkedIn===true||Object.keys(r.checkedInSlots||{}).length>0,amount:parseFloat(r.amount_paid||0),payment_type:r.payment_type||'Online'});
+  });
+  batchStudents.forEach(s=>{
+    const p = normPhone(s.phone); if(!p) return;
+    if(!map[p]) map[p]={phone:p,name:'',wsRegs:[],batchEnrols:[]};
+    if(s.name&&!map[p].name) map[p].name=s.name;
+    const b=BATCHES_CONFIG.find(x=>x.id===s.batchId);
+    map[p].batchEnrols.push({batchId:s.batchId,batchName:b?.name||s.batchId,joinDate:s.joinDate||'',active:s.active!==false});
+  });
+  return Object.values(map);
+}
+
+window.renderAnalysis = function(){
+  const el = document.getElementById('analysisContent');
+  if(!el) return;
+  const profiles = buildStudentProfiles();
+  const now      = new Date();
+  const MS_DAY   = 86400000;
+
+  const wsOnly    = profiles.filter(p=>p.wsRegs.length>0&&p.batchEnrols.length===0);
+  const batchOnly = profiles.filter(p=>p.wsRegs.length===0&&p.batchEnrols.length>0);
+  const both      = profiles.filter(p=>p.wsRegs.length>0&&p.batchEnrols.length>0);
+  const total     = profiles.length;
+  const wsStudents= profiles.filter(p=>p.wsRegs.length>0);
+
+  // Repeat analysis
+  const dist={1:0,'2-3':0,'4-5':0,'6-9':0,'10+':0};
+  let totalWsAtt=0;
+  wsStudents.forEach(p=>{
+    const c=p.wsRegs.length; totalWsAtt+=c;
+    if(c===1)dist[1]++; else if(c<=3)dist['2-3']++; else if(c<=5)dist['4-5']++; else if(c<=9)dist['6-9']++; else dist['10+']++;
+  });
+  const repeatStudents=wsStudents.filter(p=>p.wsRegs.length>1);
+  const avgWs=wsStudents.length>0?(totalWsAtt/wsStudents.length).toFixed(1):0;
+
+  // Last seen
+  function lastSeen(p){
+    let d=null;
+    [...p.wsRegs.map(r=>r.timestamp),...p.batchEnrols.map(b=>b.joinDate)].filter(Boolean).forEach(t=>{const dt=new Date(t);if(!isNaN(dt)&&(!d||dt>d))d=dt;});
+    return d;
+  }
+
+  const dorm={active:[],d30:[],d90:[],d180:[],older:[]};
+  profiles.forEach(p=>{
+    const last=lastSeen(p); if(!last){dorm.older.push(p);return;}
+    const days=(now-last)/MS_DAY;
+    if(days<=30)dorm.active.push(p);
+    else if(days<=90)dorm.d30.push(p);
+    else if(days<=180)dorm.d90.push(p);
+    else if(days<=365)dorm.d180.push(p);
+    else dorm.older.push(p);
+  });
+
+  // Conversions
+  const wsToBatch=both.filter(p=>{
+    const fw=p.wsRegs.map(r=>new Date(r.timestamp||0)).sort((a,b)=>a-b)[0];
+    const fb=p.batchEnrols.map(b=>new Date((b.joinDate||'2099')+'T00:00')).sort((a,b)=>a-b)[0];
+    return fw&&fb&&fw<fb;
+  });
+  const batchToWs=both.filter(p=>{
+    const fw=p.wsRegs.map(r=>new Date(r.timestamp||0)).sort((a,b)=>a-b)[0];
+    const fb=p.batchEnrols.map(b=>new Date((b.joinDate||'2099')+'T00:00')).sort((a,b)=>a-b)[0];
+    return fb&&fw&&fb<fw;
+  });
+
+  // Top students
+  const topWs   =[...wsStudents].sort((a,b)=>b.wsRegs.length-a.wsRegs.length).slice(0,10);
+  const topBatch=[...profiles.filter(p=>p.batchEnrols.length>0)].sort((a,b)=>b.batchEnrols.length-a.batchEnrols.length).slice(0,10);
+
+  // Monthly new
+  const monthNew={};
+  profiles.forEach(p=>{
+    const all=[...p.wsRegs.map(r=>r.timestamp),...p.batchEnrols.map(b=>b.joinDate)].filter(Boolean).sort();
+    if(!all.length)return;
+    const d=new Date(all[0]); if(isNaN(d))return;
+    const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    monthNew[k]=(monthNew[k]||0)+1;
+  });
+  const mKeys=Object.keys(monthNew).sort().slice(-12);
+
+  const pct=(n,d)=>d>0?Math.round(n/d*100):0;
+  const bar=(n,d,c='var(--red)')=>`<div style="background:var(--bg3);height:4px;border-radius:2px;overflow:hidden;margin-top:0.3rem"><div style="width:${pct(n,d)}%;height:100%;background:${c};border-radius:2px"></div></div>`;
+  const dormList=arr=>arr.slice(0,8).map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04)"><div><p style="font-size:0.82rem;color:var(--text);font-weight:500">${p.name||p.phone}</p><p style="font-size:0.68rem;color:var(--muted)">${p.phone} · ${p.wsRegs.length}ws · ${p.batchEnrols.length}batch</p></div><span style="font-size:0.68rem;color:var(--muted)">${lastSeen(p)?.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})||'Unknown'}</span></div>`).join('')+(arr.length>8?`<p style="font-size:0.72rem;color:var(--muted);margin-top:0.5rem">+${arr.length-8} more</p>`:'');
+
+  el.innerHTML = `
+    <p style="font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.85rem;font-weight:700">Overview</p>
+    <div class="stats-grid" style="margin-bottom:2rem">
+      <div class="stat-card"><p class="stat-label">Total Unique Students</p><p class="stat-val">${total}</p></div>
+      <div class="stat-card"><p class="stat-label">Active (Last 30 Days)</p><p class="stat-val" style="color:var(--green)">${dorm.active.length}</p></div>
+      <div class="stat-card"><p class="stat-label">Workshop Only</p><p class="stat-val red">${wsOnly.length}<span style="font-size:0.9rem;color:var(--muted)"> (${pct(wsOnly.length,total)}%)</span></p></div>
+      <div class="stat-card"><p class="stat-label">Batch Only</p><p class="stat-val" style="color:var(--green)">${batchOnly.length}<span style="font-size:0.9rem;color:var(--muted)"> (${pct(batchOnly.length,total)}%)</span></p></div>
+      <div class="stat-card"><p class="stat-label">Both WS + Batch</p><p class="stat-val yellow">${both.length}<span style="font-size:0.9rem;color:var(--muted)"> (${pct(both.length,total)}%)</span></p></div>
+      <div class="stat-card"><p class="stat-label">Avg Workshops / Student</p><p class="stat-val">${avgWs}</p></div>
+    </div>
+
+    <p style="font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.85rem;font-weight:700">Workshop Repeat Ratio</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem">
+      <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem">
+        <div style="display:flex;justify-content:space-between;margin-bottom:1rem">
+          <div><p style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">One-time Visitors</p><p style="font-size:2rem;font-family:'Bebas Neue',sans-serif;color:#e57373;line-height:1">${dist[1]}</p><p style="font-size:0.72rem;color:var(--muted)">${pct(dist[1],wsStudents.length)}% of workshop students</p></div>
+          <div style="text-align:right"><p style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Repeat Students</p><p style="font-size:2rem;font-family:'Bebas Neue',sans-serif;color:var(--green);line-height:1">${repeatStudents.length}</p><p style="font-size:0.72rem;color:var(--muted)">${pct(repeatStudents.length,wsStudents.length)}% come back</p></div>
+        </div>
+        ${[{l:'1 workshop',n:dist[1],c:'#e57373'},{l:'2–3 workshops',n:dist['2-3'],c:'var(--yellow)'},{l:'4–5 workshops',n:dist['4-5'],c:'var(--green)'},{l:'6–9 workshops',n:dist['6-9'],c:'#6ab0f5'},{l:'10+ workshops',n:dist['10+'],c:'var(--red)'}].map(({l,n,c})=>`<div style="margin-bottom:0.5rem"><div style="display:flex;justify-content:space-between;font-size:0.75rem"><span style="color:var(--muted)">${l}</span><span style="color:var(--text);font-weight:600">${n} <span style="color:var(--muted);font-weight:400">(${pct(n,wsStudents.length)}%)</span></span></div>${bar(n,wsStudents.length,c)}</div>`).join('')}
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem">
+        <p style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem">New Students Per Month (Last 12)</p>
+        ${mKeys.length?mKeys.map(k=>{const[y,m]=k.split('-');const label=new Date(+y,+m-1,1).toLocaleDateString('en-IN',{month:'short',year:'2-digit'});const n=monthNew[k];const max=Math.max(...mKeys.map(k2=>monthNew[k2]));return`<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem"><span style="font-size:0.65rem;color:var(--muted);width:42px;flex-shrink:0">${label}</span><div style="flex:1;background:var(--bg3);height:18px;border-radius:2px;overflow:hidden"><div style="width:${pct(n,max)}%;height:100%;background:var(--red);border-radius:2px;display:flex;align-items:center;padding-left:0.4rem"><span style="font-size:0.6rem;color:#fff;font-weight:700;white-space:nowrap">${n}</span></div></div></div>`;}).join(''):'<p style="color:var(--muted);font-size:0.8rem">No data yet</p>'}
+      </div>
+    </div>
+
+    <p style="font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.85rem;font-weight:700">Conversion Behaviour</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem">
+      <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem">
+        <p style="font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:0.25rem">Workshop → Batch</p>
+        <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.85rem">Attended a workshop first, then joined a regular batch</p>
+        <p style="font-size:2.5rem;font-family:'Bebas Neue',sans-serif;color:var(--green);line-height:1;margin-bottom:0.25rem">${wsToBatch.length}</p>
+        <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.5rem">${pct(wsToBatch.length,wsStudents.length)}% of workshop students converted to batch</p>
+        ${bar(wsToBatch.length,wsStudents.length,'var(--green)')}
+        ${wsToBatch.length?`<div style="margin-top:0.85rem;border-top:1px solid var(--border);padding-top:0.75rem">${wsToBatch.slice(0,5).map(p=>`<p style="font-size:0.75rem;color:var(--text);padding:0.2rem 0">${p.name||p.phone} <span style="color:var(--muted)">${p.wsRegs.length}ws → ${p.batchEnrols.length}batch</span></p>`).join('')}${wsToBatch.length>5?`<p style="font-size:0.68rem;color:var(--muted);margin-top:0.3rem">+${wsToBatch.length-5} more</p>`:''}</div>`:''}
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem">
+        <p style="font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:0.25rem">Batch → Workshop</p>
+        <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.85rem">Regular batch students who later started attending workshops</p>
+        <p style="font-size:2.5rem;font-family:'Bebas Neue',sans-serif;color:var(--yellow);line-height:1;margin-bottom:0.25rem">${batchToWs.length}</p>
+        <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.5rem">${pct(batchToWs.length,batchOnly.length+both.length)}% of batch students also attend workshops</p>
+        ${bar(batchToWs.length,batchOnly.length+both.length,'var(--yellow)')}
+        ${batchToWs.length?`<div style="margin-top:0.85rem;border-top:1px solid var(--border);padding-top:0.75rem">${batchToWs.slice(0,5).map(p=>`<p style="font-size:0.75rem;color:var(--text);padding:0.2rem 0">${p.name||p.phone} <span style="color:var(--muted)">${p.batchEnrols.length}batch → ${p.wsRegs.length}ws</span></p>`).join('')}${batchToWs.length>5?`<p style="font-size:0.68rem;color:var(--muted);margin-top:0.3rem">+${batchToWs.length-5} more</p>`:''}</div>`:''}
+      </div>
+    </div>
+
+    <p style="font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.85rem;font-weight:700">Retention & Dormancy</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:1rem">
+      ${[{l:'Active (≤30 days)',arr:dorm.active,c:'var(--green)'},{l:'Silent 1–3 months',arr:dorm.d30,c:'var(--yellow)'},{l:'Silent 3–6 months',arr:dorm.d90,c:'#e5a23a'},{l:'Silent 6–12 months',arr:dorm.d180,c:'#e57373'},{l:'Silent 1+ year',arr:dorm.older,c:'rgba(229,115,115,0.5)'}].map(({l,arr,c})=>`<div style="background:var(--bg2);border:1px solid var(--border);padding:1rem 1.25rem"><p style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">${l}</p><p style="font-size:2rem;font-family:'Bebas Neue',sans-serif;color:${c};line-height:1">${arr.length}</p><p style="font-size:0.7rem;color:var(--muted)">${pct(arr.length,total)}% of all students</p>${bar(arr.length,total,c)}</div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem">
+      <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem"><p style="font-size:0.7rem;font-weight:700;color:var(--yellow);margin-bottom:0.75rem">Silent 1–3 Months (${dorm.d30.length})</p>${dorm.d30.length?dormList(dorm.d30):'<p style="font-size:0.78rem;color:var(--muted)">None — great retention! 🎉</p>'}</div>
+      <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem"><p style="font-size:0.7rem;font-weight:700;color:#e57373;margin-bottom:0.75rem">Silent 3–6 Months (${dorm.d90.length})</p>${dorm.d90.length?dormList(dorm.d90):'<p style="font-size:0.78rem;color:var(--muted)">None</p>'}</div>
+    </div>
+
+    <p style="font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.85rem;font-weight:700">Top Students</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem">
+      <div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden">
+        <div style="padding:0.75rem 1rem;border-bottom:1px solid var(--border);background:var(--bg3)"><p style="font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text)">Most Workshops</p></div>
+        ${topWs.map((p,i)=>`<div style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 1rem;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:${i===0?'var(--yellow)':i===1?'rgba(200,200,200,0.6)':i===2?'rgba(180,140,80,0.7)':'var(--muted)'};width:20px">${i+1}</span><div style="flex:1;min-width:0"><p style="font-size:0.82rem;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name||p.phone}</p><p style="font-size:0.68rem;color:var(--muted)">${p.phone}</p></div><span style="font-size:1rem;font-weight:700;color:var(--red);font-family:'Bebas Neue',sans-serif">${p.wsRegs.length}</span></div>`).join('')}
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden">
+        <div style="padding:0.75rem 1rem;border-bottom:1px solid var(--border);background:var(--bg3)"><p style="font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text)">Most Batches Enrolled</p></div>
+        ${topBatch.map((p,i)=>`<div style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 1rem;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:${i===0?'var(--yellow)':i===1?'rgba(200,200,200,0.6)':i===2?'rgba(180,140,80,0.7)':'var(--muted)'};width:20px">${i+1}</span><div style="flex:1;min-width:0"><p style="font-size:0.82rem;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name||p.phone}</p><p style="font-size:0.68rem;color:var(--muted)">${p.phone}</p></div><span style="font-size:1rem;font-weight:700;color:var(--green);font-family:'Bebas Neue',sans-serif">${p.batchEnrols.length}</span></div>`).join('')}
+      </div>
+    </div>
+    <p style="font-size:0.72rem;color:var(--muted);text-align:center;padding-bottom:1rem">Based on ${registrations.length} workshop registrations + ${batchStudents.length} batch enrolments · ${total} unique students · <button onclick="renderAnalysis()" style="background:none;border:none;color:var(--muted);font-size:0.72rem;cursor:pointer;text-decoration:underline">Refresh</button></p>
+  `;
+};
 
 /* ══════════════════════════════════════
    REFUND MANAGER — PHASE 1
