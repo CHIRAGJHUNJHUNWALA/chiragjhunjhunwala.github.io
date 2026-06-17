@@ -2428,29 +2428,107 @@ function normPhone(p){
   return d.length>=10 ? '+91'+d.slice(-10) : '';
 }
 
+// Parse any date string format used in THS data
+// Handles: "DD/MM/YYYY, HH:MM:SS am/pm" (en-IN locale), "YYYY-MM-DD", epoch numbers
+function parseAnyDate(val){
+  if(!val) return null;
+  if(typeof val==='number') return new Date(val);
+  const s = String(val).trim();
+
+  // Indian locale: "15/11/2026, 10:30:45 am" or "15/11/2026"
+  const indMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(indMatch){
+    const [,dd,mm,yyyy] = indMatch;
+    const d = new Date(+yyyy, +mm-1, +dd);
+    if(!isNaN(d)) return d;
+  }
+  // ISO: "2026-11-15" or "2026-11-15T10:30:00"
+  const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(isoMatch){
+    const [,yyyy,mm,dd] = isoMatch;
+    const d = new Date(+yyyy, +mm-1, +dd);
+    if(!isNaN(d)) return d;
+  }
+  // Firestore Timestamp object
+  if(val?.seconds) return new Date(val.seconds*1000);
+  return null;
+}
+
 function buildStudentProfiles(){
   const map = {};
   registrations.forEach(r=>{
     const p = normPhone(r.phone); if(!p) return;
     if(!map[p]) map[p]={phone:p,name:'',wsRegs:[],batchEnrols:[]};
     if(r.name&&!map[p].name) map[p].name=r.name;
-    map[p].wsRegs.push({workshop:r.workshop||'—',timestamp:r.timestamp||r.createdAt||'',checkedIn:r.checkedIn===true||Object.keys(r.checkedInSlots||{}).length>0,amount:parseFloat(r.amount_paid||0),payment_type:r.payment_type||'Online'});
+    map[p].wsRegs.push({
+      workshop:r.workshop||'—',
+      timestamp:r.timestamp||r.createdAt||'',
+      date: parseAnyDate(r.timestamp||r.createdAt),
+      checkedIn:r.checkedIn===true||Object.keys(r.checkedInSlots||{}).length>0,
+      amount:parseFloat(r.amount_paid||0),
+      payment_type:r.payment_type||'Online'
+    });
   });
   batchStudents.forEach(s=>{
     const p = normPhone(s.phone); if(!p) return;
     if(!map[p]) map[p]={phone:p,name:'',wsRegs:[],batchEnrols:[]};
     if(s.name&&!map[p].name) map[p].name=s.name;
     const b=BATCHES_CONFIG.find(x=>x.id===s.batchId);
-    map[p].batchEnrols.push({batchId:s.batchId,batchName:b?.name||s.batchId,joinDate:s.joinDate||'',active:s.active!==false});
+    map[p].batchEnrols.push({
+      batchId:s.batchId,
+      batchName:b?.name||s.batchId,
+      joinDate:s.joinDate||'',
+      date: parseAnyDate(s.joinDate),
+      active:s.active!==false
+    });
   });
   return Object.values(map);
 }
 
+let _analysisWsToBatch = [];
+let _analysisBatchToWs = [];
+
+window.showConversionStudents = function(type){
+  const arr  = type==='wsToBatch' ? _analysisWsToBatch : _analysisBatchToWs;
+  const panel= document.getElementById('conversionDetailPanel');
+  const title= type==='wsToBatch' ? 'Workshop → Batch Students' : 'Batch → Workshop Students';
+  const subA = type==='wsToBatch' ? 'WS' : 'Batch';
+  const subB = type==='wsToBatch' ? 'Batch' : 'WS';
+  const getA = p=> type==='wsToBatch' ? p.wsRegs.length : p.batchEnrols.length;
+  const getB = p=> type==='wsToBatch' ? p.batchEnrols.length : p.wsRegs.length;
+
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.85rem">
+      <p style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text)">${title} (${arr.length})</p>
+      <button onclick="document.getElementById('conversionDetailPanel').innerHTML=''" style="background:none;border:none;color:var(--muted);font-size:0.8rem;cursor:pointer;font-family:'Syne',sans-serif">✕ Close</button>
+    </div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+    <table style="width:100%;border-collapse:collapse;min-width:480px">
+      <thead><tr style="background:var(--bg3);border-bottom:1px solid var(--border)">
+        <th style="padding:0.55rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Name</th>
+        <th style="padding:0.55rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Phone</th>
+        <th style="padding:0.55rem 1rem;text-align:center;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">${subA} Count</th>
+        <th style="padding:0.55rem 1rem;text-align:center;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">${subB} Count</th>
+      </tr></thead>
+      <tbody>
+        ${arr.map(p=>`<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">
+          <td style="padding:0.6rem 1rem;font-weight:500;color:var(--text)">${p.name||'—'}</td>
+          <td style="padding:0.6rem 1rem;font-size:0.75rem;color:var(--muted)">${p.phone}</td>
+          <td style="padding:0.6rem 1rem;text-align:center;color:var(--yellow);font-weight:600">${getA(p)}</td>
+          <td style="padding:0.6rem 1rem;text-align:center;color:var(--green);font-weight:600">${getB(p)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>`;
+  panel.style.display='block';
+  panel.scrollIntoView({behavior:'smooth',block:'start'});
+};
+
 window.renderAnalysis = function(){
   const el = document.getElementById('analysisContent');
   if(!el) return;
-  const profiles = buildStudentProfiles();
   const now      = new Date();
+  const profiles = buildStudentProfiles();
   const MS_DAY   = 86400000;
 
   const wsOnly    = profiles.filter(p=>p.wsRegs.length>0&&p.batchEnrols.length===0);
@@ -2469,10 +2547,12 @@ window.renderAnalysis = function(){
   const repeatStudents=wsStudents.filter(p=>p.wsRegs.length>1);
   const avgWs=wsStudents.length>0?(totalWsAtt/wsStudents.length).toFixed(1):0;
 
-  // Last seen
+  // Last seen — using parsed dates
   function lastSeen(p){
     let d=null;
-    [...p.wsRegs.map(r=>r.timestamp),...p.batchEnrols.map(b=>b.joinDate)].filter(Boolean).forEach(t=>{const dt=new Date(t);if(!isNaN(dt)&&(!d||dt>d))d=dt;});
+    [...p.wsRegs.map(r=>r.date),...p.batchEnrols.map(b=>b.date)].forEach(dt=>{
+      if(dt&&!isNaN(dt)&&(!d||dt>d)) d=dt;
+    });
     return d;
   }
 
@@ -2487,15 +2567,15 @@ window.renderAnalysis = function(){
     else dorm.older.push(p);
   });
 
-  // Conversions
-  const wsToBatch=both.filter(p=>{
-    const fw=p.wsRegs.map(r=>new Date(r.timestamp||0)).sort((a,b)=>a-b)[0];
-    const fb=p.batchEnrols.map(b=>new Date((b.joinDate||'2099')+'T00:00')).sort((a,b)=>a-b)[0];
+  // Conversions — using parsed dates
+  _analysisWsToBatch=both.filter(p=>{
+    const fw=p.wsRegs.map(r=>r.date).filter(Boolean).sort((a,b)=>a-b)[0];
+    const fb=p.batchEnrols.map(b=>b.date).filter(Boolean).sort((a,b)=>a-b)[0];
     return fw&&fb&&fw<fb;
   });
-  const batchToWs=both.filter(p=>{
-    const fw=p.wsRegs.map(r=>new Date(r.timestamp||0)).sort((a,b)=>a-b)[0];
-    const fb=p.batchEnrols.map(b=>new Date((b.joinDate||'2099')+'T00:00')).sort((a,b)=>a-b)[0];
+  _analysisBatchToWs=both.filter(p=>{
+    const fw=p.wsRegs.map(r=>r.date).filter(Boolean).sort((a,b)=>a-b)[0];
+    const fb=p.batchEnrols.map(b=>b.date).filter(Boolean).sort((a,b)=>a-b)[0];
     return fb&&fw&&fb<fw;
   });
 
@@ -2503,20 +2583,24 @@ window.renderAnalysis = function(){
   const topWs   =[...wsStudents].sort((a,b)=>b.wsRegs.length-a.wsRegs.length).slice(0,10);
   const topBatch=[...profiles.filter(p=>p.batchEnrols.length>0)].sort((a,b)=>b.batchEnrols.length-a.batchEnrols.length).slice(0,10);
 
-  // Monthly new
+  // Monthly new students — ONLY past and current months, using robust date parser
   const monthNew={};
+  const nowKey=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   profiles.forEach(p=>{
-    const all=[...p.wsRegs.map(r=>r.timestamp),...p.batchEnrols.map(b=>b.joinDate)].filter(Boolean).sort();
-    if(!all.length)return;
-    const d=new Date(all[0]); if(isNaN(d))return;
-    const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    monthNew[k]=(monthNew[k]||0)+1;
+    const allDates=[
+      ...p.wsRegs.map(r=>r.date),
+      ...p.batchEnrols.map(b=>b.date)
+    ].filter(d=>d&&!isNaN(d)&&d<=now); // exclude future dates
+    if(!allDates.length) return;
+    const first=allDates.sort((a,b)=>a-b)[0];
+    const k=`${first.getFullYear()}-${String(first.getMonth()+1).padStart(2,'0')}`;
+    if(k<=nowKey) monthNew[k]=(monthNew[k]||0)+1; // double-check key is not future
   });
   const mKeys=Object.keys(monthNew).sort().slice(-12);
 
   const pct=(n,d)=>d>0?Math.round(n/d*100):0;
   const bar=(n,d,c='var(--red)')=>`<div style="background:var(--bg3);height:4px;border-radius:2px;overflow:hidden;margin-top:0.3rem"><div style="width:${pct(n,d)}%;height:100%;background:${c};border-radius:2px"></div></div>`;
-  const dormList=arr=>arr.slice(0,8).map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04)"><div><p style="font-size:0.82rem;color:var(--text);font-weight:500">${p.name||p.phone}</p><p style="font-size:0.68rem;color:var(--muted)">${p.phone} · ${p.wsRegs.length}ws · ${p.batchEnrols.length}batch</p></div><span style="font-size:0.68rem;color:var(--muted)">${lastSeen(p)?.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})||'Unknown'}</span></div>`).join('')+(arr.length>8?`<p style="font-size:0.72rem;color:var(--muted);margin-top:0.5rem">+${arr.length-8} more</p>`:'');
+  const dormList=arr=>arr.slice(0,8).map(p=>{const ls=lastSeen(p);return`<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04)"><div><p style="font-size:0.82rem;color:var(--text);font-weight:500">${p.name||p.phone}</p><p style="font-size:0.68rem;color:var(--muted)">${p.phone} · ${p.wsRegs.length}ws · ${p.batchEnrols.length}batch</p></div><span style="font-size:0.68rem;color:var(--muted)">${ls?ls.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'Unknown'}</span></div>`;}).join('')+(arr.length>8?`<p style="font-size:0.72rem;color:var(--muted);margin-top:0.5rem">+${arr.length-8} more</p>`:'');
 
   el.innerHTML = `
     <p style="font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.85rem;font-weight:700">Overview</p>
@@ -2545,24 +2629,26 @@ window.renderAnalysis = function(){
     </div>
 
     <p style="font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.85rem;font-weight:700">Conversion Behaviour</p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
       <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem">
         <p style="font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:0.25rem">Workshop → Batch</p>
         <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.85rem">Attended a workshop first, then joined a regular batch</p>
-        <p style="font-size:2.5rem;font-family:'Bebas Neue',sans-serif;color:var(--green);line-height:1;margin-bottom:0.25rem">${wsToBatch.length}</p>
-        <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.5rem">${pct(wsToBatch.length,wsStudents.length)}% of workshop students converted to batch</p>
-        ${bar(wsToBatch.length,wsStudents.length,'var(--green)')}
-        ${wsToBatch.length?`<div style="margin-top:0.85rem;border-top:1px solid var(--border);padding-top:0.75rem">${wsToBatch.slice(0,5).map(p=>`<p style="font-size:0.75rem;color:var(--text);padding:0.2rem 0">${p.name||p.phone} <span style="color:var(--muted)">${p.wsRegs.length}ws → ${p.batchEnrols.length}batch</span></p>`).join('')}${wsToBatch.length>5?`<p style="font-size:0.68rem;color:var(--muted);margin-top:0.3rem">+${wsToBatch.length-5} more</p>`:''}</div>`:''}
+        <p style="font-size:2.5rem;font-family:'Bebas Neue',sans-serif;color:var(--green);line-height:1;margin-bottom:0.25rem">${_analysisWsToBatch.length}</p>
+        <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.5rem">${pct(_analysisWsToBatch.length,wsStudents.length)}% of workshop students converted to batch</p>
+        ${bar(_analysisWsToBatch.length,wsStudents.length,'var(--green)')}
+        ${_analysisWsToBatch.length?`<button onclick="showConversionStudents('wsToBatch')" style="margin-top:0.85rem;background:rgba(92,184,122,0.1);border:1px solid rgba(92,184,122,0.3);color:var(--green);padding:0.45rem 0.85rem;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;letter-spacing:0.06em;text-transform:uppercase">View ${_analysisWsToBatch.length} Students →</button>`:''}
       </div>
       <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem">
         <p style="font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:0.25rem">Batch → Workshop</p>
         <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.85rem">Regular batch students who later started attending workshops</p>
-        <p style="font-size:2.5rem;font-family:'Bebas Neue',sans-serif;color:var(--yellow);line-height:1;margin-bottom:0.25rem">${batchToWs.length}</p>
-        <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.5rem">${pct(batchToWs.length,batchOnly.length+both.length)}% of batch students also attend workshops</p>
-        ${bar(batchToWs.length,batchOnly.length+both.length,'var(--yellow)')}
-        ${batchToWs.length?`<div style="margin-top:0.85rem;border-top:1px solid var(--border);padding-top:0.75rem">${batchToWs.slice(0,5).map(p=>`<p style="font-size:0.75rem;color:var(--text);padding:0.2rem 0">${p.name||p.phone} <span style="color:var(--muted)">${p.batchEnrols.length}batch → ${p.wsRegs.length}ws</span></p>`).join('')}${batchToWs.length>5?`<p style="font-size:0.68rem;color:var(--muted);margin-top:0.3rem">+${batchToWs.length-5} more</p>`:''}</div>`:''}
+        <p style="font-size:2.5rem;font-family:'Bebas Neue',sans-serif;color:var(--yellow);line-height:1;margin-bottom:0.25rem">${_analysisBatchToWs.length}</p>
+        <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.5rem">${pct(_analysisBatchToWs.length,batchOnly.length+both.length)}% of batch students also attend workshops</p>
+        ${bar(_analysisBatchToWs.length,batchOnly.length+both.length,'var(--yellow)')}
+        ${_analysisBatchToWs.length?`<button onclick="showConversionStudents('batchToWs')" style="margin-top:0.85rem;background:rgba(245,230,66,0.1);border:1px solid rgba(245,230,66,0.3);color:var(--yellow);padding:0.45rem 0.85rem;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;letter-spacing:0.06em;text-transform:uppercase">View ${_analysisBatchToWs.length} Students →</button>`:''}
       </div>
     </div>
+    <!-- Conversion student detail panel -->
+    <div id="conversionDetailPanel" style="display:none;background:var(--bg2);border:1px solid var(--border);padding:1.25rem;margin-bottom:2rem"></div>
 
     <p style="font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.85rem;font-weight:700">Retention & Dormancy</p>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:1rem">
@@ -2584,7 +2670,7 @@ window.renderAnalysis = function(){
         ${topBatch.map((p,i)=>`<div style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 1rem;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:${i===0?'var(--yellow)':i===1?'rgba(200,200,200,0.6)':i===2?'rgba(180,140,80,0.7)':'var(--muted)'};width:20px">${i+1}</span><div style="flex:1;min-width:0"><p style="font-size:0.82rem;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name||p.phone}</p><p style="font-size:0.68rem;color:var(--muted)">${p.phone}</p></div><span style="font-size:1rem;font-weight:700;color:var(--green);font-family:'Bebas Neue',sans-serif">${p.batchEnrols.length}</span></div>`).join('')}
       </div>
     </div>
-    <p style="font-size:0.72rem;color:var(--muted);text-align:center;padding-bottom:1rem">Based on ${registrations.length} workshop registrations + ${batchStudents.length} batch enrolments · ${total} unique students · <button onclick="renderAnalysis()" style="background:none;border:none;color:var(--muted);font-size:0.72rem;cursor:pointer;text-decoration:underline">Refresh</button></p>
+    <p style="font-size:0.72rem;color:var(--muted);text-align:center;padding-bottom:1rem">Based on ${registrations.length} workshop registrations + ${batchStudents.length} batch enrolments · ${total} unique students</p>
   `;
 };
 
