@@ -338,6 +338,9 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="nav-item" onclick="showView('analysis')">
         <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Student Analysis
       </div>
+      <div class="nav-item" onclick="showView('artistanalysis')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/><line x1="12" y1="12" x2="12" y2="21"/></svg>Artist Analysis
+      </div>
       <div class="nav-section-title">Content</div>
       <div class="nav-item" onclick="showView('abouteditor')">
         <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit About Us
@@ -1026,6 +1029,17 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         </button>
       </div>
       <div id="analysisContent"><p style="color:var(--muted);font-size:0.85rem;padding:2rem 0">Loading analysis…</p></div>
+    </div>
+
+    <!-- ARTIST ANALYSIS -->
+    <div class="view" id="view-artistanalysis">
+      <div class="page-header">
+        <div><h1 class="page-title">Artist Analysis</h1><p class="page-sub">Performance, revenue and student loyalty per artist</p></div>
+        <button class="btn btn-outline" onclick="renderArtistAnalysis()">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Refresh
+        </button>
+      </div>
+      <div id="artistAnalysisContent"><p style="color:var(--muted);font-size:0.85rem;padding:2rem 0">Loading analysis…</p></div>
     </div>
 
   </div>
@@ -2110,6 +2124,7 @@ window.showView = function(id){
   if(id==='checkins')    renderCheckinsView();
   if(id==='payments')        renderAllPayments();
   if(id==='analysis')        renderAnalysis();
+  if(id==='artistanalysis')  renderArtistAnalysis();
   if(id==='schedule')  { goScheduleToday(); }
   if(id==='monthschedule'){ initMonthViewSelectors(); renderMonthSchedule(); }
   if(id==='rentals')     renderRentals();
@@ -2672,6 +2687,350 @@ window.renderAnalysis = function(){
     </div>
     <p style="font-size:0.72rem;color:var(--muted);text-align:center;padding-bottom:1rem">Based on ${registrations.length} workshop registrations + ${batchStudents.length} batch enrolments · ${total} unique students</p>
   `;
+};
+
+/* ══════════════════════════════════════
+   ARTIST ANALYSIS ENGINE
+══════════════════════════════════════ */
+let _artistAnalysisSortCol = 'revenue';
+let _artistAnalysisSortDir = -1; // -1 = desc
+
+window.sortArtistAnalysis = function(col){
+  if(_artistAnalysisSortCol===col) _artistAnalysisSortDir*=-1;
+  else { _artistAnalysisSortCol=col; _artistAnalysisSortDir=-1; }
+  renderArtistAnalysis();
+};
+
+window.renderArtistAnalysis = function(){
+  const el = document.getElementById('artistAnalysisContent');
+  if(!el) return;
+  const now    = new Date();
+  const MS_DAY = 86400000;
+  const pct    = (n,d)=>d>0?Math.round(n/d*100):0;
+  const bar    = (n,d,c='var(--red)')=>`<div style="background:var(--bg3);height:4px;border-radius:2px;overflow:hidden;margin-top:0.3rem"><div style="width:${pct(n,d)}%;height:100%;background:${c};border-radius:2px"></div></div>`;
+  const fmt    = n=>'₹'+(n||0).toLocaleString('en-IN');
+
+  // Build per-artist profiles from ARTIST_ROSTER + workshops + registrations
+  const artistNames = [...new Set([
+    ...ARTIST_ROSTER.map(a=>a.name),
+    ...workshops.map(w=>w.artist).filter(Boolean)
+  ])].filter(Boolean);
+
+  const profiles = artistNames.map(name=>{
+    const roster   = ARTIST_ROSTER.find(a=>a.name===name);
+    const wsArr    = workshops.filter(w=>w.artist===name);
+    const settle   = wsArr.map(w=>wsSettlements[w.id]).filter(Boolean);
+
+    // All registrations across all their workshops
+    const wsIds    = new Set(wsArr.map(w=>w.id));
+    const regs     = registrations.filter(r=>r.workshop===name||wsIds.has(r.workshopId));
+
+    // Per-workshop stats
+    const wsPerfArr = wsArr.map(w=>{
+      const wRegs    = regs.filter(r=>r.workshop===name||(r.workshopId===w.id));
+      const wRegsFilt= registrations.filter(r=>r.workshop===name&&(w.slots||[]).length<=1?true:true); // all regs for this artist-workshop
+      const thisRegs = registrations.filter(r=>r.workshop===name&&wsArr.length===1?true:r.workshopId===w.id||r.workshop===name);
+      // Simpler: count regs matching by workshop name
+      const wsRegs   = registrations.filter(r=>r.workshop===w.artist&&(!r.workshopId||r.workshopId===w.id));
+      const totalSpots = (w.slots||[]).reduce((s,sl)=>s+(parseInt(sl.spots)||sl.totalSpots||0),0)||w.totalSpots||0;
+      const revenue  = wsRegs.reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
+      const dateVal  = parseAnyDate(w.dateFrom||(w.slots?.[0]?.date));
+      return {id:w.id, name:w.style||w.artist, dateFrom:w.dateFrom, dateVal, status:w.status, regs:wsRegs.length, totalSpots, revenue};
+    });
+
+    // Aggregate registrations — dedupe by workshop for per-workshop, but for general use:
+    const allRegs = registrations.filter(r=>r.workshop===name);
+
+    // Revenue
+    const grossRevenue = settle.reduce((s,x)=>s+(x.grossRevenue||0),0)
+      || allRegs.reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
+    const artistPayout = settle.reduce((s,x)=>s+(x.artistPayout||0),0);
+    const studioRev    = settle.reduce((s,x)=>s+(x.studioPayout||0),0);
+
+    // Fill rate
+    const totalSpots   = wsPerfArr.reduce((s,w)=>s+w.totalSpots,0);
+    const totalRegs    = allRegs.length;
+    const fillRate     = pct(totalRegs, totalSpots||1);
+
+    // Settlement status
+    const nPending     = wsArr.filter(w=>(w.status==='completed'||w.status==='full')&&!wsSettlements[w.id]).length;
+    const nSettled     = wsArr.filter(w=>wsSettlements[w.id]&&!wsSettlements[w.id].artistPaid).length;
+    const nPaid        = wsArr.filter(w=>wsSettlements[w.id]?.artistPaid).length;
+    const pendingPayout= settle.filter(s=>!s.artistPaid).reduce((sum,s)=>sum+(s.artistPayout||0),0);
+
+    // Unique students
+    const uniquePhones = new Set(allRegs.map(r=>normPhone(r.phone)).filter(Boolean));
+    const totalStudents= uniquePhones.size || allRegs.length;
+
+    // Repeat students (attended 2+ of this artist's workshops)
+    const phoneCount = {};
+    allRegs.forEach(r=>{ const p=normPhone(r.phone); if(p) phoneCount[p]=(phoneCount[p]||0)+1; });
+    const repeatCount = Object.values(phoneCount).filter(c=>c>1).length;
+    const newStudents = uniquePhones.size - repeatCount;
+
+    // Active check — last workshop date
+    const lastWsDate = wsPerfArr.map(w=>w.dateVal).filter(d=>d&&!isNaN(d)).sort((a,b)=>b-a)[0];
+    const daysSince  = lastWsDate ? (now-lastWsDate)/MS_DAY : 9999;
+    const isActive3  = daysSince<=90;
+    const isActive6  = daysSince<=180;
+
+    // Trend — compare last 3 workshops vs previous 3
+    const sortedWs = [...wsPerfArr].sort((a,b)=>(b.dateVal||0)-(a.dateVal||0));
+    const last3avg = sortedWs.slice(0,3).reduce((s,w)=>s+w.regs,0)/Math.max(sortedWs.slice(0,3).length,1);
+    const prev3avg = sortedWs.slice(3,6).reduce((s,w)=>s+w.regs,0)/Math.max(sortedWs.slice(3,6).length,1);
+    let trend = '—';
+    if(sortedWs.length>=2){
+      if(last3avg>prev3avg*1.1) trend='↑ Growing';
+      else if(last3avg<prev3avg*0.9) trend='↓ Declining';
+      else trend='→ Stable';
+    }
+    const trendColor = trend.includes('↑')?'var(--green)':trend.includes('↓')?'#e57373':'var(--muted)';
+
+    // Best workshop
+    const bestWs = [...wsPerfArr].sort((a,b)=>b.regs-a.regs)[0];
+
+    return {
+      name, roster, wsArr, wsPerfArr, allRegs,
+      grossRevenue, artistPayout, studioRev,
+      totalSpots, totalRegs, fillRate, totalStudents,
+      repeatCount, newStudents, phoneCount,
+      nPending, nSettled, nPaid, pendingPayout,
+      lastWsDate, daysSince, isActive3, isActive6,
+      trend, trendColor, bestWs,
+      totalWs: wsArr.length, completedWs: wsArr.filter(w=>w.status==='completed'||w.status==='full').length
+    };
+  }).filter(p=>p.totalWs>0||p.allRegs.length>0);
+
+  if(!profiles.length){
+    el.innerHTML='<p style="color:var(--muted);padding:3rem;text-align:center">No artist data found yet.</p>';
+    return;
+  }
+
+  // Sort comparison table
+  const col = _artistAnalysisSortCol;
+  const sortedProfiles = [...profiles].sort((a,b)=>{
+    const va = col==='name'?a.name:col==='workshops'?a.totalWs:col==='students'?a.totalStudents:col==='fill'?a.fillRate:col==='repeat'?a.repeatCount:col==='revenue'?a.grossRevenue:col==='payout'?a.artistPayout:col==='studio'?a.studioRev:col==='pending'?a.pendingPayout:a.grossRevenue;
+    const vb = col==='name'?b.name:col==='workshops'?b.totalWs:col==='students'?b.totalStudents:col==='fill'?b.fillRate:col==='repeat'?b.repeatCount:col==='revenue'?b.grossRevenue:col==='payout'?b.artistPayout:col==='studio'?b.studioRev:col==='pending'?b.pendingPayout:b.grossRevenue;
+    if(col==='name') return _artistAnalysisSortDir*(va.localeCompare(vb));
+    return _artistAnalysisSortDir*(va-vb);
+  });
+
+  // Totals for overview
+  const totalArtists  = profiles.length;
+  const active3       = profiles.filter(p=>p.isActive3).length;
+  const active6       = profiles.filter(p=>p.isActive6).length;
+  const totalPending  = profiles.reduce((s,p)=>s+p.nPending,0);
+  const totalPendAmt  = profiles.reduce((s,p)=>s+p.pendingPayout,0);
+  const totalPaidOut  = profiles.reduce((s,p)=>s+p.artistPayout,0);
+
+  const thStyle = (c)=>`padding:0.55rem 1rem;text-align:${c==='name'?'left':'right'};font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;cursor:pointer;white-space:nowrap;user-select:none`;
+  const sortArrow= c=>_artistAnalysisSortCol===c?(_artistAnalysisSortDir>0?' ↑':' ↓'):'';
+
+  el.innerHTML = `
+
+    <!-- ══ OVERVIEW ══ -->
+    <p style="font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.85rem;font-weight:700">Overview</p>
+    <div class="stats-grid" style="margin-bottom:2rem">
+      <div class="stat-card"><p class="stat-label">Total Artists</p><p class="stat-val">${totalArtists}</p></div>
+      <div class="stat-card"><p class="stat-label">Active (Last 3 Months)</p><p class="stat-val" style="color:var(--green)">${active3}</p></div>
+      <div class="stat-card"><p class="stat-label">Active (Last 6 Months)</p><p class="stat-val" style="color:var(--yellow)">${active6}</p></div>
+      <div class="stat-card"><p class="stat-label">Pending Settlement</p><p class="stat-val" style="color:#e57373">${totalPending}</p></div>
+      <div class="stat-card"><p class="stat-label">Pending Payout</p><p class="stat-val" style="color:#e57373">${fmt(totalPendAmt)}</p></div>
+      <div class="stat-card"><p class="stat-label">Total Paid Out</p><p class="stat-val" style="color:var(--green)">${fmt(totalPaidOut)}</p></div>
+    </div>
+
+    <!-- ══ COMPARISON TABLE ══ -->
+    <p style="font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.85rem;font-weight:700">All Artists — Click header to sort</p>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:2rem">
+    <table style="width:100%;border-collapse:collapse;min-width:900px">
+      <thead style="position:sticky;top:0;z-index:1">
+        <tr style="background:var(--bg3);border-bottom:1px solid var(--border)">
+          <th onclick="sortArtistAnalysis('name')"    style="${thStyle('name')}">Artist${sortArrow('name')}</th>
+          <th onclick="sortArtistAnalysis('workshops')" style="${thStyle('r')}">Workshops${sortArrow('workshops')}</th>
+          <th onclick="sortArtistAnalysis('students')" style="${thStyle('r')}">Students${sortArrow('students')}</th>
+          <th onclick="sortArtistAnalysis('fill')"    style="${thStyle('r')}">Fill Rate${sortArrow('fill')}</th>
+          <th onclick="sortArtistAnalysis('repeat')"  style="${thStyle('r')}">Repeat${sortArrow('repeat')}</th>
+          <th onclick="sortArtistAnalysis('revenue')" style="${thStyle('r')}">Revenue${sortArrow('revenue')}</th>
+          <th onclick="sortArtistAnalysis('payout')"  style="${thStyle('r')}">Artist Payout${sortArrow('payout')}</th>
+          <th onclick="sortArtistAnalysis('studio')"  style="${thStyle('r')}">Studio Rev${sortArrow('studio')}</th>
+          <th onclick="sortArtistAnalysis('pending')" style="${thStyle('r')}">Pending${sortArrow('pending')}</th>
+          <th style="padding:0.55rem 1rem;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;text-align:center">Trend</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${sortedProfiles.map((p,i)=>`<tr style="border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer" onclick="showArtistDetail('${p.name}')" title="Click to see full profile">
+          <td style="padding:0.75rem 1rem">
+            <p style="font-weight:600;color:var(--text)">${p.name}</p>
+            <p style="font-size:0.68rem;color:${p.isActive3?'var(--green)':p.isActive6?'var(--yellow)':'#e57373'}">${p.isActive3?'● Active':'○ Inactive'}</p>
+          </td>
+          <td style="padding:0.75rem 1rem;text-align:right;font-weight:600;color:var(--text)">${p.totalWs}</td>
+          <td style="padding:0.75rem 1rem;text-align:right;color:var(--text)">${p.totalStudents}</td>
+          <td style="padding:0.75rem 1rem;text-align:right"><span style="color:${p.fillRate>=80?'var(--green)':p.fillRate>=50?'var(--yellow)':'#e57373'};font-weight:600">${p.fillRate}%</span></td>
+          <td style="padding:0.75rem 1rem;text-align:right;color:var(--yellow)">${p.repeatCount}</td>
+          <td style="padding:0.75rem 1rem;text-align:right;font-weight:600;color:var(--text)">${fmt(p.grossRevenue)}</td>
+          <td style="padding:0.75rem 1rem;text-align:right;color:var(--yellow)">${p.artistPayout?fmt(p.artistPayout):'—'}</td>
+          <td style="padding:0.75rem 1rem;text-align:right;color:var(--muted)">${p.studioRev?fmt(p.studioRev):'—'}</td>
+          <td style="padding:0.75rem 1rem;text-align:right;color:${p.pendingPayout?'#e57373':'var(--muted)'}">${p.pendingPayout?fmt(p.pendingPayout):'—'}</td>
+          <td style="padding:0.75rem 1rem;text-align:center;font-size:0.75rem;font-weight:600;color:${p.trendColor}">${p.trend}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>
+
+    <!-- ══ ARTIST DEEP DIVE ══ -->
+    <div id="artistDetailSection" style="display:none"></div>
+
+    <p style="font-size:0.72rem;color:var(--muted);text-align:center;padding-bottom:1rem">Based on ${workshops.length} workshops · ${registrations.length} registrations · Click any row to see full profile</p>
+  `;
+};
+
+window.showArtistDetail = function(name){
+  const el = document.getElementById('artistDetailSection');
+  if(!el) return;
+
+  const now    = new Date();
+  const pct    = (n,d)=>d>0?Math.round(n/d*100):0;
+  const fmt    = n=>'₹'+(n||0).toLocaleString('en-IN');
+  const bar    = (n,d,c)=>`<div style="background:var(--bg3);height:5px;border-radius:3px;overflow:hidden;margin-top:0.3rem"><div style="width:${pct(n,d)}%;height:100%;background:${c};border-radius:3px"></div></div>`;
+
+  const wsArr   = workshops.filter(w=>w.artist===name);
+  const allRegs = registrations.filter(r=>r.workshop===name);
+  const settle  = wsArr.map(w=>wsSettlements[w.id]).filter(Boolean);
+
+  const grossRevenue = settle.reduce((s,x)=>s+(x.grossRevenue||0),0)||allRegs.reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
+  const artistPayout = settle.reduce((s,x)=>s+(x.artistPayout||0),0);
+  const studioRev    = settle.reduce((s,x)=>s+(x.studioPayout||0),0);
+  const totalSpots   = wsArr.reduce((s,w)=>(w.slots||[]).reduce((a,sl)=>a+(parseInt(sl.spots)||sl.totalSpots||0),0)+s, 0)||wsArr.reduce((s,w)=>s+(w.totalSpots||0),0);
+
+  // Unique + repeat students
+  const phoneCount = {};
+  allRegs.forEach(r=>{ const p=normPhone(r.phone); if(p) phoneCount[p]=(phoneCount[p]||0)+1; });
+  const uniqueStudents = Object.keys(phoneCount).length||allRegs.length;
+  const repeatStudents = Object.values(phoneCount).filter(c=>c>1).length;
+  const newStudents    = uniqueStudents-repeatStudents;
+
+  // Settlement
+  const completedWs    = wsArr.filter(w=>w.status==='completed'||w.status==='full');
+  const pendingSettle  = completedWs.filter(w=>!wsSettlements[w.id]);
+  const settledUnpaid  = completedWs.filter(w=>wsSettlements[w.id]&&!wsSettlements[w.id].artistPaid);
+  const paidWs         = completedWs.filter(w=>wsSettlements[w.id]?.artistPaid);
+  const pendingPayout  = settle.filter(s=>!s.artistPaid).reduce((sum,s)=>sum+(s.artistPayout||0),0);
+
+  // Per-workshop table
+  const wsByDate = [...wsArr].sort((a,b)=>{
+    const da=parseAnyDate(a.dateFrom),db=parseAnyDate(b.dateFrom);
+    return (db||0)-(da||0);
+  });
+
+  el.style.display='block';
+  el.innerHTML=`
+    <div style="border:1px solid var(--border);margin-bottom:2rem">
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;background:var(--bg3);border-bottom:1px solid var(--border);flex-wrap:wrap;gap:0.75rem">
+        <div>
+          <h2 style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:0.05em;color:var(--text);line-height:1">${name}</h2>
+          <p style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem">${wsArr.length} workshops · ${uniqueStudents} unique students</p>
+        </div>
+        <button onclick="document.getElementById('artistDetailSection').style.display='none'" style="background:none;border:1px solid var(--border);color:var(--muted);padding:0.4rem 0.85rem;font-size:0.72rem;cursor:pointer;font-family:'Syne',sans-serif">✕ Close</button>
+      </div>
+
+      <!-- Workshop Performance -->
+      <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border)">
+        <p style="font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.85rem;font-weight:700">Workshop Performance</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:1rem;margin-bottom:1.25rem">
+          ${[
+            {l:'Total Workshops',  v:wsArr.length,            c:'var(--text)'},
+            {l:'Total Students',   v:uniqueStudents,           c:'var(--text)'},
+            {l:'Fill Rate',        v:pct(allRegs.length,totalSpots||1)+'%', c:pct(allRegs.length,totalSpots||1)>=70?'var(--green)':'var(--yellow)'},
+            {l:'Best Workshop',    v:([...wsByDate].sort((a,b)=>registrations.filter(r=>r.workshop===name&&r.workshopId===b.id).length-registrations.filter(r=>r.workshop===name&&r.workshopId===a.id).length)[0]?.style||'—'), c:'var(--yellow)', small:true},
+          ].map(({l,v,c,small})=>`<div style="background:var(--bg2);border:1px solid var(--border);padding:0.85rem 1rem"><p style="font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">${l}</p><p style="font-size:${small?'0.88':'1.6'}rem;font-family:${small?'inherit':'Bebas Neue'},sans-serif;color:${c};line-height:1.2;font-weight:${small?'600':'400'}">${v}</p></div>`).join('')}
+        </div>
+
+        <!-- Workshop by workshop table -->
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <table style="width:100%;border-collapse:collapse;min-width:560px">
+          <thead><tr style="background:var(--bg2);border-bottom:1px solid var(--border)">
+            ${['Workshop','Date','Status','Students','Fill Rate','Revenue'].map(h=>`<th style="padding:0.5rem 0.85rem;text-align:left;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">${h}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${wsByDate.map(w=>{
+              const wRegs=registrations.filter(r=>r.workshop===name||(r.workshopId===w.id));
+              const wRev=wRegs.reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
+              const wSpots=(w.slots||[]).reduce((s,sl)=>s+(parseInt(sl.spots)||sl.totalSpots||0),0)||w.totalSpots||0;
+              const wFill=pct(wRegs.length,wSpots||1);
+              const sColor={active:'var(--green)',full:'var(--red)',completed:'var(--muted)',cancelled:'#e57373',draft:'var(--blue)'}[w.status]||'var(--muted)';
+              return `<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">
+                <td style="padding:0.6rem 0.85rem;font-weight:500;color:var(--text)">${w.style||'—'}</td>
+                <td style="padding:0.6rem 0.85rem;font-size:0.75rem;color:var(--muted)">${w.dateFrom||'—'}</td>
+                <td style="padding:0.6rem 0.85rem"><span class="pill" style="font-size:0.58rem;color:${sColor};background:transparent;border:1px solid ${sColor}">${w.status||'—'}</span></td>
+                <td style="padding:0.6rem 0.85rem;font-weight:600">${wRegs.length}</td>
+                <td style="padding:0.6rem 0.85rem"><span style="color:${wFill>=70?'var(--green)':wFill>=40?'var(--yellow)':'#e57373'};font-weight:600">${wFill}%</span></td>
+                <td style="padding:0.6rem 0.85rem;color:var(--yellow)">${fmt(wRev)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <!-- Revenue -->
+      <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border)">
+        <p style="font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.85rem;font-weight:700">Revenue</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem">
+          ${[
+            {l:'Gross Revenue',   v:fmt(grossRevenue), c:'var(--text)',   n:grossRevenue},
+            {l:'Artist Payout',   v:artistPayout?fmt(artistPayout):'Not settled', c:'var(--yellow)', n:artistPayout},
+            {l:'Studio Revenue',  v:studioRev?fmt(studioRev):'Not settled',       c:'var(--green)',  n:studioRev},
+          ].map(({l,v,c,n})=>`<div style="background:var(--bg2);border:1px solid var(--border);padding:1rem 1.25rem"><p style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">${l}</p><p style="font-size:1.4rem;font-family:'Bebas Neue',sans-serif;color:${c};line-height:1">${v}</p>${n&&grossRevenue?bar(n,grossRevenue,c):''}</div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Student Loyalty -->
+      <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border)">
+        <p style="font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.85rem;font-weight:700">Student Loyalty</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem">
+          <div style="background:var(--bg2);border:1px solid var(--border);padding:1rem 1.25rem">
+            <p style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">Unique Students</p>
+            <p style="font-size:1.4rem;font-family:'Bebas Neue',sans-serif;color:var(--text);line-height:1">${uniqueStudents}</p>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);padding:1rem 1.25rem">
+            <p style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">New Students</p>
+            <p style="font-size:1.4rem;font-family:'Bebas Neue',sans-serif;color:var(--text);line-height:1">${newStudents}</p>
+            <p style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem">${pct(newStudents,uniqueStudents)}% attended only once</p>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);padding:1rem 1.25rem">
+            <p style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">Repeat Students</p>
+            <p style="font-size:1.4rem;font-family:'Bebas Neue',sans-serif;color:var(--yellow);line-height:1">${repeatStudents}</p>
+            <p style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem">${pct(repeatStudents,uniqueStudents)}% came back for more</p>
+            ${bar(repeatStudents,uniqueStudents,'var(--yellow)')}
+          </div>
+        </div>
+        ${repeatStudents>0?`
+        <div style="margin-top:1rem;background:var(--bg3);border:1px solid var(--border);padding:1rem 1.25rem">
+          <p style="font-size:0.68rem;font-weight:600;color:var(--text);margin-bottom:0.5rem">Repeat student breakdown</p>
+          ${Object.entries(
+              Object.values(phoneCount).reduce((acc,c)=>{ const k=c>=5?'5+':(c+'x'); acc[k]=(acc[k]||0)+1; return acc; },{})
+            ).sort(([a],[b])=>parseInt(a)-parseInt(b))
+            .map(([times,count])=>`<div style="display:flex;justify-content:space-between;font-size:0.75rem;padding:0.2rem 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="color:var(--muted)">Attended ${times}</span><span style="color:var(--text);font-weight:600">${count} student${count!==1?'s':''}</span></div>`).join('')}
+        </div>`:'' }
+      </div>
+
+      <!-- Settlement -->
+      <div style="padding:1.25rem 1.5rem">
+        <p style="font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.85rem;font-weight:700">Settlement Status</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem">
+          ${[
+            {l:'Pending Settlement', v:pendingSettle.length,  c:'#e57373'},
+            {l:'Settled (Unpaid)',   v:settledUnpaid.length,  c:'var(--yellow)'},
+            {l:'Fully Paid',         v:paidWs.length,         c:'var(--green)'},
+            {l:'Pending Payout',     v:pendingPayout?fmt(pendingPayout):'—', c:pendingPayout?'#e57373':'var(--muted)'},
+            {l:'Total Paid Out',     v:artistPayout?fmt(artistPayout):'—',   c:artistPayout?'var(--green)':'var(--muted)'},
+          ].map(({l,v,c})=>`<div style="background:var(--bg2);border:1px solid var(--border);padding:0.85rem 1rem"><p style="font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">${l}</p><p style="font-size:1.4rem;font-family:'Bebas Neue',sans-serif;color:${c};line-height:1">${v}</p></div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+
+  el.scrollIntoView({behavior:'smooth',block:'start'});
 };
 
 /* ══════════════════════════════════════
