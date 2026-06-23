@@ -265,14 +265,6 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
       <span class="section-heading-text">Choose a Package</span>
       <span class="section-heading-pill pill-red">Step 1</span>
     </div>
-    <!-- OTS Info Banner (info only, not bookable) -->
-    <div id="otsBanner" style="display:none;align-items:center;gap:0.75rem;padding:0.85rem 1rem;border:1px solid rgba(245,230,66,0.25);background:rgba(245,230,66,0.05);margin-bottom:1.5rem">
-      <svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--yellow)" fill="none" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <div>
-        <p style="font-size:0.72rem;color:var(--yellow);font-weight:700;letter-spacing:0.06em;text-transform:uppercase">On-The-Spot: <span id="otsAmount"></span></p>
-        <p style="font-size:0.68rem;color:var(--text-muted);margin-top:0.1rem">Available at the door · Subject to Availability · Register online to secure your spot</p>
-      </div>
-    </div>
     <div class="packages" id="packageList"></div>
     <!-- Combo / Group Pricing -->
     <div id="comboSection" style="display:none;margin-bottom:1.5rem">
@@ -283,6 +275,14 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
     <div id="groupMembersSection" style="display:none;margin-bottom:1.5rem">
       <p style="font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.75rem">Group Members</p>
       <div id="groupMembersFields"></div>
+    </div>
+    <!-- OTS Info Banner — shown last, info only, not bookable -->
+    <div id="otsBanner" style="display:none;align-items:center;gap:0.75rem;padding:0.85rem 1rem;border:1px solid rgba(245,230,66,0.25);background:rgba(245,230,66,0.05);margin-bottom:1.5rem">
+      <svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--yellow)" fill="none" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div>
+        <p style="font-size:0.72rem;color:var(--yellow);font-weight:700;letter-spacing:0.06em;text-transform:uppercase">On-The-Spot: <span id="otsAmount"></span></p>
+        <p style="font-size:0.68rem;color:var(--text-muted);margin-top:0.1rem">Available at the door · Subject to Availability · Register online to secure your spot</p>
+      </div>
     </div>
     <div class="section-heading">
       <span class="section-heading-text">Choose your Class</span>
