@@ -91,6 +91,14 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
 .package-opt{border:1px solid var(--border);padding:1.1rem 1.25rem;transition:border-color 0.2s,background 0.2s;position:relative;display:flex;align-items:center;gap:1rem}
 .package-opt:hover{border-color:rgba(255,255,255,0.2)}
 .package-opt.selected{border-color:var(--red);background:var(--red-dim)}
+.combo-opt{border:1px solid var(--border);padding:1rem 1.1rem;display:flex;align-items:center;gap:0.85rem;cursor:pointer;transition:border-color 0.2s,background 0.2s;position:relative}
+.combo-opt.selected{border-color:var(--red);background:var(--red-dim)}
+.combo-radio{width:16px;height:16px;border-radius:50%;border:2px solid var(--border2);flex-shrink:0;position:relative;transition:border-color 0.2s}
+.combo-radio::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:var(--red);opacity:0;transition:opacity 0.2s}
+.combo-opt.selected .combo-radio{border-color:var(--red)}
+.combo-opt.selected .combo-radio::after{opacity:1}
+.group-member-row{background:var(--bg2);border:1px solid var(--border);padding:0.85rem 1rem;margin-bottom:0.5rem}
+.group-member-row input{background:var(--bg3);border:1px solid var(--border2);padding:0.55rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;width:100%;margin-top:0.3rem}
 .pkg-radio{width:18px;height:18px;border:1px solid rgba(255,255,255,0.3);border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:border-color 0.2s}
 .package-opt.selected .pkg-radio{border-color:var(--red)}
 .pkg-radio::after{content:'';width:8px;height:8px;border-radius:50%;background:var(--red);opacity:0;transition:opacity 0.2s}
@@ -258,6 +266,16 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
       <span class="section-heading-pill pill-red">Step 1</span>
     </div>
     <div class="packages" id="packageList"></div>
+    <!-- Combo / Group Pricing -->
+    <div id="comboSection" style="display:none;margin-bottom:1.5rem">
+      <p style="font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.75rem">Group Offers</p>
+      <div class="packages" id="comboList"></div>
+    </div>
+    <!-- Group member fields (shown when combo selected) -->
+    <div id="groupMembersSection" style="display:none;margin-bottom:1.5rem">
+      <p style="font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.75rem">Group Members</p>
+      <div id="groupMembersFields"></div>
+    </div>
     <div class="section-heading">
       <span class="section-heading-text">Choose your Class Date</span>
       <span class="section-heading-pill pill-red-outline" id="slotStep">Step 2</span>
@@ -303,6 +321,21 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
       Review & Pay <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
     </button>
     <p class="form-note">Secured by Razorpay · UPI, Cards & Netbanking accepted<br>A 2% convenience fee will be added at checkout</p>
+
+    <!-- Payment failure banner (hidden by default) -->
+    <div id="paymentErrorBanner" style="display:none;margin-top:1rem;padding:1rem 1.25rem;background:rgba(229,115,115,0.08);border:1px solid rgba(229,115,115,0.35)">
+      <div style="display:flex;align-items:flex-start;gap:0.75rem">
+        <span style="font-size:1.1rem;flex-shrink:0">⚠️</span>
+        <div>
+          <p id="paymentErrorTitle" style="font-size:0.85rem;font-weight:600;color:#e57373;margin-bottom:0.2rem">Payment failed</p>
+          <p id="paymentErrorMsg" style="font-size:0.78rem;color:rgba(240,237,230,0.65);line-height:1.5;margin-bottom:0.75rem"></p>
+          <div style="display:flex;gap:0.6rem;flex-wrap:wrap">
+            <button onclick="retryPayment()" style="background:var(--red);color:#fff;border:none;padding:0.5rem 1.1rem;font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer">Try Again</button>
+            <a href="https://wa.me/917984448750" target="_blank" style="display:inline-block;background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.35);color:#25d366;padding:0.5rem 1.1rem;font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;text-decoration:none">WhatsApp Us</a>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -377,6 +410,7 @@ const CONVENIENCE  = 2;
 
 let workshop      = null;
 let selectedPkg   = null;
+let selectedCombo = null; // combo pricing selection
 let selectedSlots = [];
 
 /* AUTO-FILL NAME FROM PHONE */
@@ -501,6 +535,27 @@ function renderPage(){
     </div>`).join('')
     : '<p style="color:var(--text-muted);font-size:0.85rem">No packages available yet.</p>';
 
+  // Combo / Group packages
+  const combos = w.comboPricing||[];
+  if(combos.length){
+    document.getElementById('comboSection').style.display='block';
+    document.getElementById('comboList').innerHTML = combos.map((c,i)=>`
+      <div class="combo-opt" id="combo-${i}" onclick="selectCombo(${i})">
+        ${c.badge?`<span class="pkg-badge">${c.badge}</span>`:''}
+        <div class="combo-radio"></div>
+        <div class="pkg-info">
+          <p class="pkg-name">Group of ${c.people}</p>
+          <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem">₹${Math.round(c.price/c.people).toLocaleString('en-IN')} per person · All names required</p>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <p class="pkg-price">₹${parseInt(c.price||0).toLocaleString('en-IN')}</p>
+          <p style="font-size:0.62rem;color:var(--text-muted);margin-top:0.15rem">total</p>
+        </div>
+      </div>`).join('');
+  } else {
+    document.getElementById('comboSection').style.display='none';
+  }
+
   renderSlots(0);
 }
 
@@ -535,12 +590,53 @@ function renderSlots(count){
 
 window.selectPackage = function(id){
   selectedPkg=(workshop.packages||[]).find(p=>p.id===id);
-  selectedSlots=[];
+  selectedCombo=null;
   document.querySelectorAll('.package-opt').forEach(el=>el.classList.remove('selected'));
+  document.querySelectorAll('.combo-opt').forEach(el=>el.classList.remove('selected'));
   document.getElementById('pkg-'+id).classList.add('selected');
+  document.getElementById('groupMembersSection').style.display='none';
   const n=getSessionCount(selectedPkg);
   renderSlots(n);
   document.getElementById('slotStep').textContent=n===1?'Pick 1 date':'Pick '+n+' dates';
+  updateFormSummary();
+  updateEnrollBtn();
+};
+
+window.selectCombo = function(idx){
+  const combos=(workshop.comboPricing||[]);
+  selectedCombo=combos[idx];
+  selectedPkg=null;
+  selectedSlots=[];
+  document.querySelectorAll('.package-opt').forEach(el=>el.classList.remove('selected'));
+  document.querySelectorAll('.combo-opt').forEach(el=>el.classList.remove('selected'));
+  document.getElementById('combo-'+idx).classList.add('selected');
+
+  // Build group member fields
+  const n = selectedCombo.people;
+  const name  = document.getElementById('regName')?.value.trim()||'';
+  const phone = document.getElementById('regPhone')?.value.trim()||'';
+  let html = '';
+  for(let i=0;i<n;i++){
+    html+=`<div class="group-member-row">
+      <p style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">${i===0?'You (Person 1)':`Person ${i+1}`}</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-top:0.5rem">
+        <div>
+          <p style="font-size:0.7rem;color:var(--muted);margin-bottom:0.25rem">Full Name *</p>
+          <input type="text" id="gm-name-${i}" placeholder="Full name" value="${i===0?name:''}" oninput="updateEnrollBtn()">
+        </div>
+        <div>
+          <p style="font-size:0.7rem;color:var(--muted);margin-bottom:0.25rem">Mobile Number *</p>
+          <input type="tel" id="gm-phone-${i}" maxlength="10" placeholder="10-digit number" value="${i===0?phone:''}" oninput="updateEnrollBtn()">
+        </div>
+      </div>
+    </div>`;
+  }
+  document.getElementById('groupMembersFields').innerHTML=html;
+  document.getElementById('groupMembersSection').style.display='block';
+
+  // Slots: combo uses all slots (1 session per person)
+  renderSlots(1);
+  document.getElementById('slotStep').textContent='Pick your date';
   updateFormSummary();
   updateEnrollBtn();
 };
@@ -610,6 +706,18 @@ function renderAttendees(){
 function getTotalPeople(){ return 1 + attendees.length; }
 function updateFormSummary(){
   const el=document.getElementById('formSummary');
+  if(selectedCombo){
+    const price = parseInt(selectedCombo.price)||0;
+    const fee   = Math.round(price*CONVENIENCE/100);
+    const total = price+fee;
+    const perP  = Math.round(price/selectedCombo.people);
+    el.innerHTML=`
+      <div class="form-summary-row"><span>Group of ${selectedCombo.people}</span><span>₹${price.toLocaleString('en-IN')}</span></div>
+      <div class="form-summary-row"><span>₹${perP.toLocaleString('en-IN')} per person</span></div>
+      <div class="form-summary-row"><span>Convenience fee (${CONVENIENCE}%)</span><span>₹${fee.toLocaleString('en-IN')}</span></div>
+      <div class="form-summary-row total"><span>Total</span><span>₹${total.toLocaleString('en-IN')}</span></div>`;
+    return;
+  }
   if(!selectedPkg){el.innerHTML='<p class="form-summary-placeholder">Select a package to see pricing</p>';return;}
   const people   = getTotalPeople();
   const base     = parseInt(selectedPkg.price)||0;
@@ -629,6 +737,15 @@ function normalizePhone(p){ const d=p.replace(/\D/g,''); return d.startsWith('91
 function validateForm(){
   const name=document.getElementById('inp-name').value.trim();
   const phone=document.getElementById('inp-phone').value.replace(/\D/g,'');
+  if(selectedCombo){
+    const n=selectedCombo.people;
+    for(let i=0;i<n;i++){
+      const gn=(document.getElementById('gm-name-'+i)?.value||'').trim();
+      const gp=(document.getElementById('gm-phone-'+i)?.value||'').replace(/\D/g,'');
+      if(!gn||gp.length!==10) return false;
+    }
+    return selectedSlots.length>0;
+  }
   return name.length>0&&phone.length===10&&selectedPkg&&selectedSlots.length>0;
 }
 function updateEnrollBtn(){document.getElementById('enrollBtn').disabled=!validateForm();}
@@ -636,12 +753,39 @@ function updateEnrollBtn(){document.getElementById('enrollBtn').disabled=!valida
 /* POPUP */
 window.openConfirmPopup = function(){
   if(!validateForm())return;
+  const CONVENIENCE_FEE = typeof CONVENIENCE!=='undefined'?CONVENIENCE:2;
+
+  if(selectedCombo){
+    // Combo confirm popup
+    const n      = selectedCombo.people;
+    const price  = parseInt(selectedCombo.price)||0;
+    const fee    = Math.round(price*CONVENIENCE_FEE/100);
+    const total  = price+fee;
+    let memberRows='';
+    for(let i=0;i<n;i++){
+      const gn=(document.getElementById('gm-name-'+i)?.value||'').trim();
+      const gp=(document.getElementById('gm-phone-'+i)?.value||'').replace(/\D/g,'');
+      memberRows+=`<div class="popup-row"><span>Person ${i+1}</span><span>${gn} · +91${gp}</span></div>`;
+    }
+    document.getElementById('popupRows').innerHTML=`
+      <div class="popup-row"><span>Artist</span><span>${workshop.artist}</span></div>
+      <div class="popup-row"><span>Offer</span><span>Group of ${n}</span></div>
+      <div class="popup-row"><span>Slot</span><span>${selectedSlots.map(s=>s.date+' · '+s.time).join(', ')}</span></div>
+      ${memberRows}
+      <div class="popup-row"><span>Group Price</span><span>₹${price.toLocaleString('en-IN')}</span></div>
+      <div class="popup-row"><span>Convenience fee</span><span>₹${fee.toLocaleString('en-IN')}</span></div>
+      <div class="popup-row total"><span>Total Payable</span><span>₹${total.toLocaleString('en-IN')}</span></div>`;
+    document.getElementById('popupBackdrop').classList.add('open');
+    document.body.style.overflow='hidden';
+    return;
+  }
+
   const name     = document.getElementById('inp-name').value.trim();
   const phone    = normalizePhone(document.getElementById('inp-phone').value.trim());
   const people   = getTotalPeople();
   const base     = parseInt(selectedPkg.price)||0;
   const subtotal = base * people;
-  const fee      = Math.round(subtotal*CONVENIENCE/100);
+  const fee      = Math.round(subtotal*CONVENIENCE_FEE/100);
   const total    = subtotal + fee;
   document.getElementById('popupRows').innerHTML=`
     <div class="popup-row"><span>${people>1?'Primary Person':'Name'}</span><span>${name}</span></div>
@@ -661,17 +805,107 @@ window.closePopup=function(){document.getElementById('popupBackdrop').classList.
 
 /* PAYMENT */
 window.initiatePayment = async function(){
+  const CONVENIENCE_FEE = typeof CONVENIENCE!=='undefined'?CONVENIENCE:2;
+  const btn    = document.getElementById('popupPayBtn');
+  btn.innerHTML='<span class="btn-spinner"></span> Opening…';
+  btn.disabled = true;
+  const errBanner = document.getElementById('paymentErrorBanner');
+  if(errBanner) errBanner.style.display = 'none';
+
+  // ── COMBO PAYMENT ───────────────────────────────────────────
+  if(selectedCombo){
+    const n      = selectedCombo.people;
+    const price  = parseInt(selectedCombo.price)||0;
+    const fee    = Math.round(price*CONVENIENCE_FEE/100);
+    const total  = price+fee;
+    const slots  = selectedSlots.map(s=>s.date+' · '+s.time).join(' | ');
+
+    // Collect group members
+    const groupMembers=[];
+    for(let i=0;i<n;i++){
+      const gn=(document.getElementById('gm-name-'+i)?.value||'').trim();
+      const gp='+91'+(document.getElementById('gm-phone-'+i)?.value||'').replace(/\D/g,'');
+      groupMembers.push({name:gn, phone:gp});
+    }
+
+    const options={
+      key:RAZORPAY_KEY, amount:total*100, currency:'INR',
+      name:'The Happening Space',
+      description:`${workshop.artist} — Group of ${n}`,
+      prefill:{name:groupMembers[0].name, contact:groupMembers[0].phone},
+      notes:{artist:workshop.artist, combo:`Group of ${n}`, slots, people:n},
+      theme:{color:'#bc1f2e'},
+      handler:async function(response){
+        closePopup();
+        const timestamp  = new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'});
+        const paymentId  = response.razorpay_payment_id;
+        const groupId    = 'grp_'+paymentId;
+
+        // Split amount equally — remainder goes on person 1
+        const basePerPerson = Math.floor(price/n);
+        const remainder     = price - (basePerPerson * n);
+        const regIds        = [];
+
+        for(const [i,member] of groupMembers.entries()){
+          const data={
+            name: member.name, phone: member.phone,
+            workshop: workshop.artist, style: workshop.style||'',
+            package: `Group of ${n}`,
+            slots,
+            amount_paid:  basePerPerson + (i===0 ? remainder : 0), // equal split, remainder on person 1
+            payment_type: 'Online',
+            payment_id:   i===0 ? paymentId : paymentId, // all share same payment ID for traceability
+            timestamp,
+            isCombo:      true,
+            groupId,
+            groupSize:    n,
+            groupPosition: i+1,
+            groupMembers:  groupMembers.map(m=>({name:m.name, phone:m.phone})), // full list on every reg
+            checkedIn:    false,
+            checkedInSlots: {},
+          };
+          const ref = await addDoc(collection(db,'registrations'), data);
+          regIds.push(ref.id);
+          // Deduct spot per member
+          try {
+            const wsDoc = await getDoc(doc(db,'workshops',workshop.id));
+            if(wsDoc.exists()){
+              const w=wsDoc.data();
+              selectedSlots.forEach(sel=>{
+                const idx=w.slots.findIndex(s=>s.id===sel.id);
+                if(idx>-1) w.slots[idx].spots=Math.max(0,(w.slots[idx].spots||0)-1);
+              });
+              await updateDoc(doc(db,'workshops',workshop.id),{slots:w.slots});
+            }
+          } catch(e){}
+        }
+        showSuccess({name:groupMembers[0].name, phone:groupMembers[0].phone, workshop:workshop.artist, package:`Group of ${n}`, slots, amount_paid:price, payment_id:paymentId, isCombo:true, groupMembers, groupSize:n}, regIds);
+      },
+      modal:{ondismiss:function(){
+        btn.innerHTML='Pay Now <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+        btn.disabled=false;
+        showPaymentError('Payment not completed','Your spots are still available — tap Try Again whenever you\'re ready.');
+      }}
+    };
+    const rzp=new Razorpay(options);
+    rzp.on('payment.failed',function(r){
+      btn.innerHTML='Pay Now <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+      btn.disabled=false;
+      showPaymentError('Payment failed', r.error?.description||'Something went wrong. Please try again.');
+    });
+    rzp.open();
+    return;
+  }
+
+  // ── INDIVIDUAL PAYMENT (existing flow) ─────────────────────
   const name   = document.getElementById('inp-name').value.trim();
   const phone  = normalizePhone(document.getElementById('inp-phone').value.trim());
   const people = getTotalPeople();
   const base   = parseInt(selectedPkg.price)||0;
   const subtotal = base * people;
-  const fee    = Math.round(subtotal*CONVENIENCE/100);
+  const fee    = Math.round(subtotal*CONVENIENCE_FEE/100);
   const total  = subtotal+fee;
   const slots  = selectedSlots.map(s=>s.song?'♪ '+s.song+' · '+s.time:s.date+' · '+s.time).join(' | ');
-  const btn    = document.getElementById('popupPayBtn');
-  btn.innerHTML='<span class="btn-spinner"></span> Opening…';
-  btn.disabled = true;
 
   const options={
     key:RAZORPAY_KEY, amount:total*100, currency:'INR',
@@ -726,33 +960,74 @@ window.initiatePayment = async function(){
 
       showSuccess({name, phone, workshop:workshop.artist, package:selectedPkg.name, slots, amount_paid:total, payment_id:paymentId, people:allPeople}, regIds);
     },
-    modal:{ondismiss:function(){btn.innerHTML='Pay Now <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';btn.disabled=false;}}
+    modal:{ondismiss:function(){
+      btn.innerHTML='Pay Now <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+      btn.disabled=false;
+      showPaymentError('Payment not completed', 'You closed the payment window. Your spot is still available — tap Try Again whenever you\'re ready.');
+    }}
   };
   const rzp=new Razorpay(options);
-  rzp.on('payment.failed',function(r){btn.innerHTML='Pay Now';btn.disabled=false;alert('Payment failed: '+r.error.description);});
+  rzp.on('payment.failed',function(r){
+    btn.innerHTML='Pay Now <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+    btn.disabled=false;
+    const desc = r.error?.description || 'Something went wrong.';
+    const code = r.error?.code || '';
+    let friendly = desc;
+    if(code==='BAD_REQUEST_ERROR'||desc.toLowerCase().includes('card'))
+      friendly='Your card was declined. Try a different card or pay via UPI.';
+    else if(desc.toLowerCase().includes('upi'))
+      friendly='UPI payment failed. Try again or use a different method.';
+    else if(desc.toLowerCase().includes('bank'))
+      friendly='Your bank declined the transaction. Please try a different payment method.';
+    else if(desc.toLowerCase().includes('network')||desc.toLowerCase().includes('timeout'))
+      friendly='Network issue during payment. Check your connection and try again.';
+    showPaymentError('Payment failed', friendly);
+  });
   rzp.open();
 };
+
+function showPaymentError(title, message){
+  const banner = document.getElementById('paymentErrorBanner');
+  if(!banner) return;
+  document.getElementById('paymentErrorTitle').textContent = title;
+  document.getElementById('paymentErrorMsg').textContent   = message;
+  banner.style.display = 'block';
+  banner.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function retryPayment(){
+  document.getElementById('paymentErrorBanner').style.display = 'none';
+  const btn = document.getElementById('enrollBtn');
+  if(btn) btn.click();
+}
 
 function showSuccess(data, regIds){
   document.getElementById('mainContent').style.display='none';
   document.querySelector('.back-link').style.display='none';
   document.getElementById('posterHero').style.display='none';
 
-  const people = data.people || [{name:data.name, phone:data.phone}];
+  // For combo: use groupMembers array; for individual: use people array or single person
+  let people;
+  if(data.isCombo && data.groupMembers){
+    people = data.groupMembers;
+  } else {
+    people = data.people || [{name:data.name, phone:data.phone}];
+  }
   const idsArr = Array.isArray(regIds) ? regIds : [regIds];
 
   document.getElementById('successDetails').innerHTML=`
     <div class="success-row"><span>Workshop</span><span>${data.workshop}</span></div>
-    <div class="success-row"><span>Package</span><span>${data.package}</span></div>
+    <div class="success-row"><span>Package</span><span>${data.package}${data.isCombo?' · Group booking':''}</span></div>
     <div class="success-row"><span>Slot(s)</span><span>${data.slots}</span></div>
     <div class="success-row"><span>Amount paid</span><span>₹${data.amount_paid.toLocaleString('en-IN')}</span></div>
-    <div class="success-row"><span>Payment ID</span><span style="font-size:0.72rem">${data.payment_id}</span></div>`;
+    <div class="success-row"><span>Payment ID</span><span style="font-size:0.72rem">${data.payment_id}</span></div>
+    ${data.isCombo?`<div class="success-row"><span>Group Size</span><span>${data.groupSize} people · each gets their own QR</span></div>`:''}`;
 
   // QR codes per person
   const qrSection = document.getElementById('qrSection');
   qrSection.style.display = 'block';
   qrSection.innerHTML = `
-    <p style="font-size:0.65rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-muted);margin-bottom:1rem;text-align:center">Entry QR Code${people.length>1?'s':''}</p>
+    <p style="font-size:0.65rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-muted);margin-bottom:1rem;text-align:center">Entry QR Code${people.length>1?'s — One per person':''}</p>
     <div style="display:flex;flex-wrap:wrap;gap:1.5rem;justify-content:center">
       ${people.map((p,i)=>`
         <div style="text-align:center">
@@ -761,9 +1036,8 @@ function showSuccess(data, regIds){
           <p style="font-size:0.6rem;color:var(--text-muted);font-family:monospace">THS-REG-${idsArr[i]||data.payment_id}</p>
         </div>`).join('')}
     </div>
-    <p style="font-size:0.72rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6">Screenshot these QR codes — each person shows their own at the entry gate.</p>`;
+    <p style="font-size:0.72rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6">${people.length>1?'Each person shows their own QR at the entry gate. Screenshot and share individually.':'Screenshot this QR — show it at the entry gate.'}</p>`;
 
-  // Generate QRs after DOM update
   setTimeout(()=>{
     people.forEach((_,i)=>{
       const el = document.getElementById('qr-success-'+i);
