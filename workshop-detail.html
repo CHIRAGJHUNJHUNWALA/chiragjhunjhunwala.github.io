@@ -544,8 +544,8 @@ function renderPage(){
         ${c.badge?`<span class="pkg-badge">${c.badge}</span>`:''}
         <div class="combo-radio"></div>
         <div class="pkg-info">
-          <p class="pkg-name">Group of ${c.people}</p>
-          <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem">₹${Math.round(c.price/c.people).toLocaleString('en-IN')} per person · All names required</p>
+          <p class="pkg-name">GROUP OF ${c.people}</p>
+          <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem">₹${Math.round(c.price/c.people).toLocaleString('en-IN')} PER PERSON · ALL NAMES REQUIRED</p>
         </div>
         <div style="text-align:right;flex-shrink:0">
           <p class="pkg-price">₹${parseInt(c.price||0).toLocaleString('en-IN')}</p>
@@ -642,6 +642,18 @@ window.selectCombo = function(idx){
 };
 
 window.selectSlotToggle = function(id){
+  // Combo mode: single slot only, clicking replaces current selection
+  if(selectedCombo){
+    const slot=(workshop.slots||[]).find(s=>s.id===id);
+    if(!slot) return;
+    selectedSlots=[slot];
+    document.querySelectorAll('.slot-opt').forEach(el=>el.classList.remove('selected'));
+    const el=document.getElementById('slot-'+id);
+    if(el) el.classList.add('selected');
+    updateFormSummary();
+    updateEnrollBtn();
+    return;
+  }
   if(!selectedPkg){alert('Please choose a package first.');return;}
   const max=(getSessionCount(selectedPkg));
   const slot=(workshop.slots||[]).find(s=>s.id===id);
@@ -712,7 +724,7 @@ function updateFormSummary(){
     const total = price+fee;
     const perP  = Math.round(price/selectedCombo.people);
     el.innerHTML=`
-      <div class="form-summary-row"><span>Group of ${selectedCombo.people}</span><span>₹${price.toLocaleString('en-IN')}</span></div>
+      <div class="form-summary-row"><span>GROUP OF ${selectedCombo.people}</span><span>₹${price.toLocaleString('en-IN')}</span></div>
       <div class="form-summary-row"><span>₹${perP.toLocaleString('en-IN')} per person</span></div>
       <div class="form-summary-row"><span>Convenience fee (${CONVENIENCE}%)</span><span>₹${fee.toLocaleString('en-IN')}</span></div>
       <div class="form-summary-row total"><span>Total</span><span>₹${total.toLocaleString('en-IN')}</span></div>`;
@@ -769,7 +781,7 @@ window.openConfirmPopup = function(){
     }
     document.getElementById('popupRows').innerHTML=`
       <div class="popup-row"><span>Artist</span><span>${workshop.artist}</span></div>
-      <div class="popup-row"><span>Offer</span><span>Group of ${n}</span></div>
+      <div class="popup-row"><span>Offer</span><span>GROUP OF ${n}</span></div>
       <div class="popup-row"><span>Slot</span><span>${selectedSlots.map(s=>s.date+' · '+s.time).join(', ')}</span></div>
       ${memberRows}
       <div class="popup-row"><span>Group Price</span><span>₹${price.toLocaleString('en-IN')}</span></div>
@@ -831,9 +843,9 @@ window.initiatePayment = async function(){
     const options={
       key:RAZORPAY_KEY, amount:total*100, currency:'INR',
       name:'The Happening Space',
-      description:`${workshop.artist} — Group of ${n}`,
+      description:`${workshop.artist} — GROUP OF ${n}`,
       prefill:{name:groupMembers[0].name, contact:groupMembers[0].phone},
-      notes:{artist:workshop.artist, combo:`Group of ${n}`, slots, people:n},
+      notes:{artist:workshop.artist, combo:`GROUP OF ${n}`, slots, people:n},
       theme:{color:'#bc1f2e'},
       handler:async function(response){
         closePopup();
@@ -850,7 +862,7 @@ window.initiatePayment = async function(){
           const data={
             name: member.name, phone: member.phone,
             workshop: workshop.artist, style: workshop.style||'',
-            package: `Group of ${n}`,
+            package: `GROUP OF ${n}`,
             slots,
             amount_paid:  basePerPerson + (i===0 ? remainder : 0), // equal split, remainder on person 1
             payment_type: 'Online',
@@ -879,7 +891,7 @@ window.initiatePayment = async function(){
             }
           } catch(e){}
         }
-        showSuccess({name:groupMembers[0].name, phone:groupMembers[0].phone, workshop:workshop.artist, package:`Group of ${n}`, slots, amount_paid:price, payment_id:paymentId, isCombo:true, groupMembers, groupSize:n}, regIds);
+        showSuccess({name:groupMembers[0].name, phone:groupMembers[0].phone, workshop:workshop.artist, package:`GROUP OF ${n}`, slots, amount_paid:price, payment_id:paymentId, isCombo:true, groupMembers, groupSize:n}, regIds);
       },
       modal:{ondismiss:function(){
         btn.innerHTML='Pay Now <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
