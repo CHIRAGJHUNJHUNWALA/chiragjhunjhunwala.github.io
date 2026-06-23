@@ -1564,6 +1564,15 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <div id="packagesEditor"></div>
         <button class="add-slot-btn" onclick="addPackageRow()">+ Add Package</button>
       </div>
+      <!-- COMBO PRICING -->
+      <div class="slots-editor" style="margin-top:0.5rem">
+        <div class="slots-editor-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>Combo / Group Pricing</span>
+          <span style="font-size:0.62rem;color:var(--muted);font-weight:400;letter-spacing:normal;text-transform:none">Groups of 2–10 · each person registers individually</span>
+        </div>
+        <div id="comboEditor"></div>
+        <button class="add-slot-btn" onclick="addComboRow()">+ Add Group Offer</button>
+      </div>
       <!-- CLASS DETAILS -->
       <div class="slots-editor">
         <div class="slots-editor-title">Class Details</div>
@@ -3899,10 +3908,33 @@ window.openStatusMenu = function(id, btn){
 };
 
 window.setStatus = async function(id, status){
-  const w = workshops.find(x=>x.id===id);
+  const w    = workshops.find(x=>x.id===id);
+  const prev = w.status;
+
+  // If moving away from completed/full and a settlement exists, ask to clear it
+  const wasSettled  = (prev==='completed'||prev==='full') && wsSettlements[id];
+  const goingActive = status!=='completed' && status!=='full';
+
+  if(wasSettled && goingActive){
+    const settle = wsSettlements[id];
+    const hasPaid = settle?.artistPaid;
+    const msg = hasPaid
+      ? `This workshop has an artist payment already marked as PAID.\n\nChanging status to "${status}" will clear the settlement record.\n\nAre you sure?`
+      : `This workshop has settlement data saved.\n\nChanging status to "${status}" will clear the settlement record so you can start fresh when it's completed again.\n\nContinue?`;
+    if(!confirm(msg)) return;
+
+    // Delete settlement from Firestore and memory
+    try {
+      await deleteDoc(doc(db,'workshopSettlements',id));
+    } catch(e){ console.warn('Could not delete settlement:', e); }
+    delete wsSettlements[id];
+  }
+
   w.status = status;
   await setDoc(doc(db,'workshops',id), w);
-  showToast('Status set to ' + status);
+  showToast('Status updated to ' + status + (wasSettled&&goingActive?' · Settlement cleared':''));
+  renderWorkshopGrid();
+  if(document.getElementById('view-artistpayments')?.classList.contains('active')) renderArtistPaymentsView();
 };
 
 /* WORKSHOP DETAIL PANEL */
@@ -4038,6 +4070,7 @@ window.openAddWorkshop = function(){
   document.getElementById('posterPreview').style.display = 'none';
   document.getElementById('posterUploadText').textContent = 'Click or drag & drop poster image here';
   document.getElementById('packagesEditor').innerHTML = '';
+  document.getElementById('comboEditor').innerHTML    = '';
   document.getElementById('slotsEditor').innerHTML    = '';
   pendingPosterURL  = null;
   pendingPosterFile = null;
@@ -4068,6 +4101,8 @@ window.openEditWorkshop = function(id){
   }
   document.getElementById('packagesEditor').innerHTML = '';
   (w.packages||[]).forEach(p=>addPackageRow(p));
+  document.getElementById('comboEditor').innerHTML = '';
+  (w.comboPricing||[]).forEach(c=>addComboRow(c));
   document.getElementById('slotsEditor').innerHTML = '';
   (w.slots||[]).forEach(s=>addSlotRow(s));
   openModal('wsModal');
@@ -4102,6 +4137,30 @@ window.addPackageRow = function(p={}){
       </div>
     </div>`;
   document.getElementById('packagesEditor').appendChild(div);
+};
+
+window.addComboRow = function(c={}){
+  const div = document.createElement('div');
+  div.style.cssText = 'background:var(--bg3);border:1px solid var(--border);padding:0.85rem;margin-bottom:0.6rem;position:relative';
+  div.innerHTML = `
+    <button onclick="this.closest('div').remove()" style="position:absolute;top:0.6rem;right:0.6rem;background:none;border:1px solid rgba(229,115,115,0.3);color:#e57373;width:24px;height:24px;display:flex;align-items:center;justify-content:justify-content:center;cursor:pointer;font-size:0.85rem;line-height:1">✕</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;padding-right:2rem">
+      <div>
+        <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">Group Size (people)</p>
+        <select class="combo-people" style="width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.8rem;outline:none;appearance:none">
+          ${[2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${(c.people||2)==n?'selected':''}>${n} People</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">Total Price ₹ (for whole group)</p>
+        <input type="number" placeholder="e.g. 2500" value="${c.price||''}" class="combo-price" style="width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.8rem;outline:none">
+      </div>
+      <div>
+        <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">Badge (optional)</p>
+        <input type="text" placeholder="e.g. Best Deal" value="${c.badge||''}" class="combo-badge" style="width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.8rem;outline:none">
+      </div>
+    </div>`;
+  document.getElementById('comboEditor').appendChild(div);
 };
 
 window.addSlotRow = function(s={}){
@@ -4156,6 +4215,12 @@ window.saveWorkshop = async function(saveStatus){
   const editId = document.getElementById('wsEditId').value;
   const id     = editId || artist.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
 
+  const comboRows = document.querySelectorAll('#comboEditor > div');
+  const comboPricing = Array.from(comboRows).map(row=>({
+    people: parseInt(row.querySelector('.combo-people').value)||2,
+    price:  parseInt(row.querySelector('.combo-price').value)||0,
+    badge:  row.querySelector('.combo-badge').value.trim()||null,
+  })).filter(c=>c.price>0);
   const pkgRows  = document.querySelectorAll('#packagesEditor > div');
   const packages = Array.from(pkgRows).map((row,i)=>({
     id:'p'+(i+1), name:row.querySelector('.pkg-name').value.trim(),
@@ -4216,7 +4281,7 @@ window.saveWorkshop = async function(saveStatus){
     bioTitle: document.getElementById('wsStyle').value.trim(),
     dateFrom: document.getElementById('wsDateFrom').value || '',
     dateTo:   document.getElementById('wsDateTo').value   || '',
-    packages, slots,
+    packages, slots, comboPricing,
     createdAt: existing?.createdAt || Date.now(),
   };
 
