@@ -1538,6 +1538,15 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           <input type="date" id="wsDateTo" style="color-scheme:dark;width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none">
         </div>
       </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>On-The-Spot Price ₹ <span style="font-weight:300;color:var(--muted);font-size:0.75em">· shown as "Subject to Availability" · not bookable online</span></label>
+          <input type="number" id="wsOtsPrice" placeholder="e.g. 1200" style="width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none">
+        </div>
+        <div class="form-group">
+          <!-- spacer -->
+        </div>
+      </div>
       <div class="form-row full">
         <div class="form-group"><label>Workshop Description</label><textarea id="wsDesc" placeholder="What students will learn…"></textarea></div>
       </div>
@@ -4067,6 +4076,7 @@ window.openAddWorkshop = function(){
   document.getElementById('wsBio').value      = '';
   document.getElementById('wsDateFrom').value = '';
   document.getElementById('wsDateTo').value   = '';
+  document.getElementById('wsOtsPrice').value = '';
   document.getElementById('posterPreview').style.display = 'none';
   document.getElementById('posterUploadText').textContent = 'Click or drag & drop poster image here';
   document.getElementById('packagesEditor').innerHTML = '';
@@ -4090,6 +4100,7 @@ window.openEditWorkshop = function(id){
   document.getElementById('wsBio').value      = w.bio||'';
   document.getElementById('wsDateFrom').value = w.dateFrom||'';
   document.getElementById('wsDateTo').value   = w.dateTo||'';
+  document.getElementById('wsOtsPrice').value = w.otsPrice||'';
   pendingPosterURL = w.poster||null;
   if(w.poster){
     document.getElementById('posterPreviewImg').src = w.poster;
@@ -4282,6 +4293,7 @@ window.saveWorkshop = async function(saveStatus){
     dateFrom: document.getElementById('wsDateFrom').value || '',
     dateTo:   document.getElementById('wsDateTo').value   || '',
     packages, slots, comboPricing,
+    otsPrice: parseInt(document.getElementById('wsOtsPrice').value)||0,
     createdAt: existing?.createdAt || Date.now(),
   };
 

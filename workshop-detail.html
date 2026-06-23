@@ -265,7 +265,14 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
       <span class="section-heading-text">Choose a Package</span>
       <span class="section-heading-pill pill-red">Step 1</span>
     </div>
-    <div class="packages" id="packageList"></div>
+    <!-- OTS Info Banner (info only, not bookable) -->
+    <div id="otsBanner" style="display:none;align-items:center;gap:0.75rem;padding:0.85rem 1rem;border:1px solid rgba(245,230,66,0.25);background:rgba(245,230,66,0.05);margin-bottom:1.5rem">
+      <svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--yellow)" fill="none" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div>
+        <p style="font-size:0.72rem;color:var(--yellow);font-weight:700;letter-spacing:0.06em;text-transform:uppercase">On-The-Spot: <span id="otsAmount"></span></p>
+        <p style="font-size:0.68rem;color:var(--text-muted);margin-top:0.1rem">Available at the door · Subject to Availability · Register online to secure your spot</p>
+      </div>
+    </div>
     <!-- Combo / Group Pricing -->
     <div id="comboSection" style="display:none;margin-bottom:1.5rem">
       <p style="font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.75rem">Group Offers</p>
@@ -277,7 +284,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
       <div id="groupMembersFields"></div>
     </div>
     <div class="section-heading">
-      <span class="section-heading-text">Choose your Class Date</span>
+      <span class="section-heading-text">Choose your Class</span>
       <span class="section-heading-pill pill-red-outline" id="slotStep">Step 2</span>
     </div>
     <div class="schedule-slots" id="slotList"></div>
@@ -556,6 +563,15 @@ function renderPage(){
     document.getElementById('comboSection').style.display='none';
   }
 
+  // OTS price info banner
+  const otsBanner = document.getElementById('otsBanner');
+  if(w.otsPrice > 0){
+    document.getElementById('otsAmount').textContent = '₹'+w.otsPrice.toLocaleString('en-IN');
+    otsBanner.style.display = 'flex';
+  } else {
+    otsBanner.style.display = 'none';
+  }
+
   renderSlots(0);
 }
 
@@ -597,7 +613,7 @@ window.selectPackage = function(id){
   document.getElementById('groupMembersSection').style.display='none';
   const n=getSessionCount(selectedPkg);
   renderSlots(n);
-  document.getElementById('slotStep').textContent=n===1?'Pick 1 date':'Pick '+n+' dates';
+  document.getElementById('slotStep').textContent=n===1?'Pick 1 Class':'Pick '+n+' Classes';
   updateFormSummary();
   updateEnrollBtn();
 };
@@ -636,7 +652,7 @@ window.selectCombo = function(idx){
 
   // Slots: combo uses all slots (1 session per person)
   renderSlots(1);
-  document.getElementById('slotStep').textContent='Pick your date';
+  document.getElementById('slotStep').textContent='Pick your Class';
   updateFormSummary();
   updateEnrollBtn();
 };

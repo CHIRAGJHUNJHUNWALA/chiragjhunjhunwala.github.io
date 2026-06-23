@@ -150,6 +150,41 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
     </div>
   </div>
 
+  <!-- OTS REGISTRATION -->
+  <div class="manual-wrap" style="border-color:rgba(245,230,66,0.25)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+      <p class="manual-label" style="color:var(--yellow);margin-bottom:0">On-The-Spot Registration</p>
+      <button onclick="toggleOtsPanel()" id="otsPanelToggle" style="font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--yellow);background:rgba(245,230,66,0.1);border:1px solid rgba(245,230,66,0.25);padding:0.3rem 0.75rem;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700">Open</button>
+    </div>
+    <div id="otsPanel" style="display:none">
+      <div style="margin-bottom:0.75rem">
+        <p style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.35rem;font-family:'Syne',sans-serif">Select Workshop</p>
+        <select id="otsWorkshop" onchange="otsWorkshopChanged()" style="width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;appearance:none">
+          <option value="">— Choose active workshop —</option>
+        </select>
+      </div>
+      <div id="otsSlotWrap" style="display:none;margin-bottom:0.75rem">
+        <p style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.35rem;font-family:'Syne',sans-serif">Select Class</p>
+        <select id="otsSlot" style="width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;appearance:none">
+          <option value="">— Choose class —</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.75rem">
+        <div>
+          <p style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.35rem;font-family:'Syne',sans-serif">Student Name</p>
+          <input id="otsName" type="text" placeholder="Full name" style="width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none">
+        </div>
+        <div>
+          <p style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.35rem;font-family:'Syne',sans-serif">Mobile Number</p>
+          <input id="otsPhone" type="tel" placeholder="10 digits" maxlength="10" oninput="this.value=this.value.replace(/\D/g,'').slice(0,10)" style="width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none">
+        </div>
+      </div>
+      <div id="otsPriceInfo" style="display:none;padding:0.6rem 0.85rem;background:rgba(245,230,66,0.06);border:1px solid rgba(245,230,66,0.2);margin-bottom:0.75rem;font-size:0.78rem;color:var(--yellow)"></div>
+      <button onclick="submitOtsRegistration()" style="width:100%;background:var(--yellow);color:#000;border:none;padding:0.85rem;font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer">Register On The Spot</button>
+      <div id="otsResult" style="margin-top:0.75rem;display:none"></div>
+    </div>
+  </div>
+
   <!-- RESULT -->
   <div id="resultArea"></div>
 
@@ -199,7 +234,7 @@ if(sessionStorage.getItem('ths_scanner')==='1'){
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getFirestore, doc, getDoc, updateDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 const app  = initializeApp({
@@ -531,6 +566,153 @@ function showResult(type, icon, title, sub, data, regId){
 }
 
 function addHistory(name, type){
+  const now = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  scanHistory.unshift({name, type, time:now});
+
+  document.getElementById('histCount').textContent = scanHistory.length + ' scanned';
+  document.getElementById('historyList').innerHTML = scanHistory.slice(0,20).map(h=>`
+    <div class="history-item">
+      <div>
+        <p class="history-name">${h.name}</p>
+        <p class="history-time">${h.time}</p>
+      </div>
+      <span class="history-badge ${h.type==='valid'?'badge-in':h.type==='partial'?'badge-partial':h.type==='duplicate'?'badge-dup':'badge-inv'}">
+        ${h.type==='valid'?'Checked In':h.type==='partial'?'Partial':h.type==='duplicate'?'Duplicate':'Invalid'}
+      </span>
+    </div>`).join('');
+}
+
+/* ══ OTS REGISTRATION ══════════════════════════════ */
+let otsWorkshopsCache = [];
+
+window.toggleOtsPanel = function(){
+  const panel  = document.getElementById('otsPanel');
+  const toggle = document.getElementById('otsPanelToggle');
+  const open   = panel.style.display === 'none';
+  panel.style.display = open ? 'block' : 'none';
+  toggle.textContent  = open ? 'Close' : 'Open';
+  if(open) loadOtsWorkshops();
+};
+
+async function loadOtsWorkshops(){
+  const sel = document.getElementById('otsWorkshop');
+  sel.innerHTML = '<option value="">Loading…</option>';
+  try {
+    const snap = await getDocs(collection(db,'workshops'));
+    otsWorkshopsCache = snap.docs
+      .map(d=>({id:d.id,...d.data()}))
+      .filter(w=>w.status==='active'||w.status==='full');
+    otsWorkshopsCache.sort((a,b)=>(a.dateFrom||'').localeCompare(b.dateFrom||''));
+    sel.innerHTML = '<option value="">— Choose active workshop —</option>'
+      + otsWorkshopsCache.map(w=>`<option value="${w.id}">${w.artist}${w.dateFrom?' · '+w.dateFrom:''}</option>`).join('');
+  } catch(e){
+    sel.innerHTML = '<option value="">Failed to load workshops</option>';
+  }
+}
+
+window.otsWorkshopChanged = function(){
+  const wsId = document.getElementById('otsWorkshop').value;
+  const ws   = otsWorkshopsCache.find(w=>w.id===wsId);
+  const slotWrap   = document.getElementById('otsSlotWrap');
+  const slotSel    = document.getElementById('otsSlot');
+  const priceInfo  = document.getElementById('otsPriceInfo');
+
+  if(!ws){ slotWrap.style.display='none'; priceInfo.style.display='none'; return; }
+
+  // Slot picker
+  const slots = ws.slots||[];
+  if(slots.length > 1){
+    slotSel.innerHTML = '<option value="">— Choose class —</option>'
+      + slots.map(s=>`<option value="${s.id}">${s.date||''} ${s.time||''}${s.song?' · ♪ '+s.song:''}</option>`).join('');
+    slotWrap.style.display = 'block';
+  } else {
+    slotWrap.style.display = 'none';
+    slotSel.value = slots[0]?.id||'';
+  }
+
+  // OTS price info
+  if(ws.otsPrice > 0){
+    priceInfo.textContent = 'On-The-Spot Price: ₹'+ws.otsPrice.toLocaleString('en-IN')+' · Subject to Availability';
+    priceInfo.style.display = 'block';
+  } else {
+    priceInfo.style.display = 'none';
+  }
+};
+
+window.submitOtsRegistration = async function(){
+  const wsId  = document.getElementById('otsWorkshop').value;
+  const name  = document.getElementById('otsName').value.trim();
+  const phone = '+91'+(document.getElementById('otsPhone').value.replace(/\D/g,''));
+  const ws    = otsWorkshopsCache.find(w=>w.id===wsId);
+
+  if(!ws)   { alert('Please select a workshop'); return; }
+  if(!name) { alert('Please enter student name'); return; }
+  if(phone.length<13){ alert('Please enter a valid 10-digit phone number'); return; }
+
+  const slots = ws.slots||[];
+  let slotId  = document.getElementById('otsSlot').value;
+  let slotObj;
+
+  if(slots.length > 1){
+    if(!slotId){ alert('Please select a class'); return; }
+    slotObj = slots.find(s=>s.id===slotId);
+  } else {
+    slotObj = slots[0];
+  }
+
+  const slotLabel = slotObj
+    ? [slotObj.date, slotObj.time, slotObj.song?'♪ '+slotObj.song:''].filter(Boolean).join(' · ')
+    : '—';
+
+  const btn = document.querySelector('[onclick="submitOtsRegistration()"]');
+  btn.disabled = true;
+  btn.textContent = 'Registering…';
+
+  try {
+    const timestamp = new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'});
+    const ref = await addDoc(collection(db,'registrations'),{
+      name, phone,
+      workshop:     ws.artist,
+      style:        ws.style||'',
+      package:      'On The Spot',
+      slots:        slotLabel,
+      amount_paid:  ws.otsPrice||0,
+      payment_type: 'Cash',
+      payment_id:   'OTS-'+Date.now(),
+      timestamp,
+      isOts:        true,
+      checkedIn:    true,    // mark as checked in immediately (they're physically here)
+      checkedInAt:  new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+      checkedInSlots: slotObj ? {[slotObj.id]: new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} : {},
+      checkedInBy:  'Scanner (OTS)',
+    });
+
+    document.getElementById('otsResult').style.display = 'block';
+    document.getElementById('otsResult').innerHTML = `
+      <div style="background:rgba(92,184,122,0.1);border:1px solid rgba(92,184,122,0.3);padding:1rem">
+        <p style="font-size:0.72rem;font-weight:700;color:var(--green);letter-spacing:0.08em;margin-bottom:0.4rem">✓ REGISTERED & CHECKED IN</p>
+        <p style="font-size:0.88rem;color:var(--text);font-weight:600">${name}</p>
+        <p style="font-size:0.75rem;color:var(--muted)">${phone} · ${ws.artist} · ${slotLabel}</p>
+        ${ws.otsPrice?`<p style="font-size:0.72rem;color:var(--yellow);margin-top:0.3rem">₹${ws.otsPrice.toLocaleString('en-IN')} · Cash Collected</p>`:''}
+      </div>`;
+
+    addHistory(name, 'valid');
+
+    // Reset form
+    document.getElementById('otsName').value  = '';
+    document.getElementById('otsPhone').value = '';
+    document.getElementById('otsWorkshop').value = '';
+    document.getElementById('otsSlotWrap').style.display  = 'none';
+    document.getElementById('otsPriceInfo').style.display = 'none';
+
+  } catch(e){
+    alert('Registration failed. Check connection and try again.');
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Register On The Spot';
+  }
+};
   const now = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
   scanHistory.unshift({name, type, time:now});
 
