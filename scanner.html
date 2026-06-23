@@ -203,9 +203,11 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 <script>
 // STAFF PASSWORDS — same as admin
 const SCANNER_PASSWORDS = ['happening2025','space2025','studio2025'];
-const scanHistory = [];
-let html5QrCode   = null;
-let isScanning    = false;
+
+// These are on window so the ES module can access them reliably
+window._scanHistory  = [];
+window._html5QrCode  = null;
+window._isScanning   = false;
 
 function doScannerLogin(){
   const pass = document.getElementById('loginPass').value;
@@ -222,7 +224,7 @@ function doScannerLogin(){
 
 function doScannerLogout(){
   sessionStorage.removeItem('ths_scanner');
-  stopScanner();
+  if(window.stopScanner) stopScanner();
   location.reload();
 }
 
@@ -267,21 +269,21 @@ if(sessionStorage.getItem('ths_scanner')==='1'){
 window.startScanner = function(){
   const reader = document.getElementById('reader');
   reader.innerHTML = '';
-  html5QrCode = new Html5Qrcode('reader');
+  window._html5QrCode = new Html5Qrcode('reader');
   document.getElementById('startBtn').style.display   = 'none';
   document.getElementById('stopBtn').style.display    = 'inline-block';
   document.getElementById('scanNextBtn').style.display = 'none';
   document.getElementById('scanStatus').textContent   = 'Starting…';
   document.getElementById('scanStatus').className     = 'scanner-status status-scanning';
 
-  html5QrCode.start(
+  window._html5QrCode.start(
     { facingMode:'environment' },
     { fps:10, qrbox:{width:250,height:250} },
     async (text) => {
-      if(isScanning) return;
-      isScanning = true;
+      if(window._isScanning) return;
+      window._isScanning = true;
       // Pause camera immediately after scan
-      html5QrCode.pause();
+      window._html5QrCode.pause();
       document.getElementById('scanStatus').textContent = 'Paused — review result';
       document.getElementById('scanStatus').className   = 'scanner-status status-off';
       document.getElementById('scanNextBtn').style.display = 'inline-block';
@@ -301,9 +303,9 @@ window.startScanner = function(){
 
 window.scanNext = function(){
   // Resume scanning for next person
-  if(html5QrCode){
-    html5QrCode.resume();
-    isScanning = false;
+  if(window._html5QrCode){
+    window._html5QrCode.resume();
+    window._isScanning = false;
     document.getElementById('scanStatus').textContent    = 'Ready — point at QR';
     document.getElementById('scanStatus').className      = 'scanner-status status-scanning';
     document.getElementById('scanNextBtn').style.display = 'none';
@@ -313,8 +315,8 @@ window.scanNext = function(){
 };
 
 window.stopScanner = function(){
-  if(html5QrCode) html5QrCode.stop().catch(()=>{});
-  isScanning = false;
+  if(window._html5QrCode) window._html5QrCode.stop().catch(()=>{});
+  window._isScanning = false;
   document.getElementById('startBtn').style.display    = 'inline-block';
   document.getElementById('stopBtn').style.display     = 'none';
   document.getElementById('scanNextBtn').style.display = 'none';
@@ -565,22 +567,6 @@ function showResult(type, icon, title, sub, data, regId){
     </div>`;
 }
 
-function addHistory(name, type){
-  const now = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-  scanHistory.unshift({name, type, time:now});
-
-  document.getElementById('histCount').textContent = scanHistory.length + ' scanned';
-  document.getElementById('historyList').innerHTML = scanHistory.slice(0,20).map(h=>`
-    <div class="history-item">
-      <div>
-        <p class="history-name">${h.name}</p>
-        <p class="history-time">${h.time}</p>
-      </div>
-      <span class="history-badge ${h.type==='valid'?'badge-in':h.type==='partial'?'badge-partial':h.type==='duplicate'?'badge-dup':'badge-inv'}">
-        ${h.type==='valid'?'Checked In':h.type==='partial'?'Partial':h.type==='duplicate'?'Duplicate':'Invalid'}
-      </span>
-    </div>`).join('');
-}
 
 /* ══ OTS REGISTRATION ══════════════════════════════ */
 let otsWorkshopsCache = [];
@@ -724,10 +710,10 @@ window.submitOtsRegistration = async function(){
 
 function addHistory(name, type){
   const now = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-  scanHistory.unshift({name, type, time:now});
+  window._scanHistory.unshift({name, type, time:now});
 
-  document.getElementById('histCount').textContent = scanHistory.length + ' scanned';
-  document.getElementById('historyList').innerHTML = scanHistory.slice(0,20).map(h=>`
+  document.getElementById('histCount').textContent = window._scanHistory.length + ' scanned';
+  document.getElementById('historyList').innerHTML = window._scanHistory.slice(0,20).map(h=>`
     <div class="history-item">
       <div>
         <p class="history-name">${h.name}</p>
