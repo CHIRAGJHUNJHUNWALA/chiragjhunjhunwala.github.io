@@ -499,14 +499,14 @@ function getExpiryDate(s){
 async function loadStudentData(phone){
   try {
     const normPhone = normalisePhone(phone);
-    // Use WHERE queries — reads only this student's data
-    // This satisfies Firestore security rules AND is faster
     const [regSnap, batchSnap] = await Promise.all([
-      getDocs(query(collection(db,'registrations'), where('phone','==',normPhone))),
-      getDocs(query(collection(db,'batchStudents'),  where('phone','==',normPhone))),
+      getDocs(collection(db,'registrations')),
+      getDocs(collection(db,'batchStudents')),
     ]);
-    const regs    = regSnap.docs.map(d=>({id:d.id,...d.data()}));
-    const batches = batchSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const regs    = regSnap.docs.map(d=>({id:d.id,...d.data()}))
+                      .filter(r=>normalisePhone(r.phone||'')===normPhone);
+    const batches = batchSnap.docs.map(d=>({id:d.id,...d.data()}))
+                      .filter(s=>normalisePhone(s.phone||'')===normPhone);
     const name = (regs[0]?.name || batches[0]?.name || 'Student').trim();
     sessionStorage.setItem('ths_student', JSON.stringify({phone:normPhone, name}));
     showApp(normPhone, name, regs, batches);
@@ -546,7 +546,7 @@ function showApp(phone, name, regs, batches){
   const completedRegs = regs.filter(r => isFullyDone(r));
 
   renderBatches(activeBatches, phone);
-  renderWorkshops(activeRegs);
+  renderWorkshops(activeRegs, phone);
   renderHistory(expiredBatches, completedRegs);
 }
 
@@ -611,17 +611,13 @@ async function renderBatches(batches, phone){
 
 async function renderAttendance(s, phone){
   try {
-    // Query only this student's batch attendance — not the whole collection
-    const attSnap = await getDocs(
-      query(collection(db,'attendance'),
-        where('batchId','==', s.batchId),
-        where('artistId','==', s.artistId)
-      )
-    );
-    const docs = attSnap.docs
+    // Get all attendance docs for this batch and artist
+    const attSnap = await getDocs(collection(db,'attendance'));
+    const docs    = attSnap.docs
       .map(d=>({id:d.id,...d.data()}))
+      .filter(d=>d.batchId===s.batchId && d.artistId===s.artistId)
       .sort((a,b)=>b.weekKey.localeCompare(a.weekKey))
-      .slice(0,8);
+      .slice(0,8); // Last 8 weeks
 
     if(!docs.length) return `<div style="padding:1rem 1.5rem 1.5rem"><p style="font-size:0.82rem;color:var(--text-muted)">No attendance recorded yet.</p></div>`;
 
@@ -669,7 +665,9 @@ async function renderAttendance(s, phone){
 }
 
 /* ══════ WORKSHOPS ══════ */
-function renderWorkshops(regs){
+function renderWorkshops(regs, phone=''){
+  const normP = p=>String(p||'').replace(/\D/g,'').slice(-10);
+  const myPhone = normP(phone);
   document.getElementById('workshopLoading').style.display = 'none';
   document.getElementById('workshopContent').style.display = 'block';
   const el = document.getElementById('workshopContent');
@@ -744,15 +742,28 @@ function renderWorkshops(regs){
             <p class="booking-artist">${r.workshop||'—'}</p>
             <p class="booking-style">${r.style||'Workshop'}</p>
           </div>
-          ${statusPill}
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.35rem">
+            ${r.isCombo ? `<span class="pill" style="background:rgba(245,230,66,0.15);color:var(--yellow);border:1px solid rgba(245,230,66,0.3);font-size:0.58rem;letter-spacing:0.08em">GROUP BOOKING</span>` : ''}
+            ${statusPill}
+          </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:start">
           <div class="booking-body">
             <div class="info-item"><strong>Package</strong><span>${r.package||'—'}</span></div>
             <div class="info-item"><strong>Slot / Song</strong><span style="font-size:0.82rem;color:var(--yellow)">${r.slots||'—'}</span></div>
-            <div class="info-item"><strong>Amount Paid</strong><span style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</span></div>
+            <div class="info-item"><strong>Your Share</strong><span style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}${r.isCombo?` <span style="font-size:0.7rem;color:var(--muted)">(1 of ${r.groupSize})</span>`:''}</span></div>
             <div class="info-item"><strong>Booked On</strong><span style="font-size:0.78rem">${r.timestamp||'—'}</span></div>
             ${slotStatusHTML}
+            ${r.isCombo && r.groupMembers?.length ? `
+            <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.06)">
+              <p style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.45rem">Group Members (${r.groupSize})</p>
+              ${r.groupMembers.map((m,mi)=>`
+                <div style="display:flex;align-items:center;gap:0.6rem;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+                  <span style="font-size:0.65rem;color:var(--muted);width:14px;flex-shrink:0">${mi+1}</span>
+                  <span style="font-size:0.8rem;color:${normP(m.phone)===myPhone?'var(--yellow)':'var(--text)'};font-weight:${normP(m.phone)===myPhone?'600':'400'}">${m.name}${normP(m.phone)===myPhone?' (you)':''}</span>
+                  <span style="font-size:0.7rem;color:var(--muted);margin-left:auto">${m.phone}</span>
+                </div>`).join('')}
+            </div>` : ''}
           </div>
           <div style="padding:1.25rem 1.25rem 0 0;text-align:center;position:relative">
             <div style="background:#fff;padding:8px;display:inline-block;border-radius:4px;position:relative" id="qr-wrap-${i}">
@@ -760,6 +771,7 @@ function renderWorkshops(regs){
               ${qrOverlay}
             </div>
             <p style="font-size:0.6rem;color:${allCheckedIn?'#e57373':'var(--text-muted)'};margin-top:0.4rem;letter-spacing:0.05em">${qrLabel}</p>
+            ${r.isCombo ? `<p style="font-size:0.58rem;color:var(--muted);margin-top:0.2rem">Your entry QR</p>` : ''}
           </div>
         </div>
         <div class="booking-pid">ID: ${qrVal}</div>
