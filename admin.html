@@ -2292,13 +2292,14 @@ function renderDashboard(){
         <td>${r.package||'—'}</td>
         <td style="font-size:0.75rem;color:var(--yellow)">${getSongForReg(r)}</td>
         <td style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
-        <td>${payTypePill(r.payment_type)}</td>
+        <td>${payTypePill(r.payment_type, r.isOts)}</td>
         <td style="font-size:0.72rem;color:var(--muted)">${r.timestamp||'—'}</td>
       </tr>`).join('')
     : '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:2rem">No registrations in this period</td></tr>';
 }
 
-function payTypePill(t){
+function payTypePill(t, isOts){
+  if(isOts) return '<span class="pill pill-orange" style="font-size:0.58rem">OTS</span>';
   if(!t||t==='Online') return '<span class="pill pill-green">Online</span>';
   if(t==='Cash')   return '<span class="pill pill-yellow">Cash</span>';
   if(t==='Free')   return '<span class="pill pill-blue">Free</span>';
@@ -2313,6 +2314,7 @@ function wsCardHTML(w){
   const packages = w.packages||[];
   const totalSp  = slots.reduce((s,sl)=>s+(parseInt(sl.totalSpots)||0),0);
   const wsRegs   = registrations.filter(r=>r.workshop===w.artist);
+  const otsRegs  = wsRegs.filter(r=>r.isOts===true);
   const usedSp   = wsRegs.reduce((s,r)=>{
     // Count slots × people for accurate spot usage
     const slotCount = (r.slots||'').split('|').filter(Boolean).length || 1;
@@ -2368,7 +2370,11 @@ function wsCardHTML(w){
       <p style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);font-size:0.9rem;line-height:1.2;margin-bottom:0.15rem">${w.artist||'—'}</p>
       <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.06em">${w.style||'—'}</p>
       <div class="ws-spots-bar" style="margin-bottom:0.85rem">
-        <div class="spots-label"><span>Spots filled</span><span>${usedSp}/${totalSp}</span></div>
+        <div class="spots-label">
+          <span>Spots filled</span>
+          <span>${usedSp}/${totalSp}${otsRegs.length?` <span style="font-size:0.62rem;color:var(--orange);margin-left:0.3rem">+${otsRegs.length} OTS</span>`:''}
+          </span>
+        </div>
         <div class="spots-track"><div class="spots-fill ${pct>=100?'full':pct>=75?'warn':''}" style="width:${pct}%"></div></div>
       </div>
       <div class="ws-card-actions" onclick="event.stopPropagation()">
@@ -4565,7 +4571,7 @@ function renderRegTable(){
           <td>${r.package||'—'}</td>
           <td style="font-size:0.75rem;color:var(--yellow)">${getSlotDisplay(r)}</td>
           <td style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
-          <td>${payTypePill(r.payment_type)}</td>
+          <td>${payTypePill(r.payment_type, r.isOts)}</td>
           <td style="font-size:0.72rem;color:var(--muted)">${r.payment_id||'—'}</td>
           <td style="font-size:0.72rem;color:var(--muted)">${r.timestamp||'—'}</td>
           <td><button class="btn btn-danger btn-sm" onclick="deleteRegistration('${r.id}','${(r.name||'').replace(/'/g,"\\'")}')">
@@ -4735,7 +4741,7 @@ function renderAllPayments(){
         <td>${r.package||'—'}</td>
         <td style="font-size:0.75rem;color:var(--yellow)">${getSlotDisplayForReg(r)}</td>
         <td style="color:var(--yellow);font-weight:500">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
-        <td>${payTypePill(r.payment_type)}</td>
+        <td>${payTypePill(r.payment_type, r.isOts)}</td>
         <td style="font-family:monospace;font-size:0.7rem;color:var(--muted)">${r.payment_id||'—'}</td>
         <td style="font-size:0.72rem;color:var(--muted)">${r.timestamp||'—'}</td>
       </tr>`).join('')
@@ -5140,7 +5146,7 @@ window.generateReport = function(){
                 <td style="padding:0.5rem 0.85rem;font-size:0.78rem">${r.package||'—'}</td>
                 <td style="padding:0.5rem 0.85rem;font-size:0.72rem;color:var(--yellow)">${getSlotDisplayForReg(r)}</td>
                 <td style="padding:0.5rem 0.85rem;color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</td>
-                <td style="padding:0.5rem 0.85rem">${payTypePill(r.payment_type)}</td>
+                <td style="padding:0.5rem 0.85rem">${payTypePill(r.payment_type, r.isOts)}</td>
                 <td style="padding:0.5rem 0.85rem;font-size:0.72rem;color:${r.checkedIn?'var(--green)':'var(--muted)'}">${r.checkedIn?'✓ '+r.checkedInAt:'—'}</td>
               </tr>`).join('')}
             </tbody>
