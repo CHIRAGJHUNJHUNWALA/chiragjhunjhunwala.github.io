@@ -116,9 +116,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
 .slot-radio::after{content:'';width:7px;height:7px;border-radius:50%;background:var(--red);opacity:0;transition:opacity 0.2s}
 .slot-opt.selected .slot-radio::after{opacity:1}
 .slot-info{flex:1}
-.slot-date{font-size:0.88rem;font-weight:500;color:var(--text)}
-.slot-time{font-size:0.75rem;color:var(--text-muted);margin-top:0.1rem}
-.slot-song{font-size:0.72rem;color:var(--yellow);margin-top:0.15rem;letter-spacing:0.03em}
+.slot-song{font-size:0.95rem;font-weight:600;color:var(--text);letter-spacing:0.01em}
+.slot-date{font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem}
+.slot-time{font-size:0.75rem;color:var(--text-muted)}
 .slot-spots{font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;padding:0.25rem 0.6rem;border:1px solid var(--border-red);color:var(--red)}
 .slot-spots.low{background:rgba(188,31,46,0.1)}
 .artist-bio{border-top:1px solid var(--border);padding-top:2rem;margin-top:1rem}
@@ -276,12 +276,16 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
       <p style="font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.75rem">Group Members</p>
       <div id="groupMembersFields"></div>
     </div>
-    <!-- OTS Info Banner — shown last, info only, not bookable -->
-    <div id="otsBanner" style="display:none;align-items:center;gap:0.75rem;padding:0.85rem 1rem;border:1px solid rgba(245,230,66,0.25);background:rgba(245,230,66,0.05);margin-bottom:1.5rem">
-      <svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--yellow)" fill="none" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <div>
-        <p style="font-size:0.72rem;color:var(--yellow);font-weight:700;letter-spacing:0.06em;text-transform:uppercase">On-The-Spot: <span id="otsAmount"></span></p>
-        <p style="font-size:0.68rem;color:var(--text-muted);margin-top:0.1rem">Available at the door · Subject to Availability · Register online to secure your spot</p>
+    <!-- OTS — shown last, styled like a package card but not clickable -->
+    <div id="otsBanner" style="display:none;border:1px solid var(--border);padding:1rem 1.25rem;margin-bottom:1.5rem;opacity:0.75;position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;right:0;background:rgba(245,230,66,0.12);padding:0.2rem 0.6rem;font-size:0.58rem;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.1em;color:var(--yellow);text-transform:uppercase">At The Door</div>
+      <div style="display:flex;align-items:center;gap:1rem">
+        <div style="width:16px;height:16px;border:1px solid rgba(255,255,255,0.15);border-radius:50%;flex-shrink:0"></div>
+        <div style="flex:1">
+          <p style="font-size:0.88rem;font-weight:500;color:var(--text)">On The Spot</p>
+          <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.15rem">Subject to Availability · Register online to secure your spot</p>
+        </div>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:0.04em;color:var(--text-muted)">₹<span id="otsAmount"></span></span>
       </div>
     </div>
     <div class="section-heading">
@@ -624,7 +628,7 @@ function renderPage(){
   const otsBanner = document.getElementById('otsBanner');
   if(w.otsPrice > 0){
     document.getElementById('otsAmount').textContent = '₹'+w.otsPrice.toLocaleString('en-IN');
-    otsBanner.style.display = 'flex';
+    otsBanner.style.display = 'block';
   } else {
     otsBanner.style.display = 'none';
   }
@@ -649,11 +653,10 @@ function renderSlots(count){
     <div class="slot-opt ${i<count?'selected':''}" id="slot-${s.id}" onclick="selectSlotToggle('${s.id}')">
       <div class="slot-radio"></div>
       <div class="slot-info">
-        <p class="slot-date">${s.date}</p>
-        <p class="slot-time">${s.time}</p>
         ${s.song?`<p class="slot-song">♪ ${s.song}</p>`:''}
-        ${s.instaLink?`<a href="${s.instaLink}" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.7rem;color:var(--red);text-decoration:none;margin-top:0.35rem;font-family:'Syne',sans-serif;font-weight:600;letter-spacing:0.06em">
-          <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        <p class="slot-date" style="margin-top:${s.song?'0.25rem':'0'}">${s.date}${s.time?' · '+s.time:''}</p>
+        ${s.instaLink?`<a href="${s.instaLink}" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.68rem;color:var(--text-muted);text-decoration:none;margin-top:0.4rem;transition:color 0.2s" onmouseover="this.style.color='#e1306c'" onmouseout="this.style.color='var(--text-muted)'">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><circle cx="17.5" cy="6.5" r="0.5" fill="currentColor"/></svg>
           Watch Choreography
         </a>`:''}
       </div>
