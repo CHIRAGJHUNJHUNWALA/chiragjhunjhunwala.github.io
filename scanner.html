@@ -113,10 +113,36 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 <div id="loginScreen">
   <div class="login-box">
     <p class="login-logo">The <span>Happening</span> Space</p>
-    <p class="login-sub">Entry Scanner — Staff Only</p>
-    <input class="login-input" id="loginPass" type="password" placeholder="Enter staff password" onkeydown="if(event.key==='Enter')doScannerLogin()">
-    <button class="login-btn" onclick="doScannerLogin()">Enter Scanner</button>
-    <p class="login-error" id="loginErr">Incorrect password</p>
+    <p class="login-sub">Entry Scanner — Admin Only</p>
+
+    <!-- Step 1: Phone number -->
+    <div id="otpStep1">
+      <p style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);text-align:left;margin-bottom:0.4rem;font-family:'Syne',sans-serif">Admin Mobile Number</p>
+      <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
+        <span style="background:var(--bg2);border:1px solid var(--border2);padding:0.8rem 0.85rem;color:var(--muted);font-size:0.9rem;white-space:nowrap">+91</span>
+        <input class="login-input" id="scannerPhone" type="tel" placeholder="10-digit number"
+          maxlength="10" oninput="this.value=this.value.replace(/\D/g,'').slice(0,10)"
+          onkeydown="if(event.key==='Enter')scannerSendOtp()"
+          style="margin-bottom:0">
+      </div>
+      <div id="scanner-recaptcha-container"></div>
+      <button class="login-btn" onclick="scannerSendOtp()" id="scannerSendBtn">Send OTP</button>
+      <p class="login-error" id="loginErr">Not authorised. Only admin numbers can access the scanner.</p>
+    </div>
+
+    <!-- Step 2: OTP verify -->
+    <div id="otpStep2" style="display:none">
+      <p style="font-size:0.72rem;color:var(--muted);margin-bottom:1rem">OTP sent to +91 <span id="scannerPhoneDisplay"></span></p>
+      <p style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);text-align:left;margin-bottom:0.4rem;font-family:'Syne',sans-serif">Enter OTP</p>
+      <input class="login-input" id="scannerOtp" type="tel" placeholder="6-digit OTP"
+        maxlength="6" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6)"
+        onkeydown="if(event.key==='Enter')scannerVerifyOtp()"
+        style="margin-bottom:1rem">
+      <button class="login-btn" onclick="scannerVerifyOtp()" id="scannerVerifyBtn">Verify & Enter</button>
+      <button onclick="document.getElementById('otpStep1').style.display='block';document.getElementById('otpStep2').style.display='none'"
+        style="background:none;border:none;color:var(--muted);font-size:0.78rem;cursor:pointer;margin-top:0.75rem;display:block;width:100%">← Change number</button>
+      <p class="login-error" id="otpErr">Invalid OTP. Please try again.</p>
+    </div>
   </div>
 </div>
 
@@ -125,6 +151,40 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
   <div class="app-header">
     <p class="app-title">Entry <span>Scanner</span></p>
     <button class="logout-btn" onclick="doScannerLogout()">Log Out</button>
+  </div>
+
+  <!-- WORKSHOP + SLOT SELECTOR -->
+  <div style="background:var(--bg2);border:1px solid var(--border);padding:1rem;margin-bottom:1.25rem">
+    <p style="font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.75rem">Scanning For</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem;margin-bottom:0.75rem">
+      <div>
+        <p style="font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem;font-family:'Syne',sans-serif">Workshop</p>
+        <select id="scanWorkshopSel" onchange="onScanWorkshopChange()" style="width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.6rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.8rem;outline:none;appearance:none">
+          <option value="">— Select workshop —</option>
+        </select>
+      </div>
+      <div>
+        <p style="font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem;font-family:'Syne',sans-serif">Class / Slot</p>
+        <select id="scanSlotSel" style="width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.6rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.8rem;outline:none;appearance:none">
+          <option value="">— Select slot —</option>
+        </select>
+      </div>
+    </div>
+    <div id="scanSessionBadge" style="display:none;padding:0.5rem 0.75rem;background:rgba(92,184,122,0.1);border:1px solid rgba(92,184,122,0.3);font-size:0.75rem;color:var(--green);margin-bottom:0.75rem"></div>
+
+    <!-- Auto check-in toggle -->
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <p style="font-size:0.78rem;color:var(--text);font-weight:500">Auto Check-In</p>
+        <p style="font-size:0.68rem;color:var(--muted)">Instantly check in on scan — no button click needed</p>
+      </div>
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+        <span style="font-size:0.7rem;color:var(--muted)" id="autoCheckInLabel">OFF</span>
+        <div onclick="toggleAutoCheckIn()" id="autoCheckInToggle" style="width:40px;height:22px;background:var(--bg3);border:1px solid var(--border2);border-radius:11px;position:relative;cursor:pointer;transition:background 0.2s">
+          <div id="autoCheckInThumb" style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:transform 0.2s,background 0.2s"></div>
+        </div>
+      </label>
+    </div>
   </div>
 
   <!-- SCANNER -->
@@ -214,25 +274,43 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 </div>
 
 <script>
-// STAFF PASSWORDS — same as admin
-const SCANNER_PASSWORDS = ['happening2025','space2025','studio2025'];
+// Admin phone numbers — only these can access the scanner
+const ADMIN_PHONES = ['+917984448750', '+919274598929'];
 
 // These are on window so the ES module can access them reliably
 window._scanHistory  = [];
 window._html5QrCode  = null;
 window._isScanning   = false;
 
-function doScannerLogin(){
-  const pass = document.getElementById('loginPass').value;
-  if(SCANNER_PASSWORDS.includes(pass)){
-    sessionStorage.setItem('ths_scanner','1');
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('app').style.display         = 'block';
-    // Trigger Firebase Auth sign-in via module
-    document.dispatchEvent(new CustomEvent('scannerLoggedIn', {detail:{pass}}));
-  } else {
-    document.getElementById('loginErr').classList.add('show');
-  }
+let _scannerOtpResult = null;
+
+function scannerSendOtp(){
+  const raw   = document.getElementById('scannerPhone').value.replace(/\D/g,'');
+  const phone = '+91' + raw;
+  const err   = document.getElementById('loginErr');
+  err.classList.remove('show');
+
+  if(raw.length !== 10){ err.textContent='Enter a valid 10-digit number'; err.classList.add('show'); return; }
+  if(!ADMIN_PHONES.includes(phone)){ err.classList.add('show'); return; }
+
+  document.getElementById('scannerSendBtn').disabled = true;
+  document.getElementById('scannerSendBtn').textContent = 'Sending…';
+
+  // Fire OTP via module
+  document.dispatchEvent(new CustomEvent('scannerRequestOtp', {detail:{phone}}));
+}
+
+function scannerVerifyOtp(){
+  const otp    = document.getElementById('scannerOtp').value.trim();
+  const errEl  = document.getElementById('otpErr');
+  errEl.classList.remove('show');
+
+  if(otp.length !== 6){ errEl.textContent='Enter the 6-digit OTP'; errEl.classList.add('show'); return; }
+
+  document.getElementById('scannerVerifyBtn').disabled = true;
+  document.getElementById('scannerVerifyBtn').textContent = 'Verifying…';
+
+  document.dispatchEvent(new CustomEvent('scannerVerifyOtp', {detail:{otp}}));
 }
 
 function doScannerLogout(){
@@ -241,16 +319,21 @@ function doScannerLogout(){
   location.reload();
 }
 
-if(sessionStorage.getItem('ths_scanner')==='1'){
+function showScannerApp(){
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display         = 'block';
+}
+
+// Session restore
+if(sessionStorage.getItem('ths_scanner')==='1'){
+  showScannerApp();
 }
 </script>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 const app  = initializeApp({
   apiKey:"AIzaSyCvGMYRUhDAr4r2zoTbnRJ3PiCwhCWxLFs",
@@ -263,19 +346,152 @@ const app  = initializeApp({
 const db   = getFirestore(app);
 const auth = getAuth(app);
 
-// Sign in anonymously when scanner logs in (no CF needed)
-// Anonymous auth satisfies Firestore security rules (isAuthenticated())
-document.addEventListener('scannerLoggedIn', async ()=>{
+let _scannerOtpConfirmation = null;
+
+// ── OTP: Send ──────────────────────────────────────
+document.addEventListener('scannerRequestOtp', async (e)=>{
+  const phone = e.detail.phone;
   try {
-    await signInAnonymously(auth);
+    if(!window._scannerRecaptcha){
+      window._scannerRecaptcha = new RecaptchaVerifier(auth,'scanner-recaptcha-container',{size:'invisible'});
+    }
+    _scannerOtpConfirmation = await signInWithPhoneNumber(auth, phone, window._scannerRecaptcha);
+    document.getElementById('otpStep1').style.display = 'none';
+    document.getElementById('otpStep2').style.display = 'block';
+    document.getElementById('scannerPhoneDisplay').textContent = phone.replace('+91','');
+    document.getElementById('scannerSendBtn').disabled    = false;
+    document.getElementById('scannerSendBtn').textContent = 'Send OTP';
   } catch(err){
-    console.warn('Scanner anonymous auth failed:', err);
+    console.error('OTP send failed:',err);
+    const errEl = document.getElementById('loginErr');
+    errEl.textContent = 'Failed to send OTP. Try again.';
+    errEl.classList.add('show');
+    document.getElementById('scannerSendBtn').disabled    = false;
+    document.getElementById('scannerSendBtn').textContent = 'Send OTP';
   }
 });
 
-// If already logged in from a previous session, re-auth anonymously
+// ── OTP: Verify ─────────────────────────────────────
+document.addEventListener('scannerVerifyOtp', async (e)=>{
+  const otp   = e.detail.otp;
+  const errEl = document.getElementById('otpErr');
+  try {
+    await _scannerOtpConfirmation.confirm(otp);
+    // Phone Auth session is now active — phone number in auth token, no anonymous auth needed
+    sessionStorage.setItem('ths_scanner','1');
+    showScannerApp();
+    loadScanWorkshops();
+  } catch(err){
+    console.error('OTP verify failed:',err);
+    errEl.textContent = 'Invalid OTP. Please try again.';
+    errEl.classList.add('show');
+    document.getElementById('scannerVerifyBtn').disabled    = false;
+    document.getElementById('scannerVerifyBtn').textContent = 'Verify & Enter';
+  }
+});
+
+// ── Session restore ──────────────────────────────────
 if(sessionStorage.getItem('ths_scanner')==='1'){
-  signInAnonymously(auth).catch(()=>{});
+  loadScanWorkshops();
+}
+
+
+/* ══ SESSION SETUP ══════════════════════════════════ */
+let scanWorkshopsCache = [];
+let activeScanWorkshop = null; // full workshop object
+let activeScanSlot     = null; // full slot object
+let autoCheckIn        = false;
+
+// Load active workshops into selector on app load
+async function loadScanWorkshops(){
+  try {
+    const snap = await getDocs(collection(db,'workshops'));
+    scanWorkshopsCache = snap.docs
+      .map(d=>({id:d.id,...d.data()}))
+      .filter(w=>w.status==='active'||w.status==='full')
+      .sort((a,b)=>(a.dateFrom||'').localeCompare(b.dateFrom||''));
+    const sel = document.getElementById('scanWorkshopSel');
+    if(!sel) return;
+    sel.innerHTML = '<option value="">— Select workshop —</option>'
+      + scanWorkshopsCache.map(w=>`<option value="${w.id}">${w.artist}${w.dateFrom?' · '+w.dateFrom:''}</option>`).join('');
+  } catch(e){ console.warn('Could not load scan workshops:',e); }
+}
+
+window.onScanWorkshopChange = function(){
+  const wsId = document.getElementById('scanWorkshopSel').value;
+  const ws   = scanWorkshopsCache.find(w=>w.id===wsId);
+  activeScanWorkshop = ws||null;
+  activeScanSlot     = null;
+
+  const slotSel = document.getElementById('scanSlotSel');
+  const badge   = document.getElementById('scanSessionBadge');
+
+  if(!ws){ slotSel.innerHTML='<option value="">— Select slot —</option>'; badge.style.display='none'; return; }
+
+  const slots = (ws.slots||[]).filter(s=>!s.cancelled);
+  if(slots.length===1){
+    // Auto-select single slot
+    slotSel.innerHTML = slots.map(s=>`<option value="${s.id}">${[s.date,s.time,s.song?'♪ '+s.song:''].filter(Boolean).join(' · ')}</option>`).join('');
+    activeScanSlot = slots[0];
+    updateScanBadge();
+  } else {
+    slotSel.innerHTML = '<option value="">— Select slot —</option>'
+      + slots.map(s=>`<option value="${s.id}">${[s.date,s.time,s.song?'♪ '+s.song:''].filter(Boolean).join(' · ')}</option>`).join('');
+    badge.style.display = 'none';
+  }
+
+  slotSel.onchange = function(){
+    const slot = (ws.slots||[]).find(s=>s.id===this.value);
+    activeScanSlot = slot||null;
+    updateScanBadge();
+  };
+};
+
+function updateScanBadge(){
+  const badge = document.getElementById('scanSessionBadge');
+  if(activeScanWorkshop && activeScanSlot){
+    const slotLabel = [activeScanSlot.date,activeScanSlot.time,activeScanSlot.song?'♪ '+activeScanSlot.song:''].filter(Boolean).join(' · ');
+    badge.innerHTML = `✓ Scanning: <strong>${activeScanWorkshop.artist}</strong> · ${slotLabel}`;
+    badge.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+window.toggleAutoCheckIn = function(){
+  autoCheckIn = !autoCheckIn;
+  const toggle = document.getElementById('autoCheckInToggle');
+  const thumb  = document.getElementById('autoCheckInThumb');
+  const label  = document.getElementById('autoCheckInLabel');
+  toggle.style.background = autoCheckIn ? 'var(--green)' : 'var(--bg3)';
+  thumb.style.transform   = autoCheckIn ? 'translateX(18px)' : 'translateX(0)';
+  thumb.style.background  = autoCheckIn ? '#fff' : 'var(--muted)';
+  label.textContent       = autoCheckIn ? 'ON' : 'OFF';
+  label.style.color       = autoCheckIn ? 'var(--green)' : 'var(--muted)';
+};
+
+// Validate that scanned reg belongs to the active slot
+function validateSlotAccess(reg){
+  if(!activeScanSlot) return { valid: true }; // no slot selected = no restriction
+  const slotId    = activeScanSlot.id;
+  const slotLabel = [activeScanSlot.date,activeScanSlot.time,activeScanSlot.song].filter(Boolean).join(' · ');
+
+  // Check checkedInSlots map
+  if(reg.checkedInSlots && reg.checkedInSlots[slotId] !== undefined) return { valid: true };
+
+  // Check if this slot's details appear in the registration's slots string
+  const regSlots = (reg.slots||'').toLowerCase();
+  const matchSong = activeScanSlot.song && regSlots.includes(activeScanSlot.song.toLowerCase());
+  const matchDate = activeScanSlot.date && regSlots.includes(activeScanSlot.date.toLowerCase());
+  const matchTime = activeScanSlot.time && regSlots.includes(activeScanSlot.time.toLowerCase());
+
+  if(matchSong||matchDate||matchTime) return { valid: true };
+
+  return {
+    valid: false,
+    reason: `Not registered for this class`,
+    detail: `Registered for: ${reg.slots||'unknown slot'}`,
+  };
 }
 
 /* ══ SCANNER ══ */
@@ -378,6 +594,80 @@ async function processCode(raw){
 }
 
 async function processReg(id, data){
+  // ── SLOT VALIDATION ─────────────────────────────
+  if(activeScanWorkshop && activeScanSlot){
+    // Check student is registered for the correct workshop
+    if(data.workshop !== activeScanWorkshop.artist){
+      showResult('invalid','✗','Wrong Workshop',
+        `This QR is for: ${data.workshop||'unknown workshop'}`,null,null);
+      addHistory(data.name||id,'invalid');
+      return;
+    }
+    // Check student is registered for the correct slot
+    const slotCheck = validateSlotAccess(data);
+    if(!slotCheck.valid){
+      const resultArea = document.getElementById('resultArea');
+      resultArea.innerHTML = `
+        <div class="result-card invalid">
+          <div class="result-header">
+            <div class="result-icon invalid">✗</div>
+            <div>
+              <p class="result-title">Wrong Class</p>
+              <p class="result-sub">${data.name||'—'} · ${slotCheck.reason}</p>
+            </div>
+          </div>
+          <div class="result-body">
+            <p style="font-size:0.78rem;color:var(--muted);padding:0 1.25rem 1rem">${slotCheck.detail}</p>
+          </div>
+        </div>`;
+      addHistory(data.name||id,'invalid');
+      if(navigator.vibrate) navigator.vibrate([100,50,100]);
+      return;
+    }
+  }
+
+  // ── AUTO CHECK-IN ────────────────────────────────
+  // If auto check-in is ON and student is not yet checked in for this slot, do it immediately
+  if(autoCheckIn && activeScanSlot){
+    const slotKey = activeScanSlot.id;
+    const already = data.checkedInSlots?.[slotKey];
+    if(!already){
+      try {
+        const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+        const updatedSlots = {...(data.checkedInSlots||{}), [slotKey]: time};
+        await updateDoc(doc(db,'registrations',id),{
+          checkedIn:      true,
+          checkedInAt:    time,
+          checkedInBy:    'Scanner (Auto)',
+          checkedInSlots: updatedSlots,
+        });
+        data.checkedInSlots = updatedSlots;
+        data.checkedIn      = true;
+
+        // Show quick green flash
+        const resultArea = document.getElementById('resultArea');
+        resultArea.innerHTML = `
+          <div class="result-card valid">
+            <div class="result-header">
+              <div class="result-icon valid">✓</div>
+              <div>
+                <p class="result-title">✓ Checked In</p>
+                <p class="result-sub">${data.name||'—'} · ${time}</p>
+              </div>
+            </div>
+          </div>`;
+        addHistory(data.name||id,'valid');
+        if(navigator.vibrate) navigator.vibrate(200);
+        return;
+      } catch(e){ console.error('Auto check-in failed:',e); }
+    } else {
+      // Already checked in for this slot
+      showResultSlots('used', data, [{label: activeScanSlot.song||activeScanSlot.time||'Slot', done:true, time:already}], id);
+      addHistory(data.name||id,'duplicate');
+      return;
+    }
+  }
+
   // Fetch workshop slot details
   let wsSlots = [];
   try {
@@ -694,10 +984,7 @@ window.submitOtsRegistration = async function(){
   resultEl.style.display = 'none';
 
   try {
-    // Ensure anonymous Firebase auth before writing
-    if(!auth.currentUser){
-      await signInAnonymously(auth);
-    }
+    // Auth is handled at login — phone auth session active
 
     const ts   = new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'});
     const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
