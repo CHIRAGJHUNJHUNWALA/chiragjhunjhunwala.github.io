@@ -587,9 +587,9 @@ function getSessionCount(p){
 }
 
 function renderSlots(count){
-  const slt=(workshop.slots||[]);
+  const slt=(workshop.slots||[]).filter(s=>!s.cancelled); // hide cancelled slots
   selectedSlots=slt.slice(0,count);
-  document.getElementById('slotList').innerHTML=slt.map((s,i)=>`
+  document.getElementById('slotList').innerHTML = slt.length ? slt.map((s,i)=>`
     <div class="slot-opt ${i<count?'selected':''}" id="slot-${s.id}" onclick="selectSlotToggle('${s.id}')">
       <div class="slot-radio"></div>
       <div class="slot-info">
@@ -602,7 +602,8 @@ function renderSlots(count){
         </a>`:''}
       </div>
       ${parseInt(s.spots)===0?'<span class="slot-spots none">Full</span>':''}
-    </div>`).join('');
+    </div>`).join('')
+  : `<p style="font-size:0.82rem;color:var(--text-muted);padding:1rem 0">No classes currently available for booking.</p>`;
 }
 
 window.selectPackage = function(id){
