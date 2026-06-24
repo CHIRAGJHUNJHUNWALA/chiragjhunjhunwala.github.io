@@ -377,9 +377,14 @@ tr:hover td{background:rgba(255,255,255,0.02)}
             <p id="weeklySongFilm" style="font-size:0.7rem;color:var(--muted);margin-top:0.05rem;display:none"></p>
           </div>
         </div>
-        <button onclick="openSongModal()" style="background:rgba(245,230,66,0.12);border:1px solid rgba(245,230,66,0.3);color:var(--yellow);padding:0.4rem 0.85rem;font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;flex-shrink:0">
-          ✎ Set Song
-        </button>
+        <div style="display:flex;gap:0.5rem;flex-shrink:0">
+          <button id="deleteSongBtn" onclick="deleteWeeklySong()" style="display:none;background:rgba(229,115,115,0.1);border:1px solid rgba(229,115,115,0.3);color:#e57373;padding:0.4rem 0.85rem;font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer">
+            ✕ Remove
+          </button>
+          <button onclick="openSongModal()" style="background:rgba(245,230,66,0.12);border:1px solid rgba(245,230,66,0.3);color:var(--yellow);padding:0.4rem 0.85rem;font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer">
+            ✎ Set Song
+          </button>
+        </div>
       </div>
 
       <!-- Days header -->
@@ -1502,22 +1507,40 @@ async function loadWeeklySong(batchId, weekKey){
 }
 
 function renderWeeklySong(){
-  const display = document.getElementById('weeklySongDisplay');
-  const film    = document.getElementById('weeklySongFilm');
+  const display   = document.getElementById('weeklySongDisplay');
+  const film      = document.getElementById('weeklySongFilm');
+  const deleteBtn = document.getElementById('deleteSongBtn');
   if(!display) return;
   if(currentWeeklySong?.song){
     display.textContent = '♪ ' + currentWeeklySong.song;
     if(currentWeeklySong.film){
-      film.textContent = currentWeeklySong.film;
-      film.style.display = 'block';
+      film.textContent    = currentWeeklySong.film;
+      film.style.display  = 'block';
     } else {
-      film.style.display = 'none';
+      film.style.display  = 'none';
     }
+    if(deleteBtn) deleteBtn.style.display = 'block';
   } else {
     display.textContent = 'Not set yet';
-    film.style.display = 'none';
+    film.style.display  = 'none';
+    if(deleteBtn) deleteBtn.style.display = 'none';
   }
 }
+
+window.deleteWeeklySong = async function(){
+  if(!currentWeeklySong?.song) return;
+  if(!confirm(`Remove "${currentWeeklySong.song}" from this week?`)) return;
+  const startStr = document.getElementById('weekStart').value;
+  const weekKey  = startStr.replace(/-/g,'');
+  try {
+    await deleteDoc(doc(db,'weeklySongs',`${currentAttBatch}_${weekKey}`));
+    currentWeeklySong = null;
+    renderWeeklySong();
+    showToast('Song removed ✓');
+  } catch(e){
+    showToast('Failed to remove song','error');
+  }
+};
 
 window.openSongModal = function(){
   const weekLabel = document.getElementById('weekLabel').textContent;
