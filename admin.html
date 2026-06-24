@@ -3168,9 +3168,7 @@ async function saveAisensyKey(key){
   } catch(e){ console.error('Failed to save AiSensy key:',e); }
 }
 // Save key on first load (runs once, safe to call again)
-saveAisensyKey('8ba193cbb7d614a454792').then(()=>{
-  // After saving, clear from code — key now lives in Firestore only
-});
+// AiSensy key stored in Firestore settings/aisensy — not in code
 
 window.openRefundManager = async function(wId){
   const w = workshops.find(x=>x.id===wId);
