@@ -5898,18 +5898,58 @@ window.renderCheckinsView = function(){
     return slot?.song ? '♪ '+slot.song : '—';
   };
 
-  // A registration is "checked in" if either old checkedIn flag OR has any checkedInSlots entries
-  const isCheckedIn = (r) => r.checkedIn===true || Object.keys(r.checkedInSlots||{}).length > 0;
-  const checkedIn   = filtered.filter(r=>isCheckedIn(r));
-  const notArrived  = filtered.filter(r=>!isCheckedIn(r));
-  const total       = filtered.length;
-  const pct         = total>0 ? Math.round(checkedIn.length/total*100) : 0;
+  // Count by SPOTS (slots booked), not students
+  // A student with a 2-class pass counts as 2 in All Slots, 1 in a specific slot
+  const countSpots = (regs) => {
+    if(checkinSlot !== 'all') return regs.length; // specific slot: 1 per student
+    return regs.reduce((sum, r)=>{
+      const slotCount = (r.slots||'').split('|').filter(Boolean).length || 1;
+      return sum + slotCount;
+    }, 0);
+  };
+
+  const countCheckedInSpots = (regs) => {
+    if(checkinSlot !== 'all'){
+      // Specific slot: checked in if checkedInSlots has this slot id OR old-style checkedIn
+      const slot = slots.find(s=>s.id===checkinSlot);
+      return regs.filter(r=>
+        (r.checkedInSlots && slot && r.checkedInSlots[slot.id]) ||
+        (r.checkedIn===true && !Object.keys(r.checkedInSlots||{}).length)
+      ).length;
+    }
+    // All slots: count each individual slot check-in
+    return regs.reduce((sum, r)=>{
+      const checkedSlots = Object.keys(r.checkedInSlots||{}).length;
+      if(checkedSlots > 0) return sum + checkedSlots;
+      if(r.checkedIn===true){
+        // old-style: count all slots on this reg as checked in
+        return sum + ((r.slots||'').split('|').filter(Boolean).length || 1);
+      }
+      return sum;
+    }, 0);
+  };
+
+  const isCheckedIn = (r) => {
+    if(checkinSlot !== 'all'){
+      const slot = slots.find(s=>s.id===checkinSlot);
+      return (r.checkedInSlots && slot && !!r.checkedInSlots[slot.id]) ||
+             (r.checkedIn===true && !Object.keys(r.checkedInSlots||{}).length);
+    }
+    return r.checkedIn===true || Object.keys(r.checkedInSlots||{}).length > 0;
+  };
+
+  const checkedIn  = filtered.filter(r=>isCheckedIn(r));
+  const notArrived = filtered.filter(r=>!isCheckedIn(r));
+  const total      = countSpots(filtered);
+  const totalIn    = countCheckedInSpots(filtered);
+  const totalOut   = total - totalIn;
+  const pct        = total>0 ? Math.round(totalIn/total*100) : 0;
 
   // Stats
   document.getElementById('checkinStats').innerHTML = `
-    <div class="stat-card"><p class="stat-label">Total Registered</p><p class="stat-val">${total}</p></div>
-    <div class="stat-card"><p class="stat-label">Checked In</p><p class="stat-val green">${checkedIn.length}</p></div>
-    <div class="stat-card"><p class="stat-label">Not Arrived</p><p class="stat-val yellow">${notArrived.length}</p></div>
+    <div class="stat-card"><p class="stat-label">Total Spots</p><p class="stat-val">${total}</p></div>
+    <div class="stat-card"><p class="stat-label">Checked In</p><p class="stat-val green">${totalIn}</p></div>
+    <div class="stat-card"><p class="stat-label">Not Arrived</p><p class="stat-val yellow">${totalOut}</p></div>
     <div class="stat-card"><p class="stat-label">Entry Rate</p><p class="stat-val" style="color:var(--red)">${pct}%</p></div>
   `;
 
