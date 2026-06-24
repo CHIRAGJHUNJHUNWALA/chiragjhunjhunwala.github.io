@@ -366,6 +366,22 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <button class="btn btn-ghost btn-sm" onclick="changeWeek(1)">Next →</button>
         <span id="weekLabel" style="font-size:0.8rem;color:var(--muted)"></span>
       </div>
+
+      <!-- WEEKLY SONG PANEL -->
+      <div id="weeklySongPanel" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:0.85rem 1rem;background:rgba(245,230,66,0.05);border:1px solid rgba(245,230,66,0.2);margin-bottom:1rem;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--yellow)" fill="none" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          <div>
+            <p style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">This Week's Song</p>
+            <p id="weeklySongDisplay" style="font-size:0.9rem;font-weight:600;color:var(--yellow);margin-top:0.1rem">Not set yet</p>
+            <p id="weeklySongFilm" style="font-size:0.7rem;color:var(--muted);margin-top:0.05rem;display:none"></p>
+          </div>
+        </div>
+        <button onclick="openSongModal()" style="background:rgba(245,230,66,0.12);border:1px solid rgba(245,230,66,0.3);color:var(--yellow);padding:0.4rem 0.85rem;font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;flex-shrink:0">
+          ✎ Set Song
+        </button>
+      </div>
+
       <!-- Days header -->
       <div class="week-days" id="weekDays"></div>
       <!-- Attendance list -->
@@ -375,6 +391,27 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- WEEKLY SONG MODAL -->
+<div class="modal-backdrop" id="songModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:none;align-items:center;justify-content:center;padding:1rem">
+  <div style="background:var(--bg2);border:1px solid var(--border);padding:1.5rem;width:100%;max-width:420px;position:relative">
+    <button onclick="closeSongModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer">✕</button>
+    <p style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:0.25rem;color:var(--text)">Set This Week's Song</p>
+    <p id="songModalWeekLabel" style="font-size:0.72rem;color:var(--muted);margin-bottom:1.25rem"></p>
+    <div style="margin-bottom:0.85rem">
+      <label style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:0.35rem;font-family:'Syne',sans-serif">Song Name *</label>
+      <input id="songNameInput" type="text" placeholder="e.g. Kesariya" style="width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none">
+    </div>
+    <div style="margin-bottom:1.25rem">
+      <label style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:0.35rem;font-family:'Syne',sans-serif">Film / Album <span style="font-weight:300;text-transform:none">(optional)</span></label>
+      <input id="songFilmInput" type="text" placeholder="e.g. Brahmastra" style="width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none">
+    </div>
+    <div style="display:flex;gap:0.75rem">
+      <button onclick="saveSong()" style="flex:1;background:var(--yellow);color:#000;border:none;padding:0.85rem;font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer">Save Song</button>
+      <button onclick="closeSongModal()" style="background:none;border:1px solid var(--border2);color:var(--muted);padding:0.85rem 1.25rem;font-family:'Syne',sans-serif;font-size:0.8rem;cursor:pointer">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -431,6 +468,16 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <div class="form-group">
           <label>Days Attended <span style="font-weight:300;color:var(--muted);font-size:0.75em">(override if needed)</span></label>
           <input type="number" id="sDaysAttended" min="0" placeholder="e.g. 24">
+        </div>
+        <!-- Songs Learned -->
+        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+          <p style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.75rem;display:flex;align-items:center;gap:0.5rem">
+            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            Songs Learned
+          </p>
+          <div id="studentSongHistory" style="max-height:160px;overflow-y:auto">
+            <p style="font-size:0.75rem;color:var(--muted)">Open a student to see their song history.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -646,6 +693,7 @@ const ARTISTS = [
 let currentArtist  = null;
 let students       = [];
 let attendance     = {};
+let currentWeeklySong = null;
 let currentBatchFilter = 'all';
 let currentAttBatch    = null;
 let studentSearchQ     = '';
@@ -1165,6 +1213,27 @@ window.openEditStudent = function(id){
   const sel = document.getElementById('sBatch');
   sel.innerHTML = currentArtist.batches.map(b=>`<option value="${b.id}" ${b.id===s.batchId?'selected':''}>${b.name} · ${b.time}</option>`).join('');
   openModal('studentModal');
+
+  // Load song history for this student
+  const songHistEl = document.getElementById('studentSongHistory');
+  if(songHistEl){
+    songHistEl.innerHTML = '<p style="font-size:0.75rem;color:var(--muted)">Loading songs…</p>';
+    getStudentSongHistory(id, s.batchId).then(history=>{
+      if(!history.length){
+        songHistEl.innerHTML = '<p style="font-size:0.75rem;color:var(--muted)">No songs recorded yet.</p>';
+        return;
+      }
+      songHistEl.innerHTML = history.map(h=>`
+        <div style="display:flex;align-items:center;gap:0.75rem;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--yellow)" fill="none" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          <div>
+            <p style="font-size:0.8rem;color:var(--text);font-weight:500">${h.song}</p>
+            ${h.film?`<p style="font-size:0.68rem;color:var(--muted)">${h.film}</p>`:''}
+          </div>
+          <span style="font-size:0.68rem;color:var(--muted);margin-left:auto">${h.weekStart||''}</span>
+        </div>`).join('');
+    });
+  }
 };
 
 window.artistAutoFillName = function(digits){
@@ -1283,6 +1352,11 @@ window.generateAttendanceReport = async function(){
     const pad = n=>String(n).padStart(2,'0');
     const now = new Date();
 
+    // Load weekly songs for the report period
+    const songSnapReport = await getDocs(collection(db,'weeklySongs'));
+    const songMap = {};
+    songSnapReport.docs.forEach(d=>{ songMap[d.id] = d.data(); });
+
     // Build sections per batch
     let bodyHTML = '';
     const batches = Object.values(batchMap);
@@ -1313,7 +1387,7 @@ window.generateAttendanceReport = async function(){
         sortedDates.forEach(d=>{
           const attDoc = batchAtt.find(a=>(a.date||a.weekStart||'')=== d);
           if(!attDoc) return;
-          const status = attDoc[s.id];
+          const status = attDoc.records?.[s.id]||attDoc[s.id];
           if(status === 'present') presentDays++;
           else if(isExpired || notJoined) {} // don't count absent if not enrolled
           else absentDays++;
@@ -1332,7 +1406,7 @@ window.generateAttendanceReport = async function(){
           <td style="text-align:center">${sortedDates.length}</td>
           ${sortedDates.map(d=>{
             const attDoc = batchAtt.find(a=>(a.date||a.weekStart||'')=== d);
-            const status = attDoc ? attDoc[s.id] : null;
+            const status = attDoc ? (attDoc.records?.[s.id]||attDoc[s.id]) : null;
             return `<td style="text-align:center">${status==='present'?'<span style="color:green">✓</span>':isExpired||notJoined?'<span style="color:#ddd">–</span>':'<span style="color:#e57373">✗</span>'}</td>`;
           }).join('')}
         </tr>`;
@@ -1347,6 +1421,14 @@ window.generateAttendanceReport = async function(){
             <tr>
               <th>Student</th><th>Phone</th><th>Status</th><th>Present</th><th>Absent</th><th>Classes</th>
               ${sortedDates.map(d=>`<th style="font-size:0.6rem;white-space:nowrap">${d.slice(5)}</th>`).join('')}
+            </tr>
+            <tr style="background:#fffbee">
+              <td colspan="6" style="font-size:0.65rem;color:#888;font-style:italic">Song taught</td>
+              ${sortedDates.map(d=>{
+                const wkKey = d.replace(/-/g,'');
+                const s = songMap[`${batch.id}_${wkKey}`];
+                return `<td style="font-size:0.62rem;color:#a05;white-space:nowrap;text-align:center">${s?'♪ '+s.song:''}</td>`;
+              }).join('')}
             </tr>
           </thead>
           <tbody>${rows||'<tr><td colspan="6" style="color:#999;text-align:center">No students</td></tr>'}</tbody>
@@ -1404,6 +1486,104 @@ window.changeWeek = function(dir){
   loadWeekAttendance();
 };
 
+/* ══════════════════════════════════════
+   WEEKLY SONG
+══════════════════════════════════════ */
+async function loadWeeklySong(batchId, weekKey){
+  try {
+    const snap = await getDoc(doc(db,'weeklySongs',`${batchId}_${weekKey}`));
+    currentWeeklySong = snap.exists() ? snap.data() : null;
+  } catch(e){ currentWeeklySong = null; }
+  renderWeeklySong();
+}
+
+function renderWeeklySong(){
+  const display = document.getElementById('weeklySongDisplay');
+  const film    = document.getElementById('weeklySongFilm');
+  if(!display) return;
+  if(currentWeeklySong?.song){
+    display.textContent = '♪ ' + currentWeeklySong.song;
+    if(currentWeeklySong.film){
+      film.textContent = currentWeeklySong.film;
+      film.style.display = 'block';
+    } else {
+      film.style.display = 'none';
+    }
+  } else {
+    display.textContent = 'Not set yet';
+    film.style.display = 'none';
+  }
+}
+
+window.openSongModal = function(){
+  const weekLabel = document.getElementById('weekLabel').textContent;
+  document.getElementById('songModalWeekLabel').textContent = 'Week of ' + weekLabel;
+  document.getElementById('songNameInput').value = currentWeeklySong?.song || '';
+  document.getElementById('songFilmInput').value = currentWeeklySong?.film || '';
+  document.getElementById('songModal').style.display = 'flex';
+};
+
+window.closeSongModal = function(){
+  document.getElementById('songModal').style.display = 'none';
+};
+
+window.saveSong = async function(){
+  const song = document.getElementById('songNameInput').value.trim();
+  const film = document.getElementById('songFilmInput').value.trim();
+  if(!song){ showToast('Please enter a song name','error'); return; }
+
+  const startStr = document.getElementById('weekStart').value;
+  const weekKey  = startStr.replace(/-/g,'');
+  const batchId  = currentAttBatch;
+
+  try {
+    const data = {
+      batchId, weekStart: startStr, weekKey,
+      song, film: film||'',
+      setBy: currentArtist.name,
+      setAt: new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
+    };
+    await setDoc(doc(db,'weeklySongs',`${batchId}_${weekKey}`), data);
+    currentWeeklySong = data;
+    renderWeeklySong();
+    closeSongModal();
+    showToast('Song saved ✓');
+  } catch(e){
+    showToast('Failed to save song','error');
+  }
+};
+
+// Get all songs a student has attended — returns [{weekStart, song, film}]
+async function getStudentSongHistory(studentId, batchId){
+  try {
+    // Get all attendance docs for this trainer+batch
+    const attSnap = await getDocs(collection(db,'attendance'));
+    const attDocs = attSnap.docs
+      .map(d=>({id:d.id,...d.data()}))
+      .filter(d=>d.id.startsWith(`${currentArtist.user}_${batchId}_`));
+
+    // Get all weekly songs for this batch
+    const songSnap = await getDocs(collection(db,'weeklySongs'));
+    const songMap  = {};
+    songSnap.docs.forEach(d=>{
+      const data = d.data();
+      if(data.batchId===batchId) songMap[data.weekKey] = data;
+    });
+
+    // Match attendance + song for weeks student was present
+    const history = [];
+    attDocs.forEach(a=>{
+      const weekKey = a.id.split('_')[2];
+      if(a.records?.[studentId]==='present' || a[studentId]==='present'){
+        const song = songMap[weekKey];
+        if(song) history.push(song);
+      }
+    });
+
+    return history.sort((a,b)=>b.weekStart?.localeCompare(a.weekStart||'')||0);
+  } catch(e){ return []; }
+}
+
 window.loadWeekAttendance = async function(){
   const startStr = document.getElementById('weekStart').value;
   if(!startStr) return;
@@ -1449,6 +1629,9 @@ window.loadWeekAttendance = async function(){
   const attRef  = doc(db,'attendance',`${currentArtist.user}_${currentAttBatch}_${weekKey}`);
   const attSnap = await getDoc(attRef);
   attendance    = attSnap.exists() ? attSnap.data().records||{} : {};
+
+  // Load this week's song
+  await loadWeeklySong(currentAttBatch, weekKey);
 
   // Week start and end dates (Mon–Sun)
   const weekStart = weekDates[0];
