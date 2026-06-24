@@ -338,6 +338,11 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="nav-item" onclick="showView('artistanalysis')">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/><line x1="12" y1="12" x2="12" y2="21"/></svg>Artist Analysis
       </div>
+      <div class="nav-section-title">Marketing</div>
+      <div class="nav-item" onclick="showView('marketing')">
+        <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.65 3.38 2 2 0 0 1 3.62 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 6 6l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>WhatsApp
+      </div>
+
       <div class="nav-section-title">Content</div>
       <div class="nav-item" onclick="showView('abouteditor')">
         <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit About Us
@@ -564,6 +569,157 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         </button>
       </div>
       <div id="editBatchGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.25rem"></div>
+    </div>
+
+    <!-- WHATSAPP MARKETING -->
+    <div class="view" id="view-marketing">
+      <div class="page-header">
+        <div><h1 class="page-title">WhatsApp Marketing</h1><p class="page-sub">Send workshop promotions to your student audience</p></div>
+        <button class="btn btn-red" onclick="openCampaignComposer()">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Campaign
+        </button>
+      </div>
+
+      <!-- STATS ROW -->
+      <div class="stats-grid" id="mktgStats" style="margin-bottom:1.5rem"></div>
+
+      <!-- CAMPAIGN COMPOSER (hidden by default) -->
+      <div id="campaignComposer" style="display:none;background:var(--bg2);border:1px solid var(--border);padding:1.5rem;margin-bottom:1.5rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+          <p style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem">New Campaign</p>
+          <button onclick="closeCampaignComposer()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer">✕</button>
+        </div>
+
+        <!-- Step 1: Campaign Type -->
+        <div style="margin-bottom:1.25rem">
+          <p style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;font-family:'Syne',sans-serif">Campaign Type</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+            <div id="ctype-single" onclick="setCampaignType('single')" style="padding:1rem;border:1px solid var(--red);background:var(--red-dim);cursor:pointer">
+              <p style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--text)">Single Workshop Promo</p>
+              <p style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem">Promote one specific workshop with poster, slots and pricing</p>
+            </div>
+            <div id="ctype-weekly" onclick="setCampaignType('weekly')" style="padding:1rem;border:1px solid var(--border);background:var(--bg3);cursor:pointer">
+              <p style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--text)">Weekly Workshops Blast</p>
+              <p style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem">Send all upcoming workshops this week in one message</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Workshop Picker (single only) -->
+        <div id="cWorkshopPicker" style="margin-bottom:1.25rem">
+          <p style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;font-family:'Syne',sans-serif">Select Workshop</p>
+          <select id="cWorkshopSelect" onchange="onCampaignWorkshopChange()" style="width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;appearance:none">
+            <option value="">— Choose a workshop —</option>
+          </select>
+        </div>
+
+        <!-- Step 3: Poster Upload -->
+        <div style="margin-bottom:1.25rem">
+          <p style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;font-family:'Syne',sans-serif">Header Image (Poster)</p>
+          <div style="display:flex;align-items:center;gap:1rem">
+            <label class="btn btn-outline btn-sm" style="cursor:pointer">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload Image
+              <input type="file" id="cPosterFile" accept="image/*" style="display:none" onchange="onCampaignPosterChange(this)">
+            </label>
+            <span id="cPosterName" style="font-size:0.78rem;color:var(--muted)">No image selected</span>
+            <img id="cPosterPreview" src="" style="display:none;width:48px;height:48px;object-fit:cover;border:1px solid var(--border)">
+          </div>
+        </div>
+
+        <!-- Step 4: Audience Builder -->
+        <div style="margin-bottom:1.25rem">
+          <p style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;font-family:'Syne',sans-serif">Audience</p>
+          <div style="display:grid;gap:0.5rem;margin-bottom:0.75rem">
+
+            <label style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.85rem;background:var(--bg3);border:1px solid var(--border2);cursor:pointer">
+              <input type="radio" name="cAudience" value="artist_prev" onchange="buildAudience()" style="accent-color:var(--red)">
+              <div>
+                <p style="font-size:0.82rem;color:var(--text);font-weight:500">Attended this artist before</p>
+                <p style="font-size:0.7rem;color:var(--muted)">Students who've done a workshop with this artist — highest intent</p>
+              </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.85rem;background:var(--bg3);border:1px solid var(--border2);cursor:pointer">
+              <input type="radio" name="cAudience" value="never_artist" onchange="buildAudience()" style="accent-color:var(--red)">
+              <div>
+                <p style="font-size:0.82rem;color:var(--text);font-weight:500">Never attended this artist</p>
+                <p style="font-size:0.7rem;color:var(--muted)">Introduce a new artist to existing students</p>
+              </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.85rem;background:var(--bg3);border:1px solid var(--border2);cursor:pointer">
+              <input type="radio" name="cAudience" value="last30" onchange="buildAudience()" style="accent-color:var(--red)">
+              <div>
+                <p style="font-size:0.82rem;color:var(--text);font-weight:500">Active in last 30 days</p>
+                <p style="font-size:0.7rem;color:var(--muted)">Students who registered for any workshop in the last month</p>
+              </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.85rem;background:var(--bg3);border:1px solid var(--border2);cursor:pointer">
+              <input type="radio" name="cAudience" value="last60" onchange="buildAudience()" style="accent-color:var(--red)">
+              <div>
+                <p style="font-size:0.82rem;color:var(--text);font-weight:500">Active in last 60 days</p>
+                <p style="font-size:0.7rem;color:var(--muted)">Slightly colder but still engaged audience</p>
+              </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.85rem;background:var(--bg3);border:1px solid var(--border2);cursor:pointer">
+              <input type="radio" name="cAudience" value="all" onchange="buildAudience()" style="accent-color:var(--red)">
+              <div>
+                <p style="font-size:0.82rem;color:var(--text);font-weight:500">All registered students</p>
+                <p style="font-size:0.7rem;color:var(--muted)">Everyone who has ever registered — use sparingly</p>
+              </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.85rem;background:var(--bg3);border:1px solid var(--border2);cursor:pointer">
+              <input type="radio" name="cAudience" value="custom" onchange="buildAudience()" style="accent-color:var(--red)">
+              <div style="width:100%">
+                <p style="font-size:0.82rem;color:var(--text);font-weight:500">Custom list</p>
+                <p style="font-size:0.7rem;color:var(--muted)">Paste phone numbers manually, one per line</p>
+                <textarea id="cCustomPhones" placeholder="+919876543210&#10;+919123456789" rows="3"
+                  style="display:none;width:100%;margin-top:0.5rem;background:var(--bg2);border:1px solid var(--border2);padding:0.5rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.78rem;outline:none;resize:vertical"
+                  oninput="buildAudience()"></textarea>
+              </div>
+            </label>
+
+          </div>
+
+          <!-- Audience count + cost estimate -->
+          <div id="cAudienceStats" style="display:none;padding:0.75rem 1rem;background:rgba(245,230,66,0.06);border:1px solid rgba(245,230,66,0.2)">
+            <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">
+              <div><p style="font-size:0.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em">Recipients</p><p id="cAudienceCount" style="font-size:1.1rem;font-family:'Bebas Neue',sans-serif;color:var(--yellow)">0</p></div>
+              <div><p style="font-size:0.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em">Est. Cost</p><p id="cAudienceCost" style="font-size:1.1rem;font-family:'Bebas Neue',sans-serif;color:var(--yellow)">₹0</p></div>
+              <div><p style="font-size:0.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em">Template</p><p id="cAudienceTemplate" style="font-size:0.78rem;color:var(--text);font-family:'DM Sans',sans-serif">—</p></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 5: Message Preview -->
+        <div id="cPreviewWrap" style="display:none;margin-bottom:1.25rem">
+          <p style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;font-family:'Syne',sans-serif">Message Preview</p>
+          <div style="background:var(--bg3);border:1px solid var(--border);padding:1rem;max-width:360px">
+            <div id="cPosterThumb" style="display:none;margin-bottom:0.75rem">
+              <img id="cPosterThumbImg" src="" style="width:100%;max-height:200px;object-fit:cover">
+            </div>
+            <p id="cPreviewText" style="font-size:0.82rem;color:var(--text);line-height:1.6;white-space:pre-wrap;font-family:'DM Sans',sans-serif"></p>
+            <div id="cPreviewBtn" style="display:none;margin-top:0.75rem;padding:0.5rem;background:rgba(255,255,255,0.05);border:1px solid var(--border2);text-align:center;font-size:0.75rem;color:var(--red);font-weight:600">🔗 Book Now</div>
+          </div>
+        </div>
+
+        <!-- Send Button -->
+        <div style="display:flex;gap:0.75rem;align-items:center">
+          <button id="cSendBtn" onclick="sendCampaign()" class="btn btn-red" style="opacity:0.4;pointer-events:none">
+            <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send Campaign
+          </button>
+          <span id="cSendStatus" style="font-size:0.78rem;color:var(--muted)"></span>
+        </div>
+      </div>
+
+      <!-- CAMPAIGN HISTORY -->
+      <div>
+        <p style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem;font-family:'Syne',sans-serif">Campaign History</p>
+        <div id="campaignHistory" style="font-size:0.82rem;color:var(--muted)">No campaigns sent yet.</div>
+      </div>
     </div>
 
     <!-- GALLERY MANAGEMENT -->
@@ -2141,6 +2297,7 @@ window.showView = function(id){
   document.querySelectorAll('.nav-item').forEach(n=>{
     if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+id+"'")) n.classList.add('active');
   });
+  if(id==='marketing')      renderMarketing();
   if(id==='abouteditor') loadAboutContent();
   if(id==='batches')     renderBatchesView();
   if(id==='editbatches') renderEditBatches();
@@ -6948,6 +7105,314 @@ window.deleteBatch = async function(id, name){
    GALLERY MANAGEMENT
 ══════════════════════════════════════ */
 let galleryImages = [];
+
+/* ══════════════════════════════════════
+   WHATSAPP MARKETING
+══════════════════════════════════════ */
+let campaignType    = 'single';
+let campaignAudience= [];
+let campaignPosterB64 = null;
+let campaignHistory = [];
+
+function renderMarketing(){
+  // Stats
+  const totalStudents = [...new Set(registrations.map(r=>r.phone).filter(Boolean))].length;
+  const last30 = Date.now() - 30*24*60*60*1000;
+  const active30 = [...new Set(
+    registrations.filter(r=>parseAnyDate(r.timestamp)>=last30).map(r=>r.phone).filter(Boolean)
+  )].length;
+
+  document.getElementById('mktgStats').innerHTML = `
+    <div class="stat-card"><p class="stat-label">Total Students</p><p class="stat-val">${totalStudents}</p></div>
+    <div class="stat-card"><p class="stat-label">Active Last 30 Days</p><p class="stat-val">${active30}</p></div>
+    <div class="stat-card"><p class="stat-label">Campaigns Sent</p><p class="stat-val">${campaignHistory.length}</p></div>
+    <div class="stat-card"><p class="stat-label">Cost Per Send (Mktg)</p><p class="stat-val">₹1.09</p></div>`;
+
+  renderCampaignHistory();
+}
+
+window.openCampaignComposer = function(){
+  document.getElementById('campaignComposer').style.display='block';
+  // Populate workshop dropdown
+  const sel = document.getElementById('cWorkshopSelect');
+  const active = workshops.filter(w=>w.status==='active'||w.status==='full');
+  sel.innerHTML = '<option value="">— Choose a workshop —</option>'
+    + active.map(w=>`<option value="${w.id}">${w.artist}${w.dateFrom?' · '+w.dateFrom:''}</option>`).join('');
+  setCampaignType('single');
+};
+
+window.closeCampaignComposer = function(){
+  document.getElementById('campaignComposer').style.display='none';
+  campaignPosterB64 = null;
+  document.getElementById('cPosterFile').value='';
+  document.getElementById('cPosterName').textContent='No image selected';
+  document.getElementById('cPosterPreview').style.display='none';
+  document.getElementById('cAudienceStats').style.display='none';
+  document.getElementById('cPreviewWrap').style.display='none';
+  document.querySelectorAll('input[name="cAudience"]').forEach(r=>r.checked=false);
+  document.getElementById('cSendBtn').style.opacity='0.4';
+  document.getElementById('cSendBtn').style.pointerEvents='none';
+  document.getElementById('cSendStatus').textContent='';
+};
+
+window.setCampaignType = function(type){
+  campaignType = type;
+  const single  = document.getElementById('ctype-single');
+  const weekly  = document.getElementById('ctype-weekly');
+  const picker  = document.getElementById('cWorkshopPicker');
+  const redBorder = 'border:1px solid var(--red);background:var(--red-dim)';
+  const offBorder = 'border:1px solid var(--border);background:var(--bg3)';
+  single.style.cssText  = type==='single' ? redBorder+';padding:1rem;cursor:pointer' : offBorder+';padding:1rem;cursor:pointer';
+  weekly.style.cssText  = type==='weekly' ? redBorder+';padding:1rem;cursor:pointer' : offBorder+';padding:1rem;cursor:pointer';
+  picker.style.display  = type==='single' ? 'block' : 'none';
+  // For weekly, audience options that need artist are hidden
+  document.querySelectorAll('input[name="cAudience"]').forEach(r=>r.checked=false);
+  campaignAudience = [];
+  document.getElementById('cAudienceStats').style.display='none';
+  document.getElementById('cPreviewWrap').style.display='none';
+  if(type==='weekly') buildWeeklyPreview();
+};
+
+window.onCampaignWorkshopChange = function(){
+  buildAudience();
+  buildSinglePreview();
+};
+
+window.onCampaignPosterChange = function(input){
+  const file = input.files[0];
+  if(!file) return;
+  document.getElementById('cPosterName').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    campaignPosterB64 = e.target.result;
+    const prev = document.getElementById('cPosterPreview');
+    prev.src = campaignPosterB64;
+    prev.style.display = 'block';
+    const thumb = document.getElementById('cPosterThumbImg');
+    thumb.src = campaignPosterB64;
+    document.getElementById('cPosterThumb').style.display='block';
+    checkSendReady();
+  };
+  reader.readAsDataURL(file);
+};
+
+window.buildAudience = function(){
+  const type   = document.querySelector('input[name="cAudience"]:checked')?.value;
+  const wsId   = document.getElementById('cWorkshopSelect')?.value;
+  const ws     = workshops.find(w=>w.id===wsId);
+  const custom = document.getElementById('cCustomPhones');
+
+  // Show/hide custom textarea
+  custom.style.display = type==='custom' ? 'block' : 'none';
+
+  const now    = Date.now();
+  const day    = 24*60*60*1000;
+  let phones   = [];
+
+  if(type==='artist_prev' && ws){
+    phones = [...new Set(
+      registrations.filter(r=>r.workshop===ws.artist && r.phone).map(r=>r.phone)
+    )];
+  } else if(type==='never_artist' && ws){
+    const hadArtist = new Set(
+      registrations.filter(r=>r.workshop===ws.artist).map(r=>r.phone)
+    );
+    phones = [...new Set(
+      registrations.filter(r=>r.phone && !hadArtist.has(r.phone)).map(r=>r.phone)
+    )];
+  } else if(type==='last30'){
+    phones = [...new Set(
+      registrations.filter(r=>r.phone && parseAnyDate(r.timestamp)>=(now-30*day)).map(r=>r.phone)
+    )];
+  } else if(type==='last60'){
+    phones = [...new Set(
+      registrations.filter(r=>r.phone && parseAnyDate(r.timestamp)>=(now-60*day)).map(r=>r.phone)
+    )];
+  } else if(type==='all'){
+    phones = [...new Set(registrations.filter(r=>r.phone).map(r=>r.phone))];
+  } else if(type==='custom'){
+    phones = custom.value.split('\n').map(p=>p.trim()).filter(p=>p.length>=10);
+  }
+
+  campaignAudience = phones;
+  const templateName = campaignType==='single' ? 'ths_workshop_promo' : 'ths_weekly_workshops';
+  const cost = (phones.length * 1.09).toFixed(2); // Marketing rate
+
+  document.getElementById('cAudienceCount').textContent = phones.length;
+  document.getElementById('cAudienceCost').textContent  = '₹'+cost;
+  document.getElementById('cAudienceTemplate').textContent = templateName;
+  document.getElementById('cAudienceStats').style.display = phones.length ? 'block' : 'none';
+
+  checkSendReady();
+  if(campaignType==='single') buildSinglePreview();
+  else buildWeeklyPreview();
+};
+
+function buildSinglePreview(){
+  const wsId = document.getElementById('cWorkshopSelect').value;
+  const ws   = workshops.find(w=>w.id===wsId);
+  if(!ws) return;
+
+  const slots = (ws.slots||[]).filter(s=>!s.cancelled).map(s=>
+    [s.date, s.time, s.song?'♪ '+s.song:''].filter(Boolean).join(' · ')
+  ).join('\n');
+
+  const packages = (ws.packages||[]).map(p=>
+    `${p.name} — ₹${parseInt(p.price||0).toLocaleString('en-IN')}`
+  ).join('\n');
+
+  const preview = `Hey [Name]!\n\n*${ws.artist}* is coming to The Happening Space —\n\n${slots}\n\n${packages}\n\nSpots are limited. Grab yours now.\n\n— The Happening Space`;
+
+  document.getElementById('cPreviewText').textContent = preview;
+  document.getElementById('cPreviewBtn').style.display = 'block';
+  document.getElementById('cPreviewWrap').style.display = 'block';
+}
+
+function buildWeeklyPreview(){
+  const nextWeek = Date.now() + 7*24*60*60*1000;
+  const upcoming = workshops.filter(w=>{
+    if(w.status!=='active'&&w.status!=='full') return false;
+    if(!w.dateFrom) return true;
+    const d = new Date(w.dateFrom+'T00:00');
+    return d <= new Date(nextWeek);
+  });
+
+  const lines = upcoming.map(w=>{
+    const slot = (w.slots||[])[0];
+    return `${slot?.date||w.dateFrom||'TBA'} · ${w.artist}${slot?.time?' · '+slot.time:''}`;
+  }).join('\n');
+
+  const preview = `Hey [Name]!\n\nHere's what's coming up at The Happening Space this week —\n\n${lines||'No workshops yet'}\n\nSpots are limited. Book yours before they fill up.\n\n— The Happening Space`;
+
+  document.getElementById('cPreviewText').textContent = preview;
+  document.getElementById('cPreviewBtn').style.display = 'block';
+  document.getElementById('cPreviewWrap').style.display = 'block';
+}
+
+function checkSendReady(){
+  const hasAudience = campaignAudience.length > 0;
+  const hasPoster   = !!campaignPosterB64;
+  const hasWs       = campaignType==='weekly' || !!document.getElementById('cWorkshopSelect').value;
+  const ready       = hasAudience && hasPoster && hasWs;
+  const btn         = document.getElementById('cSendBtn');
+  btn.style.opacity       = ready ? '1' : '0.4';
+  btn.style.pointerEvents = ready ? 'auto' : 'none';
+}
+
+window.sendCampaign = async function(){
+  if(!campaignAudience.length){ showToast('No audience selected','error'); return; }
+  if(!campaignPosterB64){ showToast('Please upload a poster image','error'); return; }
+
+  const btn = document.getElementById('cSendBtn');
+  const status = document.getElementById('cSendStatus');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  // Read API key from Firestore
+  let apiKey = '';
+  try {
+    const snap = await getDoc(doc(db,'settings','aisensy'));
+    apiKey = snap.data()?.apiKey||'';
+  } catch(e){ showToast('Could not read AiSensy key from Firestore','error'); btn.disabled=false; btn.textContent='Send Campaign'; return; }
+
+  if(!apiKey){ showToast('AiSensy API key not configured','error'); btn.disabled=false; btn.textContent='Send Campaign'; return; }
+
+  const wsId = document.getElementById('cWorkshopSelect').value;
+  const ws   = workshops.find(w=>w.id===wsId);
+
+  let sent=0, failed=0;
+  const total = campaignAudience.length;
+
+  for(const phone of campaignAudience){
+    try {
+      // Build template params
+      let params = [];
+      const name = registrations.find(r=>r.phone===phone)?.name||'there';
+
+      if(campaignType==='single' && ws){
+        const slots = (ws.slots||[]).filter(s=>!s.cancelled).map(s=>
+          [s.date,s.time,s.song?'♪ '+s.song:''].filter(Boolean).join(' · ')
+        ).join('\n');
+        const packages = (ws.packages||[]).map(p=>`${p.name} — ₹${parseInt(p.price||0).toLocaleString('en-IN')}`).join('\n');
+        params = [name, ws.artist, slots, packages];
+      } else {
+        const nextWeek = Date.now()+7*24*60*60*1000;
+        const upcoming = workshops.filter(w=>(w.status==='active'||w.status==='full'));
+        const lines = upcoming.map(w=>{
+          const slot=(w.slots||[])[0];
+          return `${slot?.date||w.dateFrom||'TBA'} · ${w.artist}${slot?.time?' · '+slot.time:''}`;
+        }).join('\n');
+        params = [name, lines];
+      }
+
+      const templateName = campaignType==='single' ? 'ths_workshop_promo' : 'ths_weekly_workshops';
+
+      const res = await fetch('https://backend.aisensy.com/campaign/t1/api/v2',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          apiKey,
+          campaignName: templateName+'_'+Date.now(),
+          destination:  phone.replace(/\D/g,'').replace(/^0/,'91').replace(/^(?!91)/,'91'),
+          userName:     'The Happening Space',
+          templateParams: params,
+          media:{ url: campaignPosterB64.startsWith('data:') ? '' : campaignPosterB64, filename:'poster.jpg' },
+          source: 'admin-panel',
+        })
+      });
+      const data = await res.json();
+      if(data.status==='success'||res.ok) sent++;
+      else failed++;
+    } catch(e){ failed++; }
+
+    status.textContent = `Sending… ${sent+failed}/${total}`;
+    await new Promise(r=>setTimeout(r,150)); // rate limit
+  }
+
+  // Save to campaign history
+  const record = {
+    date:     new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
+    type:     campaignType==='single'?`Promo — ${ws?.artist||''}` : 'Weekly Blast',
+    template: campaignType==='single' ? 'ths_workshop_promo' : 'ths_weekly_workshops',
+    total, sent, failed,
+  };
+  campaignHistory.unshift(record);
+  try { await setDoc(doc(db,'settings','campaignHistory'),{history: campaignHistory.slice(0,50)},{merge:true}); } catch(e){}
+
+  status.textContent = `Done — ${sent} sent, ${failed} failed`;
+  btn.disabled = false;
+  btn.textContent = 'Send Campaign';
+  showToast(`Campaign sent to ${sent} students ✓`);
+  renderCampaignHistory();
+};
+
+async function renderCampaignHistory(){
+  // Load from Firestore if empty
+  if(!campaignHistory.length){
+    try {
+      const snap = await getDoc(doc(db,'settings','campaignHistory'));
+      campaignHistory = snap.data()?.history||[];
+    } catch(e){}
+  }
+
+  const el = document.getElementById('campaignHistory');
+  if(!el) return;
+  if(!campaignHistory.length){ el.innerHTML='<p style="color:var(--muted);font-size:0.82rem">No campaigns sent yet.</p>'; return; }
+
+  el.innerHTML = `<table class="data-table">
+    <thead><tr><th>Date</th><th>Campaign</th><th>Template</th><th>Sent</th><th>Failed</th><th>Total</th></tr></thead>
+    <tbody>${campaignHistory.map(c=>`
+      <tr>
+        <td style="font-size:0.75rem">${c.date}</td>
+        <td>${c.type}</td>
+        <td><span class="pill pill-blue" style="font-size:0.58rem">${c.template}</span></td>
+        <td style="color:var(--green)">${c.sent}</td>
+        <td style="color:#e57373">${c.failed||0}</td>
+        <td>${c.total}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
 
 window.renderGallery = async function(){
   try {
