@@ -664,9 +664,17 @@ tr:hover td{background:rgba(255,255,255,0.02)}
             </label>
 
             <label style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.85rem;background:var(--bg3);border:1px solid var(--border2);cursor:pointer">
+              <input type="radio" name="cAudience" value="batch_only" onchange="buildAudience()" style="accent-color:var(--red)">
+              <div>
+                <p style="font-size:0.82rem;color:var(--text);font-weight:500">Regular batch students only</p>
+                <p style="font-size:0.7rem;color:var(--muted)">Students enrolled in Mon–Wed regular batches</p>
+              </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.85rem;background:var(--bg3);border:1px solid var(--border2);cursor:pointer">
               <input type="radio" name="cAudience" value="all" onchange="buildAudience()" style="accent-color:var(--red)">
               <div>
-                <p style="font-size:0.82rem;color:var(--text);font-weight:500">All registered students</p>
+                <p style="font-size:0.82rem;color:var(--text);font-weight:500">All students (workshops + batches)</p>
                 <p style="font-size:0.7rem;color:var(--muted)">Everyone who has ever registered — use sparingly</p>
               </div>
             </label>
@@ -7116,17 +7124,22 @@ let campaignHistory = [];
 
 function renderMarketing(){
   // Stats
-  const totalStudents = [...new Set(registrations.map(r=>r.phone).filter(Boolean))].length;
+  const totalStudents = [...new Set([
+    ...registrations.map(r=>r.phone),
+    ...batchStudents.map(s=>s.phone)
+  ].filter(Boolean))].length;
   const last30 = Date.now() - 30*24*60*60*1000;
-  const active30 = [...new Set(
-    registrations.filter(r=>parseAnyDate(r.timestamp)>=last30).map(r=>r.phone).filter(Boolean)
-  )].length;
+  const active30 = [...new Set([
+    ...registrations.filter(r=>parseAnyDate(r.timestamp)>=last30).map(r=>r.phone),
+    ...batchStudents.filter(s=>parseAnyDate(s.enrolledAt||s.timestamp)>=last30).map(s=>s.phone)
+  ].filter(Boolean))].length;
+  const batchCount = [...new Set(batchStudents.filter(s=>s.phone).map(s=>s.phone))].length;
 
   document.getElementById('mktgStats').innerHTML = `
     <div class="stat-card"><p class="stat-label">Total Students</p><p class="stat-val">${totalStudents}</p></div>
+    <div class="stat-card"><p class="stat-label">Batch Students</p><p class="stat-val">${batchCount}</p></div>
     <div class="stat-card"><p class="stat-label">Active Last 30 Days</p><p class="stat-val">${active30}</p></div>
-    <div class="stat-card"><p class="stat-label">Campaigns Sent</p><p class="stat-val">${campaignHistory.length}</p></div>
-    <div class="stat-card"><p class="stat-label">Cost Per Send (Mktg)</p><p class="stat-val">₹1.09</p></div>`;
+    <div class="stat-card"><p class="stat-label">Campaigns Sent</p><p class="stat-val">${campaignHistory.length}</p></div>`;
 
   renderCampaignHistory();
 }
@@ -7221,15 +7234,21 @@ window.buildAudience = function(){
       registrations.filter(r=>r.phone && !hadArtist.has(r.phone)).map(r=>r.phone)
     )];
   } else if(type==='last30'){
-    phones = [...new Set(
-      registrations.filter(r=>r.phone && parseAnyDate(r.timestamp)>=(now-30*day)).map(r=>r.phone)
-    )];
+    const cutoff = now - 30*day;
+    const wsPhones    = registrations.filter(r=>r.phone && parseAnyDate(r.timestamp)>=cutoff).map(r=>r.phone);
+    const batchPhones = batchStudents.filter(s=>s.phone && parseAnyDate(s.enrolledAt||s.timestamp)>=cutoff).map(s=>s.phone);
+    phones = [...new Set([...wsPhones,...batchPhones])];
   } else if(type==='last60'){
-    phones = [...new Set(
-      registrations.filter(r=>r.phone && parseAnyDate(r.timestamp)>=(now-60*day)).map(r=>r.phone)
-    )];
+    const cutoff = now - 60*day;
+    const wsPhones    = registrations.filter(r=>r.phone && parseAnyDate(r.timestamp)>=cutoff).map(r=>r.phone);
+    const batchPhones = batchStudents.filter(s=>s.phone && parseAnyDate(s.enrolledAt||s.timestamp)>=cutoff).map(s=>s.phone);
+    phones = [...new Set([...wsPhones,...batchPhones])];
+  } else if(type==='batch_only'){
+    phones = [...new Set(batchStudents.filter(s=>s.phone).map(s=>s.phone))];
   } else if(type==='all'){
-    phones = [...new Set(registrations.filter(r=>r.phone).map(r=>r.phone))];
+    const wsPhones    = registrations.filter(r=>r.phone).map(r=>r.phone);
+    const batchPhones = batchStudents.filter(s=>s.phone).map(s=>s.phone);
+    phones = [...new Set([...wsPhones,...batchPhones])];
   } else if(type==='custom'){
     phones = custom.value.split('\n').map(p=>p.trim()).filter(p=>p.length>=10);
   }
