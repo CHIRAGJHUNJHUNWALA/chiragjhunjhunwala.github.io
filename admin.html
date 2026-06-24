@@ -14,6 +14,12 @@
   --text:#f0ede6;--muted:rgba(240,237,230,0.4);--mid:rgba(240,237,230,0.65);
   --yellow:#f5e642;--green:#5cb87a;--orange:#e8863a;
 }
+body.light-mode{
+  --black:#e8e8e6;--bg:#f4f3f0;--bg2:#ffffff;--bg3:#eceae6;
+  --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.15);
+  --text:#1a1a1a;--muted:rgba(20,20,20,0.45);--mid:rgba(20,20,20,0.65);
+  --red-dim:rgba(188,31,46,0.07);
+}
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-weight:300;min-height:100vh}
 
@@ -362,6 +368,11 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
     </nav>
     <div class="sidebar-footer">
+      <!-- Theme toggle -->
+      <button id="themeToggle" onclick="toggleTheme()" style="display:flex;align-items:center;gap:0.6rem;width:100%;background:none;border:none;color:var(--muted);font-size:0.78rem;cursor:pointer;font-family:'DM Sans',sans-serif;padding:0;margin-bottom:0.75rem;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+        <span id="themeIcon" style="font-size:0.95rem">🌙</span>
+        <span id="themeLabel">Light Mode</span>
+      </button>
       <button class="logout-btn" onclick="doLogout()">
         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log Out
       </button>
@@ -2208,6 +2219,27 @@ window.adminBackToPhone = function(){
   document.getElementById('adminPhoneInput').focus();
   adminConfirmationResult = null;
 };
+
+window.toggleTheme = function(){
+  const isLight = document.body.classList.toggle('light-mode');
+  localStorage.setItem('ths_theme', isLight ? 'light' : 'dark');
+  document.getElementById('themeIcon').textContent  = isLight ? '☀️' : '🌙';
+  document.getElementById('themeLabel').textContent = isLight ? 'Dark Mode' : 'Light Mode';
+};
+
+// Apply saved theme on load
+(function(){
+  const saved = localStorage.getItem('ths_theme');
+  if(saved==='light'){
+    document.body.classList.add('light-mode');
+    document.addEventListener('DOMContentLoaded',()=>{
+      const icon  = document.getElementById('themeIcon');
+      const label = document.getElementById('themeLabel');
+      if(icon)  icon.textContent  = '☀️';
+      if(label) label.textContent = 'Dark Mode';
+    });
+  }
+})();
 
 window.doLogout = async function(){
   try { await signOut(auth); } catch(e){}
