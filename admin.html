@@ -5858,17 +5858,22 @@ window.renderCheckinsView = function(){
       `<button class="filter-tab ${checkinSlot===s.id?'active':''}" onclick="selectCheckinSlot('${s.id}')">${s.song?'♪ '+s.song:('Slot '+(i+1))} · ${s.time}</button>`
     ).join('');
 
-  // Filter by slot — match by slot date exactly
+  // Filter by slot
   let filtered = wsRegs;
   if(checkinSlot!=='all'){
     const slot = slots.find(s=>s.id===checkinSlot);
     if(slot){
-      // Student must have booked this specific slot
-      // slots field format: "Saturday 7 Jun · 11am | Sunday 8 Jun · 3pm"
-      // We split by | and check if any part contains the slot date
       filtered = wsRegs.filter(r=>{
+        // Most reliable: check checkedInSlots map by slot id
+        if(r.checkedInSlots && r.checkedInSlots[slot.id]) return true;
+        // Text match against stored slots label
         const studentSlots = (r.slots||'').split('|').map(s=>s.trim());
-        return studentSlots.some(s=>s.includes(slot.date));
+        return studentSlots.some(s=>{
+          if(slot.song && s.toLowerCase().includes(slot.song.toLowerCase())) return true;
+          if(slot.date && s.includes(slot.date)) return true;
+          if(slot.time && s.includes(slot.time)) return true;
+          return false;
+        });
       });
     }
   }
