@@ -789,6 +789,18 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <!-- Batch summary cards -->
       <div class="stats-grid" id="batchSummaryStats"></div>
 
+      <!-- NEW STUDENTS from website enquiries -->
+      <div id="newStudentsSection" style="margin-bottom:1.5rem;display:none">
+        <div style="padding:0.6rem 1rem;background:rgba(245,230,66,0.08);border:1px solid rgba(245,230,66,0.25);border-bottom:none;display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:0.6rem">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--yellow);display:inline-block"></span>
+            <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--yellow);font-family:'Syne',sans-serif" id="newStudentsLabel">New Students</span>
+          </div>
+          <span style="font-size:0.65rem;color:var(--muted)">Enrolled from website · Payment pending</span>
+        </div>
+        <div id="newStudentsList" style="border:1px solid rgba(245,230,66,0.2)"></div>
+      </div>
+
       <!-- Batch filter tabs -->
       <div class="filter-tabs" id="adminBatchTabs"></div>
 
@@ -5715,6 +5727,9 @@ function renderBatchesView(){
     <div class="stat-card"><p class="stat-label">Total Fees</p><p class="stat-val green">₹${revenue.toLocaleString('en-IN')}</p></div>
   `;
 
+  // Load + render new student enquiries
+  renderBatchEnquiries();
+
   document.getElementById('adminBatchTabs').innerHTML =
     `<button class="filter-tab ${currentAdminBatch==='all'?'active':''}" onclick="filterAdminBatch('all',this)">All Batches</button>`
     + BATCHES_CONFIG.map(b=>`<button class="filter-tab ${currentAdminBatch===b.id?'active':''}" onclick="filterAdminBatch('${b.id}',this)">${b.name} · ${b.time}</button>`).join('');
@@ -5763,6 +5778,97 @@ function renderBatchesView(){
     ? inactiveData.map(s=>rowHTML(s,true)).join('')
     : '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:2rem">No expired students</td></tr>';
 }
+
+/* ══════════════════════════════════════
+   BATCH ENQUIRIES — NEW STUDENTS
+══════════════════════════════════════ */
+async function renderBatchEnquiries(){
+  const section = document.getElementById('newStudentsSection');
+  const list    = document.getElementById('newStudentsList');
+  if(!section||!list) return;
+  try {
+    const snap = await getDocs(collection(db,'batchEnquiries'));
+    const enquiries = snap.docs
+      .map(d=>({id:d.id,...d.data()}))
+      .filter(e=>e.status==='pending')
+      .sort((a,b)=>(a.joinDate||'').localeCompare(b.joinDate||''));
+
+    if(!enquiries.length){ section.style.display='none'; return; }
+
+    section.style.display = 'block';
+    document.getElementById('newStudentsLabel').textContent = `New Students · ${enquiries.length}`;
+
+    list.innerHTML = enquiries.map(e=>`
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:1rem;align-items:center;padding:0.85rem 1rem;border-bottom:1px solid rgba(255,255,255,0.05);background:rgba(245,230,66,0.03)">
+        <div>
+          <p style="font-weight:500;color:var(--text);font-size:0.85rem">${e.name||'—'}</p>
+          <p style="font-size:0.72rem;color:var(--muted)">${e.phone||'—'}</p>
+        </div>
+        <div>
+          <p style="font-size:0.78rem;color:var(--text)">${e.batchName||'—'}</p>
+          <p style="font-size:0.7rem;color:var(--muted)">${e.time||''}</p>
+        </div>
+        <div>
+          <span class="pill ${e.plan==='Monthly'?'pill-blue':'pill-yellow'}" style="font-size:0.6rem">${e.plan||'—'}</span>
+          ${e.fee?`<span style="font-size:0.72rem;color:var(--yellow);margin-left:0.4rem">₹${parseFloat(e.fee).toLocaleString('en-IN')}</span>`:''}
+        </div>
+        <div>
+          <p style="font-size:0.72rem;color:var(--muted)">Joining</p>
+          <p style="font-size:0.82rem;color:var(--text)">${e.joinDate||'—'}</p>
+        </div>
+        <div style="display:flex;gap:0.4rem;flex-shrink:0">
+          <button class="btn btn-sm btn-red" onclick="convertEnquiry('${e.id}')" title="Convert to student">
+            Convert
+          </button>
+          <button class="btn btn-sm btn-ghost" onclick="dismissEnquiry('${e.id}')" title="Dismiss" style="color:#e57373;border-color:rgba(229,115,115,0.3)">✕</button>
+        </div>
+      </div>`).join('');
+
+  } catch(err){ console.warn('Could not load enquiries:',err); section.style.display='none'; }
+}
+
+window.convertEnquiry = async function(enquiryId){
+  // Load the enquiry
+  try {
+    const snap = await getDoc(doc(db,'batchEnquiries',enquiryId));
+    if(!snap.exists()) return;
+    const e = snap.data();
+
+    // Find the matching batchId in BATCHES_CONFIG
+    const batch = BATCHES_CONFIG.find(b=>b.id===e.batchId || b.name===e.batchName);
+
+    // Pre-fill the Add Student modal
+    document.getElementById('studentModalTitle').textContent = 'Convert Enquiry → Student';
+    document.getElementById('editStudentId').value = '';
+
+    document.getElementById('sName').value      = e.name||'';
+    document.getElementById('sPhone').value     = (e.phone||'').replace(/^\+91/,'').replace(/\D/g,'');
+    document.getElementById('sFee').value       = e.fee||'';
+    document.getElementById('sNotes').value     = `Enrolled via website · ${e.plan||''}`;
+    document.getElementById('sJoinDate').value  = e.joinDate||'';
+    document.getElementById('sSubscription').value = e.plan==='Weekly'?'Weekly':'Monthly';
+    document.getElementById('sStatus').value    = 'Active';
+    document.getElementById('sPayMode').value   = 'Cash';
+    document.getElementById('sDaysAttended').value = '';
+
+    const sel = document.getElementById('sBatch');
+    sel.innerHTML = BATCHES_CONFIG.map(b=>`<option value="${b.id}" ${b.id===e.batchId?'selected':''}>${b.name} · ${b.time}</option>`).join('');
+
+    // Store enquiry ID so saveStudent can dismiss it after saving
+    window._convertingEnquiryId = enquiryId;
+
+    openModal('studentModal');
+  } catch(err){ showToast('Could not load enquiry','error'); }
+};
+
+window.dismissEnquiry = async function(enquiryId){
+  if(!confirm('Dismiss this enquiry?')) return;
+  try {
+    await updateDoc(doc(db,'batchEnquiries',enquiryId),{status:'dismissed'});
+    renderBatchEnquiries();
+    showToast('Enquiry dismissed');
+  } catch(e){ showToast('Failed to dismiss','error'); }
+};
 
 window.filterAdminBatch = function(id, el){
   currentAdminBatch = id;
