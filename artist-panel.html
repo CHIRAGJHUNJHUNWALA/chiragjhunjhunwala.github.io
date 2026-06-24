@@ -395,22 +395,26 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 </div>
 
 <!-- WEEKLY SONG MODAL -->
-<div class="modal-backdrop" id="songModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:none;align-items:center;justify-content:center;padding:1rem">
-  <div style="background:var(--bg2);border:1px solid var(--border);padding:1.5rem;width:100%;max-width:420px;position:relative">
-    <button onclick="closeSongModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer">✕</button>
-    <p style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:0.25rem;color:var(--text)">Set This Week's Song</p>
-    <p id="songModalWeekLabel" style="font-size:0.72rem;color:var(--muted);margin-bottom:1.25rem"></p>
-    <div style="margin-bottom:0.85rem">
-      <label style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:0.35rem;font-family:'Syne',sans-serif">Song Name *</label>
-      <input id="songNameInput" type="text" placeholder="e.g. Kesariya" style="width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none">
+<div class="modal-backdrop" id="songModal">
+  <div class="modal" style="max-width:420px;width:100%">
+    <div class="modal-head">
+      <h2 class="modal-title">Set This Week's Song</h2>
+      <p id="songModalWeekLabel" style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem"></p>
+      <button class="modal-close" onclick="closeSongModal()">✕</button>
     </div>
-    <div style="margin-bottom:1.25rem">
-      <label style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:0.35rem;font-family:'Syne',sans-serif">Film / Album <span style="font-weight:300;text-transform:none">(optional)</span></label>
-      <input id="songFilmInput" type="text" placeholder="e.g. Brahmastra" style="width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none">
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Song Name *</label>
+        <input id="songNameInput" type="text" placeholder="e.g. Kesariya" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>Film / Album <span style="font-weight:300;color:var(--muted);font-size:0.75em">(optional)</span></label>
+        <input id="songFilmInput" type="text" placeholder="e.g. Brahmastra" class="form-input">
+      </div>
     </div>
-    <div style="display:flex;gap:0.75rem">
-      <button onclick="saveSong()" style="flex:1;background:var(--yellow);color:#000;border:none;padding:0.85rem;font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer">Save Song</button>
-      <button onclick="closeSongModal()" style="background:none;border:1px solid var(--border2);color:var(--muted);padding:0.85rem 1.25rem;font-family:'Syne',sans-serif;font-size:0.8rem;cursor:pointer">Cancel</button>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeSongModal()">Cancel</button>
+      <button class="btn btn-red" onclick="saveSong()">Save Song</button>
     </div>
   </div>
 </div>
@@ -1520,11 +1524,11 @@ window.openSongModal = function(){
   document.getElementById('songModalWeekLabel').textContent = 'Week of ' + weekLabel;
   document.getElementById('songNameInput').value = currentWeeklySong?.song || '';
   document.getElementById('songFilmInput').value = currentWeeklySong?.film || '';
-  document.getElementById('songModal').style.display = 'flex';
+  openModal('songModal');
 };
 
 window.closeSongModal = function(){
-  document.getElementById('songModal').style.display = 'none';
+  closeModal('songModal');
 };
 
 window.saveSong = async function(){
