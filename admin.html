@@ -323,6 +323,11 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit Batches
       </div>
       <div class="nav-section-title">Studio</div>
+      <div class="nav-item" onclick="showView('studioEnquiries')" id="nav-studioEnquiries">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Enquiries
+        <span id="enquiryBadge" style="display:none;background:var(--red);color:#fff;font-size:0.55rem;font-weight:700;padding:0.15rem 0.45rem;border-radius:10px;margin-left:auto;font-family:'Syne',sans-serif">0</span>
+      </div>
       <div class="nav-item" onclick="showView('schedule')">
         <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Schedule
       </div>
@@ -950,6 +955,19 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <!-- Summary cards -->
       <div id="expenseSummary" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem"></div>
       <div id="expenseList"></div>
+    </div>
+
+    <!-- STUDIO ENQUIRIES -->
+    <div class="view" id="view-studioEnquiries">
+      <div class="page-header">
+        <div><h1 class="page-title">Studio Enquiries</h1><p class="page-sub">Booking requests from the website</p></div>
+        <div style="display:flex;gap:0.5rem">
+          <button class="filter-tab active" onclick="filterEnquiries('pending',this)">Pending</button>
+          <button class="filter-tab" onclick="filterEnquiries('approved',this)">Approved</button>
+          <button class="filter-tab" onclick="filterEnquiries('rejected',this)">Rejected</button>
+        </div>
+      </div>
+      <div id="enquiriesGrid" style="display:flex;flex-direction:column;gap:0.75rem"></div>
     </div>
 
     <!-- STUDIO SCHEDULE -->
@@ -2360,6 +2378,7 @@ window.showView = function(id){
   if(id==='payments')        renderAllPayments();
   if(id==='analysis')        renderAnalysis();
   if(id==='artistanalysis')  renderArtistAnalysis();
+  if(id==='studioEnquiries') renderStudioEnquiries();
   if(id==='schedule')  { goScheduleToday(); }
   if(id==='schedule'){
     renderSchedule();
@@ -6202,6 +6221,219 @@ function initAboutEditor(data){
     const dsc=document.getElementById('hf'+n+'desc'); if(dsc) dsc.value=f.desc||defaultFeatures[i].desc||'';
   });
 }
+
+/* ══════════════════════════════════════
+   STUDIO ENQUIRIES
+══════════════════════════════════════ */
+let studioEnquiries   = [];
+let enquiriesFilter   = 'pending';
+
+// Live listener — also updates badge
+onSnapshot(collection(db,'studioEnquiries'), snap=>{
+  studioEnquiries = snap.docs.map(d=>({id:d.id,...d.data()}))
+    .sort((a,b)=>a.date?.localeCompare(b.date||'')||0);
+  // Update pending badge
+  const pending = studioEnquiries.filter(e=>e.status==='pending').length;
+  const badge   = document.getElementById('enquiryBadge');
+  if(badge){
+    badge.textContent    = pending;
+    badge.style.display  = pending>0 ? 'inline' : 'none';
+  }
+  if(document.getElementById('view-studioEnquiries')?.classList.contains('active')){
+    renderStudioEnquiries();
+  }
+});
+
+window.filterEnquiries = function(status, el){
+  enquiriesFilter = status;
+  document.querySelectorAll('#view-studioEnquiries .filter-tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  renderStudioEnquiries();
+};
+
+function renderStudioEnquiries(){
+  const grid = document.getElementById('enquiriesGrid');
+  if(!grid) return;
+  const filtered = studioEnquiries.filter(e=>e.status===enquiriesFilter);
+
+  if(!filtered.length){
+    grid.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--muted);border:1px dashed var(--border)">No ${enquiriesFilter} enquiries.</div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(e=>`
+    <div style="background:var(--bg2);border:1px solid ${e.status==='pending'?'rgba(245,230,66,0.2)':e.status==='approved'?'rgba(92,184,122,0.2)':'rgba(229,115,115,0.2)'};padding:1.25rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:1rem;align-items:start;flex-wrap:wrap">
+
+        <div>
+          <p style="font-weight:600;color:var(--text);font-size:0.9rem">${e.name||'—'}</p>
+          <p style="font-size:0.75rem;color:var(--muted)">${e.phone||'—'}</p>
+          ${e.timestamp?`<p style="font-size:0.65rem;color:var(--muted);margin-top:0.25rem">${e.timestamp}</p>`:''}
+        </div>
+
+        <div>
+          <p style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.25rem">Date & Time</p>
+          <p style="font-size:0.82rem;color:var(--text)">${e.date||'—'}</p>
+          <p style="font-size:0.75rem;color:var(--muted)">${e.timeFrom||''}${e.timeTo?' – '+e.timeTo:''} · ${e.hours||'?'} hr${e.hours>1?'s':''}</p>
+        </div>
+
+        <div>
+          <p style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.25rem">Purpose</p>
+          <p style="font-size:0.82rem;color:var(--text)">${e.purpose||'—'}</p>
+          ${e.people?`<p style="font-size:0.72rem;color:var(--muted)">${e.people} people</p>`:''}
+          ${e.notes?`<p style="font-size:0.7rem;color:var(--muted);margin-top:0.25rem;font-style:italic">"${e.notes}"</p>`:''}
+        </div>
+
+        <div>
+          <p style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.25rem">Est. Price</p>
+          <p style="font-size:0.9rem;color:var(--yellow);font-family:'Bebas Neue',sans-serif;letter-spacing:0.04em">${e.estimatedPrice||'—'}</p>
+          <span class="pill ${e.status==='pending'?'pill-yellow':e.status==='approved'?'pill-green':'pill-orange'}" style="font-size:0.58rem;margin-top:0.35rem;display:inline-block">${e.status}</span>
+          ${e.conflictWarning?`<p style="font-size:0.65rem;color:#e57373;margin-top:0.3rem">⚠ ${e.conflictWarning}</p>`:''}
+        </div>
+
+        ${e.status==='pending'?`
+        <div style="display:flex;flex-direction:column;gap:0.5rem;flex-shrink:0">
+          <button class="btn btn-sm btn-red" onclick="openApproveEnquiry('${e.id}')">✓ Approve</button>
+          <button class="btn btn-sm btn-ghost" onclick="rejectEnquiry('${e.id}')" style="color:#e57373;border-color:rgba(229,115,115,0.3)">✕ Reject</button>
+        </div>`:`
+        <div style="flex-shrink:0">
+          ${e.status==='approved'?`<button class="btn btn-sm btn-ghost" onclick="undoEnquiry('${e.id}')">Undo</button>`:''}
+        </div>`}
+
+      </div>
+    </div>`).join('');
+}
+
+// ── APPROVE MODAL ────────────────────────────────────
+let _approvingEnquiryId = null;
+
+window.openApproveEnquiry = async function(id){
+  _approvingEnquiryId = id;
+  const e = studioEnquiries.find(x=>x.id===id);
+  if(!e) return;
+
+  // Check for conflicts
+  const conflicts = studioEnquiries.filter(x=>
+    x.id !== id && x.status==='approved' && x.date===e.date &&
+    x.timeFrom < e.timeTo && x.timeTo > e.timeFrom
+  );
+  const schedConflicts = scheduleEntries.filter(s=>
+    s.date===e.date &&
+    (s.timeFrom||'00:00') < e.timeTo &&
+    (s.timeTo||'23:59')   > e.timeFrom
+  );
+
+  const conflictHTML = (conflicts.length||schedConflicts.length)
+    ? `<div style="background:rgba(229,115,115,0.1);border:1px solid rgba(229,115,115,0.3);padding:0.75rem;margin-bottom:1rem;font-size:0.78rem;color:#e57373">
+        ⚠ Conflict detected: ${[...conflicts.map(c=>`${c.name} (${c.timeFrom}–${c.timeTo})`), ...schedConflicts.map(s=>`${s.artist} (${s.timeFrom}–${s.timeTo})`)].join(', ')}
+       </div>` : '';
+
+  const modal = document.createElement('div');
+  modal.id = 'approveModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem';
+  modal.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border);padding:1.5rem;max-width:480px;width:100%">
+      <p style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:0.25rem">Approve Booking</p>
+      <p style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem">${e.name} · ${e.date} · ${e.timeFrom}–${e.timeTo} · ${e.purpose}</p>
+      ${conflictHTML}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem">
+        <div>
+          <p style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.35rem;font-family:'Syne',sans-serif">Rental Amount ₹</p>
+          <input id="approveAmount" type="number" value="${e.estimatedPrice?.replace(/[^\d]/g,'')||''}" placeholder="e.g. 2000"
+            style="width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none">
+        </div>
+        <div>
+          <p style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.35rem;font-family:'Syne',sans-serif">Payment Mode</p>
+          <select id="approvePayMode" style="width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none;appearance:none">
+            <option>Cash</option><option>Online</option><option>Pending</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:0.75rem">
+        <button onclick="confirmApproveEnquiry()" class="btn btn-red" style="flex:1">Confirm & Add to Schedule</button>
+        <button onclick="document.getElementById('approveModal').remove()" class="btn btn-ghost">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e=>{ if(e.target===modal) modal.remove(); });
+};
+
+window.confirmApproveEnquiry = async function(){
+  const id     = _approvingEnquiryId;
+  const e      = studioEnquiries.find(x=>x.id===id);
+  if(!e) return;
+  const amount  = parseFloat(document.getElementById('approveAmount').value)||0;
+  const payMode = document.getElementById('approvePayMode').value;
+
+  try {
+    const ts = new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'});
+
+    // 1. Mark enquiry approved
+    await updateDoc(doc(db,'studioEnquiries',id),{
+      status:'approved', approvedAt:ts, rentalAmount:amount, payMode
+    });
+
+    // 2. Add to studioSchedule
+    const schedId = 'enq_'+id;
+    await setDoc(doc(db,'studioSchedule',schedId),{
+      date:     e.date,
+      timeFrom: e.timeFrom,
+      timeTo:   e.timeTo,
+      artist:   e.name,
+      category: e.purpose||'Studio Rental',
+      remarks:  `${e.people?e.people+' people · ':''}${e.notes||''}`.trim(),
+      phone:    e.phone,
+      source:   'enquiry',
+      enquiryId:id,
+    });
+
+    // 3. Add to studioRentals
+    await addDoc(collection(db,'studioRentals'),{
+      clientName:  e.name,
+      phone:       e.phone,
+      date:        e.date,
+      timeFrom:    e.timeFrom,
+      timeTo:      e.timeTo,
+      hours:       e.hours||0,
+      purpose:     e.purpose||'',
+      amount,
+      payMode,
+      status:      payMode==='Pending'?'Pending':'Paid',
+      timestamp:   ts,
+      enquiryId:   id,
+    });
+
+    document.getElementById('approveModal')?.remove();
+    showToast(`Booking approved · Added to schedule & rentals ✓`);
+  } catch(err){
+    console.error(err);
+    showToast('Failed to approve. Try again.','error');
+  }
+};
+
+window.rejectEnquiry = async function(id){
+  const reason = prompt('Rejection reason (optional):');
+  if(reason === null) return; // cancelled
+  try {
+    await updateDoc(doc(db,'studioEnquiries',id),{
+      status:'rejected',
+      rejectedAt: new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
+      rejectionReason: reason||'',
+    });
+    showToast('Enquiry rejected');
+  } catch(e){ showToast('Failed to reject','error'); }
+};
+
+window.undoEnquiry = async function(id){
+  if(!confirm('Move this enquiry back to pending? This will also remove it from the schedule and rentals.')) return;
+  const e = studioEnquiries.find(x=>x.id===id);
+  try {
+    await updateDoc(doc(db,'studioEnquiries',id),{status:'pending'});
+    // Remove from schedule
+    try { await deleteDoc(doc(db,'studioSchedule','enq_'+id)); } catch(err){}
+    showToast('Moved back to pending');
+  } catch(err){ showToast('Failed','error'); }
+};
 
 /* ══════════════════════════════════════
    STUDIO SCHEDULE
