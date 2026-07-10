@@ -452,7 +452,7 @@ document.getElementById('f-date').addEventListener('change', function(){
   calcPrice();
 });
 
-// SUBMIT — saves to Firestore + sends WhatsApp notification
+// SUBMIT — saves to Firestore
 async function submitBooking(){
   const name    = document.getElementById('f-name').value.trim();
   const phone   = document.getElementById('f-phone').value.trim();
@@ -500,10 +500,6 @@ async function submitBooking(){
       timestamp: new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
       status: 'pending',
     });
-
-    // Also send WhatsApp notification to studio number
-    const msg = `New Studio Booking Request!\n\n*Name:* ${name}\n*Phone:* ${phone}\n*Date:* ${date} (${daytype})\n*Time:* ${start} – ${timeTo}\n*Duration:* ${hours} hour${hours>1?'s':''}\n*Purpose:* ${purpose}\n*People:* ${people||'Not specified'}\n*Est. Price:* ${price}${notes?`\n*Notes:* ${notes}`:''}\n\nReview in admin panel.`;
-    window.open(`https://wa.me/917984448750?text=${encodeURIComponent(msg)}`, '_blank');
 
     document.getElementById('bookingForm').style.display = 'none';
     document.getElementById('successMsg').classList.add('show');
