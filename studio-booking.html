@@ -338,19 +338,17 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
       </div>
       <div class="form-field">
         <label>WhatsApp Number *</label>
-        <input type="tel" id="f-phone" placeholder="+91 98765 43210">
+        <input type="tel" id="f-phone" placeholder="+91 98765 43210" maxlength="13">
       </div>
       <div class="form-row">
         <div class="form-field">
           <label>Date *</label>
-          <input type="date" id="f-date">
+          <input type="date" id="f-date" onchange="onDateChange()">
         </div>
         <div class="form-field">
-          <label>Day Type</label>
-          <select id="f-daytype" onchange="calcPrice()">
-            <option value="weekday">Weekday</option>
-            <option value="weekend">Weekend</option>
-          </select>
+          <label>Day</label>
+          <input type="text" id="f-day" readonly placeholder="Auto from date"
+            style="opacity:0.6;cursor:default">
         </div>
       </div>
       <div class="form-row">
@@ -358,129 +356,84 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
           <label>Start Time *</label>
           <select id="f-start">
             <option value="">Select time</option>
-            <option value="6:00 AM">6:00 AM</option>
-            <option value="7:00 AM">7:00 AM</option>
-            <option value="8:00 AM">8:00 AM</option>
-            <option value="9:00 AM">9:00 AM</option>
-            <option value="10:00 AM">10:00 AM</option>
-            <option value="11:00 AM">11:00 AM</option>
-            <option value="12:00 PM">12:00 PM</option>
-            <option value="1:00 PM">1:00 PM</option>
-            <option value="2:00 PM">2:00 PM</option>
-            <option value="3:00 PM">3:00 PM</option>
-            <option value="4:00 PM">4:00 PM</option>
-            <option value="5:00 PM">5:00 PM</option>
-            <option value="6:00 PM">6:00 PM</option>
-            <option value="7:00 PM">7:00 PM</option>
-            <option value="8:00 PM">8:00 PM</option>
-            <option value="9:00 PM">9:00 PM</option>
-            <option value="10:00 PM">10:00 PM</option>
+            <option>6:00 AM</option><option>7:00 AM</option><option>8:00 AM</option>
+            <option>9:00 AM</option><option>10:00 AM</option><option>11:00 AM</option>
+            <option>12:00 PM</option><option>1:00 PM</option><option>2:00 PM</option>
+            <option>3:00 PM</option><option>4:00 PM</option><option>5:00 PM</option>
+            <option>6:00 PM</option><option>7:00 PM</option><option>8:00 PM</option>
+            <option>9:00 PM</option><option>10:00 PM</option>
           </select>
         </div>
         <div class="form-field">
-          <label>Duration (hours) *</label>
-          <select id="f-hours" onchange="calcPrice()">
-            <option value="1">1 hour</option>
-            <option value="2">2 hours</option>
-            <option value="3">3 hours</option>
-            <option value="4">4 hours</option>
-            <option value="5">5 hours</option>
-            <option value="6">6 hours</option>
-            <option value="7">7 hours</option>
-            <option value="8">8 hours</option>
+          <label>Duration *</label>
+          <select id="f-hours">
+            <option value="1">1 hour</option><option value="2">2 hours</option>
+            <option value="3">3 hours</option><option value="4">4 hours</option>
+            <option value="5">5 hours</option><option value="6">6 hours</option>
+            <option value="7">7 hours</option><option value="8">8 hours</option>
           </select>
         </div>
       </div>
       <div class="form-field">
-        <label>Purpose of Booking *</label>
-        <input type="text" id="f-purpose" placeholder="e.g. Dance rehearsal, photo shoot, music recording…">
-      </div>
-      <div class="form-field">
-        <label>Number of People</label>
-        <input type="number" id="f-people" placeholder="e.g. 5" min="1">
-      </div>
-      <div class="form-field">
-        <label>Additional Notes</label>
-        <textarea id="f-notes" placeholder="Any specific requirements, equipment needed, etc."></textarea>
-      </div>
-
-      <!-- PRICE ESTIMATE -->
-      <div class="price-estimate">
-        <p class="price-estimate-label">Estimated Total</p>
-        <p class="price-estimate-val" id="priceEstimate">₹2,300</p>
-        <p class="price-estimate-note">Final price confirmed on booking. Prices not valid for dance workshops.</p>
+        <label>Purpose *</label>
+        <input type="text" id="f-purpose" placeholder="e.g. Dance rehearsal, photo shoot, event…">
       </div>
 
       <button class="submit-btn" onclick="submitBooking()">
         Request Booking
         <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </button>
-      <p class="form-note">We'll confirm your booking via WhatsApp within 24 hours.</p>
+      <p class="form-note">We'll confirm your booking within 24 hours.</p>
     </div>
 
     <!-- SUCCESS -->
     <div class="success-msg" id="successMsg">
       <div class="success-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
       <h3 class="success-title">Request Sent!</h3>
-      <p class="success-sub">We've received your booking request and will confirm availability on WhatsApp within 24 hours.<br><br>Looking forward to having you at The Happening Space.</p>
+      <p class="success-sub">We've received your booking request and will confirm availability within 24 hours.<br><br>Looking forward to having you at The Happening Space.</p>
     </div>
   </div>
 
 </div>
 
 <script>
-// PRICE CALCULATOR
-function calcPrice(){
-  const hours   = parseInt(document.getElementById('f-hours').value)||1;
-  const daytype = document.getElementById('f-daytype').value;
-  let rate;
-  if(daytype === 'weekend'){
-    rate = 2500;
-  } else {
-    if(hours >= 6)      rate = 1800;
-    else if(hours >= 2) rate = 2100;
-    else                rate = 2300;
-  }
-  const total = rate * hours;
-  document.getElementById('priceEstimate').textContent = '₹' + total.toLocaleString('en-IN');
-}
+const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
-// Auto detect weekday/weekend from date
-document.getElementById('f-date').addEventListener('change', function(){
-  const day = new Date(this.value).getDay();
-  document.getElementById('f-daytype').value = (day===0||day===6) ? 'weekend' : 'weekday';
-  calcPrice();
-});
+// Auto-show day name when date selected
+function onDateChange(){
+  const val = document.getElementById('f-date').value;
+  const dayEl = document.getElementById('f-day');
+  if(!val){ dayEl.value=''; return; }
+  const d = new Date(val+'T00:00');
+  dayEl.value = DAYS[d.getDay()];
+}
 
 // SUBMIT — saves to Firestore
 async function submitBooking(){
   const name    = document.getElementById('f-name').value.trim();
   const phone   = document.getElementById('f-phone').value.trim();
   const date    = document.getElementById('f-date').value;
+  const day     = document.getElementById('f-day').value;
   const start   = document.getElementById('f-start').value;
-  const hours   = document.getElementById('f-hours').value;
-  const purpose = document.getElementById('f-purpose').value;
-  const people  = document.getElementById('f-people').value;
-  const notes   = document.getElementById('f-notes').value.trim();
-  const price   = document.getElementById('priceEstimate').textContent;
-  const daytype = document.getElementById('f-daytype').value;
+  const hours   = parseInt(document.getElementById('f-hours').value)||1;
+  const purpose = document.getElementById('f-purpose').value.trim();
 
   if(!name||!phone||!date||!start||!purpose){
     alert('Please fill in all required fields.');
     return;
   }
 
-  // Calculate end time
-  const [h,m]   = start.split(':').map(Number);
-  const endH    = h + parseInt(hours);
-  const timeTo  = `${String(endH).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  // Calculate end time from start + duration
+  const timeFrom24 = convertTo24(start);
+  const [h,m]  = timeFrom24.split(':').map(Number);
+  const endH   = h + hours;
+  const timeTo = `${String(endH).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
 
   const btn = document.querySelector('.submit-btn');
-  btn.disabled = true;
+  btn.disabled    = true;
   btn.textContent = 'Submitting…';
 
   try {
-    // Save to Firestore
     const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
     const { getFirestore, collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
     const app = initializeApp({
@@ -494,9 +447,9 @@ async function submitBooking(){
     const db = getFirestore(app);
 
     await addDoc(collection(db,'studioEnquiries'),{
-      name, phone, date, timeFrom: start, timeTo, hours: parseInt(hours),
-      purpose, people: people||'', notes, daytype,
-      estimatedPrice: price,
+      name, phone, date, day,
+      timeFrom: timeFrom24, timeTo,
+      hours, purpose,
       timestamp: new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
       status: 'pending',
     });
@@ -506,10 +459,19 @@ async function submitBooking(){
 
   } catch(e){
     console.error(e);
-    btn.disabled = false;
+    btn.disabled    = false;
     btn.textContent = 'Request Booking';
     alert('Something went wrong. Please try again.');
   }
+}
+
+function convertTo24(t){
+  if(!t) return '00:00';
+  const [time,mod] = t.split(' ');
+  let [h,m] = time.split(':').map(Number);
+  if(mod==='PM' && h!==12) h+=12;
+  if(mod==='AM' && h===12) h=0;
+  return `${String(h).padStart(2,'0')}:${String(m||0).padStart(2,'0')}`;
 }
 
 // NAV
@@ -536,8 +498,6 @@ document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style
 (function animRing(){rx+=(mx-rx)*0.14;ry+=(my-ry)*0.14;ring.style.transform=`translate(${rx}px,${ry}px) translate(-50%,-50%)`;requestAnimationFrame(animRing);})();
 document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';ring.style.opacity='0';});
 document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';ring.style.opacity='1';});
-
-calcPrice();
 </script>
 </body>
 </html>

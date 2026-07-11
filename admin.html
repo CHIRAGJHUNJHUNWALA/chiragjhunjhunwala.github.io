@@ -1659,42 +1659,43 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <div class="modal-body">
       <input type="hidden" id="rentalEditId">
       <div class="form-row">
-        <div class="form-group"><label>Name / Brand *</label><input type="text" id="rentalName" placeholder="e.g. Sonia Gandhi"></div>
-        <div class="form-group"><label>Purpose *</label>
-          <select id="rentalPurpose">
-            <option value="Shoot">Shoot</option>
-            <option value="Dance Workshop">Dance Workshop</option>
-            <option value="Event">Event</option>
-            <option value="Birthday Kirtan">Birthday Kirtan</option>
-            <option value="Meditation">Meditation</option>
-            <option value="Summer Camp">Summer Camp</option>
-            <option value="Movie Screening">Movie Screening</option>
-            <option value="Regulars">Regulars</option>
-            <option value="Other">Other</option>
+        <div class="form-group"><label>Client Name *</label><input type="text" id="rentalName" placeholder="e.g. Sonia Gandhi"></div>
+        <div class="form-group"><label>Phone</label><input type="tel" id="rentalPhone" placeholder="+91 98765 43210"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date *</label>
+          <input type="date" id="rentalDateFrom" style="color-scheme:dark" onchange="onRentalDateChange()">
+        </div>
+        <div class="form-group">
+          <label>Day</label>
+          <input type="text" id="rentalDay" readonly placeholder="Auto from date" style="opacity:0.6;cursor:default">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Start Time *</label>
+          <input type="time" id="rentalTimeFrom" style="color-scheme:dark" onchange="calcRentalEndTime()">
+        </div>
+        <div class="form-group">
+          <label>Duration *</label>
+          <select id="rentalHours" onchange="calcRentalEndTime()" style="background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none;appearance:none;width:100%">
+            <option value="1">1 hour</option><option value="2">2 hours</option>
+            <option value="3">3 hours</option><option value="4">4 hours</option>
+            <option value="5">5 hours</option><option value="6">6 hours</option>
+            <option value="7">7 hours</option><option value="8">8 hours</option>
           </select>
         </div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>Booking Date From *</label><input type="date" id="rentalDateFrom" style="color-scheme:dark" onchange="updateRentalBookingText()"></div>
         <div class="form-group">
-          <label>Booking Date To <span style="font-weight:300;color:var(--muted);font-size:0.75em">(if multi-day)</span></label>
-          <div style="display:flex;gap:0.4rem">
-            <input type="date" id="rentalDateTo" style="color-scheme:dark;flex:1" onchange="updateRentalBookingText()">
-            <button type="button" onclick="clearRentalDateTo()" title="Clear end date" style="background:var(--bg3);border:1px solid var(--border2);color:var(--muted);padding:0 0.6rem;cursor:pointer;font-size:0.9rem;transition:all 0.2s;flex-shrink:0" onmouseover="this.style.color='#e57373';this.style.borderColor='rgba(229,115,115,0.4)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border2)'">✕</button>
-          </div>
+          <label>End Time <span style="font-weight:300;color:var(--muted);font-size:0.75em">(auto-calculated)</span></label>
+          <input type="time" id="rentalTimeTo" style="color-scheme:dark;opacity:0.65;background:var(--bg3)" readonly>
         </div>
+        <div class="form-group"><label>Amount ₹</label><input type="number" id="rentalAmount" placeholder="0"></div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label>Start Time *</label><input type="time" id="rentalTimeFrom" style="color-scheme:dark" onchange="updateRentalBookingText()"></div>
-        <div class="form-group"><label>End Time *</label><input type="time" id="rentalTimeTo" style="color-scheme:dark" onchange="updateRentalBookingText()"></div>
-      </div>
-      <div class="form-group" style="margin-bottom:1rem">
-        <label>Booking Summary <span style="font-weight:300;color:var(--muted);font-size:0.75em">(auto-filled)</span></label>
-        <input type="text" id="rentalBooking" placeholder="Auto-filled from dates above" style="background:var(--bg3);opacity:0.7">
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label>Total Hours</label><input type="number" id="rentalHours" placeholder="Auto-calculated" min="0" step="0.5"></div>
-        <div class="form-group"><label>Amount ₹ *</label><input type="number" id="rentalAmount" placeholder="0"></div>
+      <div class="form-row full">
+        <div class="form-group"><label>Purpose *</label><input type="text" id="rentalPurpose" placeholder="e.g. Dance rehearsal, photo shoot, event…"></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Payment Mode</label>
@@ -6334,12 +6335,12 @@ window.openApproveEnquiry = async function(id){
   modal.innerHTML = `
     <div style="background:var(--bg2);border:1px solid var(--border);padding:1.5rem;max-width:480px;width:100%">
       <p style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:0.25rem">Approve Booking</p>
-      <p style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem">${e.name} · ${e.date} · ${e.timeFrom}–${e.timeTo} · ${e.purpose}</p>
+      <p style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem">${e.name} · ${e.date}${e.day?' ('+e.day+')':''} · ${e.timeFrom}–${e.timeTo} · ${e.purpose}</p>
       ${conflictHTML}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem">
         <div>
           <p style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.35rem;font-family:'Syne',sans-serif">Rental Amount ₹</p>
-          <input id="approveAmount" type="number" value="${e.estimatedPrice?.replace(/[^\d]/g,'')||''}" placeholder="e.g. 2000"
+          <input id="approveAmount" type="number" placeholder="e.g. 2000"
             style="width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.65rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none">
         </div>
         <div>
@@ -6350,7 +6351,12 @@ window.openApproveEnquiry = async function(id){
         </div>
       </div>
       <div style="display:flex;gap:0.75rem">
-        <button onclick="confirmApproveEnquiry()" class="btn btn-red" style="flex:1">Confirm & Add to Schedule</button>
+        <button onclick="confirmApproveEnquiry()" class="btn btn-red" style="flex:1">
+          ✓ Confirm & Add to Schedule
+        </button>
+        <button onclick="editAndApproveEnquiry()" class="btn btn-outline" style="flex:1">
+          ✎ Edit & Approve
+        </button>
         <button onclick="document.getElementById('approveModal').remove()" class="btn btn-ghost">Cancel</button>
       </div>
     </div>`;
@@ -6358,12 +6364,42 @@ window.openApproveEnquiry = async function(id){
   modal.addEventListener('click', e=>{ if(e.target===modal) modal.remove(); });
 };
 
+// Edit & Approve — opens rental modal pre-filled from enquiry
+window.editAndApproveEnquiry = function(){
+  const id = _approvingEnquiryId;
+  const e  = studioEnquiries.find(x=>x.id===id);
+  if(!e) return;
+  document.getElementById('approveModal')?.remove();
+
+  document.getElementById('rentalModalTitle').textContent = 'Edit & Approve Booking';
+  document.getElementById('rentalEditId').value    = '';
+  document.getElementById('rentalName').value      = e.name||'';
+  document.getElementById('rentalPhone').value     = e.phone||'';
+  document.getElementById('rentalPurpose').value   = e.purpose||'';
+  document.getElementById('rentalDateFrom').value  = e.date||'';
+  document.getElementById('rentalDay').value       = e.day||'';
+  document.getElementById('rentalTimeFrom').value  = e.timeFrom||'';
+  document.getElementById('rentalHours').value     = e.hours||1;
+  calcRentalEndTime();
+  document.getElementById('rentalAmount').value    = '';
+  document.getElementById('rentalPayMode').value   = 'Pending';
+  document.getElementById('rentalHandledBy').value = '';
+  document.getElementById('rentalRemarks').value   = '';
+
+  // Mark so saveRental knows to approve the enquiry after saving
+  window._saveRentalFromEnquiryId = id;
+  openModal('rentalModal');
+};
+
 window.confirmApproveEnquiry = async function(){
-  const id     = _approvingEnquiryId;
-  const e      = studioEnquiries.find(x=>x.id===id);
+  const id      = _approvingEnquiryId;
+  const e       = studioEnquiries.find(x=>x.id===id);
   if(!e) return;
   const amount  = parseFloat(document.getElementById('approveAmount').value)||0;
   const payMode = document.getElementById('approvePayMode').value;
+
+  const confirmBtn = document.querySelector('#approveModal .btn-red');
+  if(confirmBtn){ confirmBtn.disabled=true; confirmBtn.textContent='Confirming…'; }
 
   try {
     const ts = new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'});
@@ -6374,42 +6410,72 @@ window.confirmApproveEnquiry = async function(){
     });
 
     // 2. Add to studioSchedule
-    const schedId = 'enq_'+id;
-    await setDoc(doc(db,'studioSchedule',schedId),{
-      date:     e.date,
-      timeFrom: e.timeFrom,
-      timeTo:   e.timeTo,
-      artist:   e.name,
-      category: e.purpose||'Studio Rental',
-      remarks:  `${e.people?e.people+' people · ':''}${e.notes||''}`.trim(),
-      phone:    e.phone,
-      source:   'enquiry',
-      enquiryId:id,
+    await setDoc(doc(db,'studioSchedule','enq_'+id),{
+      date:      e.date, day: e.day||'',
+      timeFrom:  e.timeFrom, timeTo: e.timeTo,
+      artist:    e.name,
+      category:  'Studio Rental',
+      remarks:   e.purpose||'',
+      phone:     e.phone,
+      source:    'enquiry', enquiryId: id,
     });
 
     // 3. Add to studioRentals
     await addDoc(collection(db,'studioRentals'),{
-      clientName:  e.name,
-      phone:       e.phone,
-      date:        e.date,
-      timeFrom:    e.timeFrom,
-      timeTo:      e.timeTo,
-      hours:       e.hours||0,
-      purpose:     e.purpose||'',
-      amount,
-      payMode,
-      status:      payMode==='Pending'?'Pending':'Paid',
-      timestamp:   ts,
-      enquiryId:   id,
+      name:      e.name, phone: e.phone,
+      date:      e.date, day: e.day||'',
+      timeFrom:  e.timeFrom, timeTo: e.timeTo,
+      hours:     e.hours||0,
+      purpose:   e.purpose||'',
+      amount, payMode,
+      status:    payMode==='Pending'?'Pending':'Paid',
+      timestamp: ts, enquiryId: id,
     });
 
+    // 4. Send WhatsApp confirmation
+    await sendStudioBookingConfirmation(e, amount, payMode);
+
     document.getElementById('approveModal')?.remove();
-    showToast(`Booking approved · Added to schedule & rentals ✓`);
+    showToast('Booking approved · WhatsApp sent · Added to schedule ✓');
   } catch(err){
     console.error(err);
     showToast('Failed to approve. Try again.','error');
+    if(confirmBtn){ confirmBtn.disabled=false; confirmBtn.textContent='✓ Confirm & Add to Schedule'; }
   }
 };
+
+// Send WhatsApp confirmation for studio booking via AiSensy
+async function sendStudioBookingConfirmation(enquiry, amount, payMode){
+  try {
+    const snap = await getDoc(doc(db,'settings','aisensy'));
+    const apiKey = snap.data()?.apiKey;
+    if(!apiKey){ console.warn('AiSensy key not found'); return; }
+
+    const phone = (enquiry.phone||'').replace(/\D/g,'').replace(/^0/,'').replace(/^(?!91)/,'91');
+    const timeLabel = `${enquiry.timeFrom||''} – ${enquiry.timeTo||''}`;
+    const amountLine = amount>0 ? `₹${amount.toLocaleString('en-IN')} · ${payMode}` : 'Amount to be confirmed';
+
+    await fetch('https://backend.aisensy.com/campaign/t1/api/v2',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        apiKey,
+        campaignName: 'ths_studio_booking_confirmed_'+Date.now(),
+        destination:  phone,
+        userName:     'The Happening Space',
+        templateParams: [
+          enquiry.name?.split(' ')[0]||'there',
+          enquiry.date||'',
+          enquiry.day||'',
+          timeLabel,
+          enquiry.purpose||'',
+          amountLine,
+        ],
+        source: 'admin-panel',
+      })
+    });
+  } catch(e){ console.warn('WhatsApp send failed:',e); }
+}
 
 window.rejectEnquiry = async function(id){
   const reason = prompt('Rejection reason (optional):');
@@ -6845,106 +6911,71 @@ function renderRentals(){
     :'<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:3rem">No rentals yet</td></tr>';
 }
 
-window.openAddRental=function(){
-  document.getElementById('rentalModalTitle').textContent='Add Rental';
-  ['rentalEditId','rentalName','rentalDateFrom','rentalDateTo','rentalTimeFrom','rentalTimeTo',
-   'rentalBooking','rentalHours','rentalAmount','rentalHandledBy','rentalRemarks'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('rentalPurpose').value='Shoot';
-  document.getElementById('rentalPayMode').value='Cash';
+const DAYS_ADMIN = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+window.onRentalDateChange = function(){
+  const val = document.getElementById('rentalDateFrom').value;
+  const dayEl = document.getElementById('rentalDay');
+  if(!val){ dayEl.value=''; return; }
+  dayEl.value = DAYS_ADMIN[new Date(val+'T00:00').getDay()];
+};
+
+window.calcRentalEndTime = function(){
+  const timeFrom = document.getElementById('rentalTimeFrom').value;
+  const hours    = parseInt(document.getElementById('rentalHours').value)||1;
+  if(!timeFrom){ return; }
+  const [h,m] = timeFrom.split(':').map(Number);
+  const endH  = h + hours;
+  document.getElementById('rentalTimeTo').value = `${String(endH).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+};
+
+window.openAddRental = function(){
+  document.getElementById('rentalModalTitle').textContent = 'Add Rental';
+  ['rentalEditId','rentalName','rentalPhone','rentalDateFrom','rentalDay',
+   'rentalTimeFrom','rentalTimeTo','rentalAmount','rentalHandledBy','rentalRemarks','rentalPurpose'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value='';
+  });
+  document.getElementById('rentalHours').value  = '1';
+  document.getElementById('rentalPayMode').value = 'Cash';
   openModal('rentalModal');
 };
 
-window.clearRentalDateTo = function(){
-  document.getElementById('rentalDateTo').value = '';
-  updateRentalBookingText();
+window.editRental = function(id){
+  const r = rentals.find(x=>x.id===id);
+  if(!r) return;
+  document.getElementById('rentalModalTitle').textContent = 'Edit Rental';
+  document.getElementById('rentalEditId').value    = id;
+  document.getElementById('rentalName').value      = r.name||'';
+  document.getElementById('rentalPhone').value     = r.phone||'';
+  document.getElementById('rentalPurpose').value   = r.purpose||'';
+  document.getElementById('rentalDateFrom').value  = r.dateFrom||r.date||'';
+  document.getElementById('rentalDay').value       = r.day||'';
+  document.getElementById('rentalTimeFrom').value  = r.timeFrom||'';
+  document.getElementById('rentalTimeTo').value    = r.timeTo||'';
+  document.getElementById('rentalHours').value     = r.hours||1;
+  document.getElementById('rentalAmount').value    = r.amount||'';
+  document.getElementById('rentalPayMode').value   = r.payMode||'Cash';
+  document.getElementById('rentalHandledBy').value = r.handledBy||'';
+  document.getElementById('rentalRemarks').value   = r.remarks||'';
+  openModal('rentalModal');
 };
 
-window.updateRentalBookingText = function(){
+window.saveRental = async function(){
+  const name     = document.getElementById('rentalName').value.trim();
+  if(!name){ showToast('Name is required','error'); return; }
+  const phone    = document.getElementById('rentalPhone').value.trim();
   const dateFrom = document.getElementById('rentalDateFrom').value;
-  const dateTo   = document.getElementById('rentalDateTo').value;
+  const day      = document.getElementById('rentalDay').value;
   const timeFrom = document.getElementById('rentalTimeFrom').value;
   const timeTo   = document.getElementById('rentalTimeTo').value;
+  const hours    = parseInt(document.getElementById('rentalHours').value)||1;
+  const purpose  = document.getElementById('rentalPurpose').value.trim();
 
-  const fmtTime = t => {
-    if(!t) return '';
-    const [h,m] = t.split(':').map(Number);
-    const ampm = h>=12?'PM':'AM';
-    return (h>12?h-12:h||12)+(m?':'+String(m).padStart(2,'0'):'')+ampm;
-  };
-
-  const fmtDate = d => {
-    if(!d) return '';
-    return new Date(d+'T00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short'}).toUpperCase();
-  };
-
-  // Build booking summary
-  let summary = '';
-  if(dateFrom){
-    if(dateTo && dateTo !== dateFrom){
-      summary = `${fmtDate(dateFrom)} - ${fmtDate(dateTo)}`;
-    } else {
-      summary = fmtDate(dateFrom);
-    }
-    if(timeFrom && timeTo){
-      summary += ` : ${fmtTime(timeFrom)}-${fmtTime(timeTo)}`;
-    }
-  }
-  document.getElementById('rentalBooking').value = summary;
-
-  // Calculate hours
-  if(timeFrom && timeTo){
-    const [fh,fm] = timeFrom.split(':').map(Number);
-    const [th,tm] = timeTo.split(':').map(Number);
-    const hrsPerDay = (th + tm/60) - (fh + fm/60);
-
-    if(hrsPerDay > 0){
-      if(dateTo && dateTo !== dateFrom){
-        // Multi-day: count total days × hours per day
-        const start = new Date(dateFrom+'T00:00');
-        const end   = new Date(dateTo+'T00:00');
-        const days  = Math.round((end - start) / (1000*60*60*24)) + 1;
-        document.getElementById('rentalHours').value = Math.round(days * hrsPerDay * 10) / 10;
-      } else {
-        // Single day: just time difference
-        document.getElementById('rentalHours').value = Math.round(hrsPerDay * 10) / 10;
-      }
-    }
-  }
-};
-
-window.editRental=function(id){
-  const r=rentals.find(x=>x.id===id);
-  document.getElementById('rentalModalTitle').textContent='Edit Rental';
-  document.getElementById('rentalEditId').value=id;
-  document.getElementById('rentalName').value=r.name||'';
-  document.getElementById('rentalPurpose').value=r.purpose||'Shoot';
-  document.getElementById('rentalDateFrom').value=r.dateFrom||'';
-  document.getElementById('rentalDateTo').value=r.dateTo||'';
-  document.getElementById('rentalTimeFrom').value=r.timeFrom||'';
-  document.getElementById('rentalTimeTo').value=r.timeTo||'';
-  document.getElementById('rentalBooking').value=r.booking||'';
-  document.getElementById('rentalHours').value=r.hours||'';
-  document.getElementById('rentalAmount').value=r.amount||'';
-  document.getElementById('rentalPayMode').value=r.payMode||'Cash';
-  document.getElementById('rentalHandledBy').value=r.handledBy||'';
-  document.getElementById('rentalRemarks').value=r.remarks||'';
-  openModal('rentalModal');
-};
-
-window.saveRental=async function(){
-  const name=document.getElementById('rentalName').value.trim();
-  if(!name){showToast('Name is required','error');return;}
-  const dateFrom  = document.getElementById('rentalDateFrom').value;
-  const dateTo    = document.getElementById('rentalDateTo').value;
-  const timeFrom  = document.getElementById('rentalTimeFrom').value;
-  const timeTo    = document.getElementById('rentalTimeTo').value;
-  const purpose   = document.getElementById('rentalPurpose').value;
-
-  const data={
-    name, purpose, dateFrom, dateTo,
-    timeFrom, timeTo,
-    booking:   document.getElementById('rentalBooking').value.trim(),
-    hours:     parseFloat(document.getElementById('rentalHours').value)||0,
+  const data = {
+    name, phone, purpose,
+    dateFrom, date: dateFrom, day,
+    timeFrom, timeTo, hours,
     amount:    parseFloat(document.getElementById('rentalAmount').value)||0,
     payMode:   document.getElementById('rentalPayMode').value,
     handledBy: document.getElementById('rentalHandledBy').value.trim(),
@@ -6952,7 +6983,7 @@ window.saveRental=async function(){
     updatedAt: Date.now(),
   };
 
-  const editId=document.getElementById('rentalEditId').value;
+  const editId = document.getElementById('rentalEditId').value;
   let rentalId = editId;
   if(editId){
     await setDoc(doc(db,'studioRentals',editId),data,{merge:true});
@@ -6961,38 +6992,45 @@ window.saveRental=async function(){
     rentalId = ref.id;
   }
 
-  // Auto-sync to Studio Schedule for each day in the date range
+  // Auto-sync to Studio Schedule
   if(dateFrom && timeFrom && timeTo){
-    const start = new Date(dateFrom+'T00:00');
-    const end   = dateTo ? new Date(dateTo+'T00:00') : start;
-    const dayMs = 1000*60*60*24;
-    const days  = Math.round((end-start)/dayMs)+1;
-
-    for(let i=0;i<days;i++){
-      const d = new Date(start); d.setDate(start.getDate()+i);
-      const dateStr = d.toLocaleDateString('en-CA');
-      const dayName = d.toLocaleDateString('en-IN',{weekday:'long'});
-
-      // Check if schedule entry already exists for this rental+date
-      const existing = scheduleEntries.find(e=>e.rentalId===rentalId&&e.date===dateStr);
-      const schData = {
-        date: dateStr, day: dayName,
-        timeFrom, timeTo,
-        category: purpose==='Dance Workshop'?'Dance Workshop':'Studio Rental',
-        artist: name,
-        remarks: data.remarks||'',
-        rentalId,
-        updatedAt: Date.now(),
-      };
-      if(existing){
-        await setDoc(doc(db,'studioSchedule',existing.id),schData,{merge:true});
-      } else {
-        await addDoc(collection(db,'studioSchedule'),{...schData,createdAt:Date.now()});
-      }
+    const d = new Date(dateFrom+'T00:00');
+    const dayName = DAYS_ADMIN[d.getDay()];
+    const existing = scheduleEntries.find(e=>e.rentalId===rentalId&&e.date===dateFrom);
+    const schData = {
+      date: dateFrom, day: dayName,
+      timeFrom, timeTo,
+      category: purpose.toLowerCase().includes('dance')?'Dance Workshop':'Studio Rental',
+      artist: name, remarks: data.remarks||'',
+      rentalId, updatedAt: Date.now(),
+    };
+    if(existing){
+      await setDoc(doc(db,'studioSchedule',existing.id),schData,{merge:true});
+    } else {
+      await addDoc(collection(db,'studioSchedule'),{...schData,createdAt:Date.now()});
     }
-    showToast(`Rental saved + ${days} day${days>1?'s':''} added to schedule ✓`);
+    showToast('Rental saved + added to schedule ✓');
   } else {
     showToast('Rental saved ✓');
+  }
+
+  // If saving from an Edit & Approve flow, mark enquiry approved + send WhatsApp
+  if(window._saveRentalFromEnquiryId){
+    const enquiryId = window._saveRentalFromEnquiryId;
+    const enq       = studioEnquiries.find(x=>x.id===enquiryId);
+    window._saveRentalFromEnquiryId = null;
+    try {
+      const ts = new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'});
+      await updateDoc(doc(db,'studioEnquiries',enquiryId),{
+        status:'approved', approvedAt:ts,
+        rentalAmount: data.amount, payMode: data.payMode,
+      });
+      if(enq) await sendStudioBookingConfirmation(
+        {...enq, timeFrom:data.timeFrom, timeTo:data.timeTo, date:data.dateFrom, purpose:data.purpose},
+        data.amount, data.payMode
+      );
+      showToast('Enquiry approved · WhatsApp sent ✓');
+    } catch(e){ console.warn('Enquiry approve after edit failed:',e); }
   }
 
   closeModal('rentalModal');
