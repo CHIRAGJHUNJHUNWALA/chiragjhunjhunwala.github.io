@@ -338,13 +338,17 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
       </div>
       <div class="form-field">
         <label>WhatsApp Number *</label>
-        <input type="tel" id="f-phone" placeholder="+91 98765 43210" maxlength="13">
+        <div style="display:flex">
+          <span style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-right:none;padding:0.75rem 0.9rem;color:var(--text-muted);font-size:0.9rem;white-space:nowrap;font-family:'DM Sans',sans-serif">+91</span>
+          <input type="tel" id="f-phone" placeholder="98765 43210" maxlength="10"
+            oninput="this.value=this.value.replace(/\D/g,'').slice(0,10)"
+            style="flex:1;border-left:none">
+        </div>
       </div>
       <div class="form-row">
         <div class="form-field">
           <label>Date *</label>
           <input type="date" id="f-date" onchange="onDateChange()">
-        </div>
         <div class="form-field">
           <label>Day</label>
           <input type="text" id="f-day" readonly placeholder="Auto from date"
@@ -399,6 +403,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
 <script>
 const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
+// Set minimum date to today
+document.getElementById('f-date').min = new Date().toLocaleDateString('en-CA');
+
 // Auto-show day name when date selected
 function onDateChange(){
   const val = document.getElementById('f-date').value;
@@ -411,14 +418,14 @@ function onDateChange(){
 // SUBMIT — saves to Firestore
 async function submitBooking(){
   const name    = document.getElementById('f-name').value.trim();
-  const phone   = document.getElementById('f-phone').value.trim();
+  const phone   = '+91' + document.getElementById('f-phone').value.replace(/\D/g,'');
   const date    = document.getElementById('f-date').value;
   const day     = document.getElementById('f-day').value;
   const start   = document.getElementById('f-start').value;
   const hours   = parseInt(document.getElementById('f-hours').value)||1;
   const purpose = document.getElementById('f-purpose').value.trim();
 
-  if(!name||!phone||!date||!start||!purpose){
+  if(!name||phone.length<13||!date||!start||!purpose){
     alert('Please fill in all required fields.');
     return;
   }

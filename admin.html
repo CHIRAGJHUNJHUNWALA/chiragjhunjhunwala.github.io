@@ -6296,9 +6296,11 @@ function renderStudioEnquiries(){
         <div style="display:flex;flex-direction:column;gap:0.5rem;flex-shrink:0">
           <button class="btn btn-sm btn-red" onclick="openApproveEnquiry('${e.id}')">✓ Approve</button>
           <button class="btn btn-sm btn-ghost" onclick="rejectEnquiry('${e.id}')" style="color:#e57373;border-color:rgba(229,115,115,0.3)">✕ Reject</button>
+          <button class="btn btn-sm btn-ghost" onclick="deleteEnquiry('${e.id}')" style="color:var(--muted);font-size:0.6rem">Delete</button>
         </div>`:`
-        <div style="flex-shrink:0">
+        <div style="display:flex;flex-direction:column;gap:0.5rem;flex-shrink:0">
           ${e.status==='approved'?`<button class="btn btn-sm btn-ghost" onclick="undoEnquiry('${e.id}')">Undo</button>`:''}
+          <button class="btn btn-sm btn-ghost" onclick="deleteEnquiry('${e.id}')" style="color:var(--muted);font-size:0.6rem">Delete</button>
         </div>`}
 
       </div>
@@ -6490,15 +6492,36 @@ window.rejectEnquiry = async function(id){
   } catch(e){ showToast('Failed to reject','error'); }
 };
 
-window.undoEnquiry = async function(id){
-  if(!confirm('Move this enquiry back to pending? This will also remove it from the schedule and rentals.')) return;
-  const e = studioEnquiries.find(x=>x.id===id);
+window.deleteEnquiry = async function(id){
+  if(!confirm('Permanently delete this enquiry? This cannot be undone.')) return;
   try {
-    await updateDoc(doc(db,'studioEnquiries',id),{status:'pending'});
-    // Remove from schedule
+    await deleteDoc(doc(db,'studioEnquiries',id));
+    showToast('Enquiry deleted');
+  } catch(e){ showToast('Failed to delete','error'); }
+};
+
+window.undoEnquiry = async function(id){
+  if(!confirm('Move this enquiry back to pending?\n\nThis will remove it from the Schedule and Rental Payments.')) return;
+  try {
+    // 1. Move enquiry back to pending
+    await updateDoc(doc(db,'studioEnquiries',id),{
+      status:'pending',
+      approvedAt: null, rentalAmount: null, payMode: null,
+    });
+
+    // 2. Delete from studioSchedule (created with id 'enq_'+id)
     try { await deleteDoc(doc(db,'studioSchedule','enq_'+id)); } catch(err){}
-    showToast('Moved back to pending');
-  } catch(err){ showToast('Failed','error'); }
+
+    // 3. Delete from studioRentals (matched by enquiryId field)
+    const rentSnap = await getDocs(collection(db,'studioRentals'));
+    const toDelete = rentSnap.docs.filter(d=>d.data().enquiryId===id);
+    await Promise.all(toDelete.map(d=>deleteDoc(doc(db,'studioRentals',d.id))));
+
+    showToast(`Undone · removed from schedule & rentals · back to pending`);
+  } catch(err){
+    console.error(err);
+    showToast('Failed to undo. Try again.','error');
+  }
 };
 
 /* ══════════════════════════════════════
