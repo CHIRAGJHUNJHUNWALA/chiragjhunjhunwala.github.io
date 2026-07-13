@@ -495,9 +495,8 @@ function getWeeksLeft(s){
 }
 
 function getTotalWeeks(s){
-  // Base weeks + any extension weeks
-  const base = s.subscription==='Weekly' ? 1 : 4;
-  return base + parseInt(s.extendedDays||0);
+  // Base subscription period only — extensions shown via Valid Until date
+  return s.subscription==='Weekly' ? 1 : 4;
 }
 
 function getExpiryDate(s){
@@ -637,7 +636,7 @@ async function renderAttendance(s, phone){
     const attSnap = await getDocs(collection(db,'attendance'));
     const docs    = attSnap.docs
       .map(d=>({id:d.id,...d.data()}))
-      .filter(d=>d.batchId===s.batchId && d.artistId===s.artistId)
+      .filter(d=>d.batchId===s.batchId)
       .sort((a,b)=>b.weekKey.localeCompare(a.weekKey))
       .slice(0,12);
 
