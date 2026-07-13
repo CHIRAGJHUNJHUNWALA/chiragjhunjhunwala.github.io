@@ -156,7 +156,9 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .att-name{color:var(--text);font-weight:500}
 .att-phone{color:var(--muted);font-size:0.75rem;margin-top:0.1rem}
 .att-days{display:flex;gap:0.35rem}
-.att-day-btn{width:40px;height:52px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:0.6rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1px}
+.att-week-btn{padding:0.45rem 1rem;font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;border:1px solid var(--border2);background:var(--bg3);color:var(--muted);cursor:pointer;transition:all 0.18s;white-space:nowrap;flex-shrink:0}
+.att-week-btn.present{background:rgba(92,184,122,0.15);border-color:rgba(92,184,122,0.4);color:var(--green)}
+.att-week-btn.absent{background:rgba(229,115,115,0.1);border-color:rgba(229,115,115,0.3);color:#e57373}width:40px;height:52px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:0.6rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1px}
 .att-day-btn span:first-child{font-size:0.55rem;letter-spacing:0.08em;text-transform:uppercase}
 .att-day-btn span:nth-child(2){font-size:0.75rem;font-weight:700;color:var(--text-mid)}
 .att-day-btn span:last-child{font-size:0.75rem}
@@ -399,8 +401,11 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         </div>
       </div>
 
-      <!-- Days header -->
-      <div class="week-days" id="weekDays"></div>
+      <!-- Week indicator -->
+      <div id="weekDays" style="padding:0.5rem 1rem;background:var(--bg3);border:1px solid var(--border);border-bottom:none;font-size:0.7rem;color:var(--muted);display:flex;align-items:center;justify-content:space-between">
+        <span>Attendance for this week</span>
+        <span style="font-size:0.65rem;color:var(--muted)">Tap to mark Present → Absent → Clear</span>
+      </div>
       <!-- Attendance list -->
       <div class="table-wrap">
         <div class="table-header"><span class="table-title" id="attTableTitle">Attendance</span></div>
@@ -487,8 +492,8 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="form-row full">
         <div class="form-group"><label>Notes</label><textarea id="sNotes" placeholder="Any notes about this student…"></textarea></div>
         <div class="form-group">
-          <label>Days Attended <span style="font-weight:300;color:var(--muted);font-size:0.75em">(override if needed)</span></label>
-          <input type="number" id="sDaysAttended" min="0" placeholder="e.g. 24">
+          <label>Weeks Attended <span style="font-weight:300;color:var(--muted);font-size:0.75em">(override if needed)</span></label>
+          <input type="number" id="sDaysAttended" min="0" placeholder="e.g. 3">
         </div>
         <!-- Songs Learned -->
         <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
@@ -1012,8 +1017,13 @@ function parseLocalDate(dateStr){
 }
 
 function getEffectiveDays(s){
-  // Start day counts as day 1, so 7 days weekly = valid through day 6 after join
-  return (s.subscription==='Weekly'?6:27) + parseInt(s.extendedDays||0);
+  // Weekly = 1 week (7 days), Monthly = 4 weeks (28 days)
+  const base = s.subscription==='Weekly' ? 7 : 28;
+  return base + (parseInt(s.extendedDays||0) * 7); // extensions in weeks
+}
+
+function getEffectiveWeeks(s){
+  return s.subscription==='Weekly' ? 1 : 4;
 }
 
 function isStudentActive(s){
@@ -1750,7 +1760,16 @@ window.loadWeekAttendance = async function(){
   const weekKey = start.toLocaleDateString('en-CA').replace(/-/g,'');
   const attRef  = doc(db,'attendance',`${currentArtist.user}_${currentAttBatch}_${weekKey}`);
   const attSnap = await getDoc(attRef);
-  attendance    = attSnap.exists() ? attSnap.data().records||{} : {};
+
+  // Support both old day-based format and new weekly flat format
+  const rawRec = attSnap.exists() ? attSnap.data().records||{} : {};
+  attendance = {};
+  Object.entries(rawRec).forEach(([sid,val])=>{
+    if(typeof val === 'string') attendance[sid] = val;
+    else if(typeof val === 'object' && val !== null){
+      attendance[sid] = Object.values(val).includes('present') ? 'present' : 'absent';
+    }
+  });
 
   // Load this week's song
   await loadWeeklySong(currentAttBatch, weekKey);
@@ -1758,11 +1777,9 @@ window.loadWeekAttendance = async function(){
   // Load new students joining this week
   await renderNewStudentsForWeek(start);
 
-  // Week start and end dates (Mon–Sun)
   const weekStart = weekDates[0];
   const weekEnd   = weekDates[6];
 
-  // Get batch students
   const batchStudents = students.filter(s=>s.batchId===currentAttBatch);
   const batch = currentArtist.batches.find(b=>b.id===currentAttBatch);
   document.getElementById('attTableTitle').textContent = (batch?.name||'') + ' · ' + (batch?.time||'');
@@ -1772,50 +1789,41 @@ window.loadWeekAttendance = async function(){
     return;
   }
 
-  // Categorise students for this week
   const activeInWeek  = [];
   const notStartedYet = [];
   const expiredInWeek = [];
 
   batchStudents.forEach(s=>{
     if(!s.joinDate){ expiredInWeek.push(s); return; }
-    const joined    = parseLocalDate(s.joinDate);
-    const expiry    = new Date(joined);
+    const joined = parseLocalDate(s.joinDate);
+    const expiry = new Date(joined);
     expiry.setDate(joined.getDate() + getEffectiveDays(s));
-
-    if(joined > weekEnd)         notStartedYet.push({...s, joined, expiry});
-    else if(expiry < weekStart)  expiredInWeek.push({...s, joined, expiry});
-    else                         activeInWeek.push({...s, joined, expiry});
+    if(joined > weekEnd)        notStartedYet.push({...s, joined, expiry});
+    else if(expiry < weekStart) expiredInWeek.push({...s, joined, expiry});
+    else                        activeInWeek.push({...s, joined, expiry});
   });
 
   let html = '';
 
-  // ACTIVE students
+  // ACTIVE — one weekly toggle per student
   if(activeInWeek.length){
     html += `<div style="padding:0.6rem 1rem;background:rgba(92,184,122,0.06);border-bottom:1px solid var(--border);font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);font-family:'Syne',sans-serif">Active · ${activeInWeek.length}</div>`;
-    html += activeInWeek.map(s=>`
-      <div class="att-row">
+    html += activeInWeek.map(s=>{
+      const weeksLeft = Math.ceil((s.expiry - new Date()) / (1000*60*60*24*7));
+      const status    = attendance[s.id]||'';
+      return `<div class="att-row">
         <div style="min-width:0;flex:1">
           <p class="att-name">${s.name}</p>
-          <p class="att-phone">${s.phone} · <span style="color:var(--green);font-size:0.65rem">until ${s.expiry.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span></p>
+          <p class="att-phone">${s.phone} · <span style="color:var(--green);font-size:0.65rem">${weeksLeft>0?weeksLeft+' week'+(weeksLeft!==1?'s':'')+' left':'expires this week'}</span></p>
         </div>
-        <div class="att-days">
-          ${dayNames.map((d,i)=>{
-            const dateKey = weekDates[i].toLocaleDateString('en-CA');
-            const status  = (attendance[s.id]||{})[dateKey]||'';
-            const isClass = i<=2;
-            if(!isClass) return `<div class="att-day-btn" style="opacity:0.18;cursor:default;font-size:0.6rem;color:var(--muted)">${d}</div>`;
-            return `<button class="att-day-btn ${status}" onclick="toggleAtt('${s.id}','${dateKey}',this)" title="${weekDates[i].toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short'})}">
-              <span>${d}</span>
-              <span>${weekDates[i].getDate()}</span>
-              <span>${status==='present'?'✓':status==='absent'?'✗':'·'}</span>
-            </button>`;
-          }).join('')}
-        </div>
-      </div>`).join('');
+        <button class="att-week-btn ${status}" onclick="toggleWeekAtt('${s.id}',this)">
+          ${status==='present'?'✓ Present':status==='absent'?'✗ Absent':'Mark Attendance'}
+        </button>
+      </div>`;
+    }).join('');
   }
 
-  // EXPIRED students
+  // EXPIRED
   if(expiredInWeek.length){
     html += `<div style="padding:0.6rem 1rem;background:rgba(229,115,115,0.06);border-bottom:1px solid var(--border);border-top:2px solid var(--border2);font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#e57373;font-family:'Syne',sans-serif;margin-top:${activeInWeek.length?'0.5rem':'0'}">Subscription Expired · ${expiredInWeek.length}</div>`;
     html += expiredInWeek.map(s=>`
@@ -1919,9 +1927,19 @@ window.extendStudent = async function(id, name, subscription){
   loadWeekAttendance();
 };
 
+window.toggleWeekAtt = function(studentId, btn){
+  const cur  = attendance[studentId]||'';
+  const next = cur===''?'present':cur==='present'?'absent':'';
+  attendance[studentId] = next;
+  btn.className = 'att-week-btn ' + next;
+  btn.textContent = next==='present'?'✓ Present':next==='absent'?'✗ Absent':'Mark Attendance';
+};
+
+// Legacy — kept for backward compat with any remaining calls
 window.toggleAtt = function(studentId, dateKey, btn){
   if(!attendance[studentId]) attendance[studentId] = {};
-  const cur = attendance[studentId][dateKey]||'';
+  if(typeof attendance[studentId] === 'string') attendance[studentId] = {};
+  const cur  = attendance[studentId][dateKey]||'';
   const next = cur===''?'present':cur==='present'?'absent':'';
   attendance[studentId][dateKey] = next;
   btn.className = 'att-day-btn ' + next;

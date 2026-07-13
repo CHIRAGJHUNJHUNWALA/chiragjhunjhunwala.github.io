@@ -481,8 +481,16 @@ function getDaysLeft(s){
   const joined = new Date(s.joinDate);
   const days   = s.subscription==='Weekly' ? 7 : 28;
   const expiry = new Date(joined);
-  expiry.setDate(joined.getDate()+days);
+  expiry.setDate(joined.getDate()+days+(parseInt(s.extendedDays||0)*7));
   return Math.ceil((expiry-new Date())/(1000*60*60*24));
+}
+
+function getWeeksLeft(s){
+  return Math.max(0, Math.ceil(getDaysLeft(s)/7));
+}
+
+function getTotalWeeks(s){
+  return s.subscription==='Weekly' ? 1 : 4;
 }
 
 function getExpiryDate(s){
@@ -490,8 +498,12 @@ function getExpiryDate(s){
   const joined = new Date(s.joinDate);
   const days   = s.subscription==='Weekly' ? 7 : 28;
   const expiry = new Date(joined);
-  expiry.setDate(joined.getDate()+days);
+  expiry.setDate(joined.getDate()+days+(parseInt(s.extendedDays||0)*7));
   return expiry.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+}
+
+function isBatchExpired(s){
+  return getDaysLeft(s) <= 0;
 }
 
 /* ══════ LOGIN ══════ */
@@ -527,9 +539,9 @@ function showApp(phone, name, regs, batches){
   document.getElementById('profileName').textContent    = name;
   document.getElementById('profilePhone').textContent   = '+91 ' + phone.replace(/^\+91/,'');
 
-  // Split batches into active and expired
-  const activeBatches  = batches.filter(b => b.status !== 'expired' && b.status !== 'inactive');
-  const expiredBatches = batches.filter(b => b.status === 'expired' || b.status === 'inactive');
+  // Split batches by actual expiry date
+  const activeBatches  = batches.filter(b => !isBatchExpired(b));
+  const expiredBatches = batches.filter(b => isBatchExpired(b));
 
   // A reg is "completed" only if ALL slots are checked in
   const isFullyDone = (r) => {
@@ -546,7 +558,7 @@ function showApp(phone, name, regs, batches){
   const completedRegs = regs.filter(r => isFullyDone(r));
 
   renderBatches(activeBatches, phone);
-  renderWorkshops(activeRegs, phone);
+  renderWorkshops(activeRegs);
   renderHistory(expiredBatches, completedRegs);
 }
 
@@ -568,13 +580,15 @@ async function renderBatches(batches, phone){
   let html = `<p class="section-eyebrow">Your Batches</p><h2 class="section-title">REGULAR BATCHES</h2>`;
 
   for(const s of batches){
-    const cfg      = BATCHES_CONFIG[s.batchId] || {};
-    const left     = getDaysLeft(s);
-    const isActive = left > 0;
-    const pct      = Math.max(0, Math.min(100, s.subscription==='Weekly' ? (left/7)*100 : (left/28)*100));
-    const chipClass = !isActive ? 'status-expired' : left<=3 ? 'status-expiring' : 'status-active';
-    const chipText  = !isActive ? 'Expired' : left<=3 ? `⚡ ${left} day${left!==1?'s':''} left` : 'Active';
-    const barColor  = !isActive ? '#e57373' : left<=3 ? 'var(--orange)' : 'var(--green)';
+    const cfg       = BATCHES_CONFIG[s.batchId] || {};
+    const weeksLeft = getWeeksLeft(s);
+    const totalWeeks= getTotalWeeks(s);
+    const isActive  = weeksLeft > 0;
+    const pct       = Math.max(0, Math.min(100, (weeksLeft/totalWeeks)*100));
+    const chipClass = !isActive ? 'status-expired' : weeksLeft<=1 ? 'status-expiring' : 'status-active';
+    const chipText  = !isActive ? 'Expired' : weeksLeft<=1 ? `⚡ Last week` : `${weeksLeft} week${weeksLeft!==1?'s':''} left`;
+    const barColor  = !isActive ? '#e57373' : weeksLeft<=1 ? 'var(--orange)' : 'var(--green)';
+    const weeksAttended = s.weeksAttended !== undefined ? s.weeksAttended : (s.daysAttended ? Math.ceil(s.daysAttended/3) : '—');
 
     html += `
       <div class="batch-info-card">
@@ -588,16 +602,18 @@ async function renderBatches(batches, phone){
         <div class="batch-info-body">
           <div class="info-item"><strong>Time</strong><span>${cfg.time||'—'}</span></div>
           <div class="info-item"><strong>Days</strong><span>${cfg.days||'—'}</span></div>
-          <div class="info-item"><strong>Subscription</strong><span>${s.subscription||'—'}</span></div>
+          <div class="info-item"><strong>Subscription</strong><span>${s.subscription||'—'} · ${totalWeeks} week${totalWeeks!==1?'s':''}</span></div>
           <div class="info-item"><strong>Joined</strong><span>${s.joinDate||'—'}</span></div>
-          <div class="info-item"><strong>Valid Until</strong><span style="color:${!isActive?'#e57373':left<=3?'var(--orange)':'var(--text)'}">${getExpiryDate(s)}</span></div>
+          <div class="info-item"><strong>Weeks Attended</strong><span style="color:var(--yellow)">${weeksAttended}</span></div>
+          <div class="info-item"><strong>Weeks Remaining</strong><span style="color:${!isActive?'#e57373':weeksLeft<=1?'var(--orange)':'var(--green)'}">${isActive?weeksLeft:'0'}</span></div>
+          <div class="info-item"><strong>Valid Until</strong><span style="color:${!isActive?'#e57373':weeksLeft<=1?'var(--orange)':'var(--text)'}">${getExpiryDate(s)}</span></div>
           <div class="info-item"><strong>Fee Paid</strong><span style="color:var(--yellow)">₹${parseFloat(s.fee||0).toLocaleString('en-IN')}</span></div>
         </div>
         <div class="expiry-bar">
           <div class="expiry-track"><div class="expiry-fill" style="width:${pct}%;background:${barColor}"></div></div>
           <div class="expiry-label">
             <span>Joined ${s.joinDate||'—'}</span>
-            <span>${isActive ? left+' day'+(left!==1?'s':'')+' remaining' : 'Subscription expired'}</span>
+            <span>${isActive ? weeksLeft+' week'+(weeksLeft!==1?'s':'')+' remaining' : 'Subscription expired'}</span>
           </div>
         </div>
       </div>`;
@@ -665,9 +681,7 @@ async function renderAttendance(s, phone){
 }
 
 /* ══════ WORKSHOPS ══════ */
-function renderWorkshops(regs, phone=''){
-  const normP = p=>String(p||'').replace(/\D/g,'').slice(-10);
-  const myPhone = normP(phone);
+function renderWorkshops(regs){
   document.getElementById('workshopLoading').style.display = 'none';
   document.getElementById('workshopContent').style.display = 'block';
   const el = document.getElementById('workshopContent');
@@ -742,28 +756,15 @@ function renderWorkshops(regs, phone=''){
             <p class="booking-artist">${r.workshop||'—'}</p>
             <p class="booking-style">${r.style||'Workshop'}</p>
           </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.35rem">
-            ${r.isCombo ? `<span class="pill" style="background:rgba(245,230,66,0.15);color:var(--yellow);border:1px solid rgba(245,230,66,0.3);font-size:0.58rem;letter-spacing:0.08em">GROUP BOOKING</span>` : ''}
-            ${statusPill}
-          </div>
+          ${statusPill}
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:start">
           <div class="booking-body">
             <div class="info-item"><strong>Package</strong><span>${r.package||'—'}</span></div>
             <div class="info-item"><strong>Slot / Song</strong><span style="font-size:0.82rem;color:var(--yellow)">${r.slots||'—'}</span></div>
-            <div class="info-item"><strong>Your Share</strong><span style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}${r.isCombo?` <span style="font-size:0.7rem;color:var(--muted)">(1 of ${r.groupSize})</span>`:''}</span></div>
+            <div class="info-item"><strong>Amount Paid</strong><span style="color:var(--yellow)">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</span></div>
             <div class="info-item"><strong>Booked On</strong><span style="font-size:0.78rem">${r.timestamp||'—'}</span></div>
             ${slotStatusHTML}
-            ${r.isCombo && r.groupMembers?.length ? `
-            <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.06)">
-              <p style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.45rem">Group Members (${r.groupSize})</p>
-              ${r.groupMembers.map((m,mi)=>`
-                <div style="display:flex;align-items:center;gap:0.6rem;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
-                  <span style="font-size:0.65rem;color:var(--muted);width:14px;flex-shrink:0">${mi+1}</span>
-                  <span style="font-size:0.8rem;color:${normP(m.phone)===myPhone?'var(--yellow)':'var(--text)'};font-weight:${normP(m.phone)===myPhone?'600':'400'}">${m.name}${normP(m.phone)===myPhone?' (you)':''}</span>
-                  <span style="font-size:0.7rem;color:var(--muted);margin-left:auto">${m.phone}</span>
-                </div>`).join('')}
-            </div>` : ''}
           </div>
           <div style="padding:1.25rem 1.25rem 0 0;text-align:center;position:relative">
             <div style="background:#fff;padding:8px;display:inline-block;border-radius:4px;position:relative" id="qr-wrap-${i}">
@@ -771,7 +772,6 @@ function renderWorkshops(regs, phone=''){
               ${qrOverlay}
             </div>
             <p style="font-size:0.6rem;color:${allCheckedIn?'#e57373':'var(--text-muted)'};margin-top:0.4rem;letter-spacing:0.05em">${qrLabel}</p>
-            ${r.isCombo ? `<p style="font-size:0.58rem;color:var(--muted);margin-top:0.2rem">Your entry QR</p>` : ''}
           </div>
         </div>
         <div class="booking-pid">ID: ${qrVal}</div>
@@ -796,19 +796,22 @@ function renderHistory(expiredBatches, completedRegs){
   if(expiredBatches.length){
     html += `<p class="section-eyebrow" style="margin-top:1.5rem">Past Batches</p>`;
     expiredBatches.forEach(b => {
-      const batchInfo = window._BATCHES?.[b.batchId] || {};
-      html += `<div class="booking-card" style="opacity:0.7">
-        <div class="booking-card-header">
+      const cfg        = BATCHES_CONFIG[b.batchId] || {};
+      const totalWeeks = getTotalWeeks(b);
+      const weeksAttended = b.weeksAttended !== undefined ? b.weeksAttended : (b.daysAttended ? Math.ceil(b.daysAttended/3) : '—');
+      html += `<div class="batch-info-card" style="opacity:0.7">
+        <div class="batch-info-header">
           <div>
-            <p class="booking-artist">${batchInfo.name||b.batchId||'Batch'}</p>
-            <p class="booking-style">by ${b.teacher||'—'}</p>
+            <p class="batch-info-name">${cfg.name||b.batchId||'Batch'}</p>
+            <p class="batch-info-trainer">by ${cfg.trainer||b.artistName||'—'}</p>
           </div>
-          <span class="pill" style="background:rgba(255,255,255,0.08);color:var(--muted)">Expired</span>
+          <span class="status-chip status-expired">Expired</span>
         </div>
-        <div class="booking-body">
-          <div class="info-item"><strong>Subscription</strong><span>${b.subscription||'—'}</span></div>
+        <div class="batch-info-body">
+          <div class="info-item"><strong>Subscription</strong><span>${b.subscription||'—'} · ${totalWeeks} week${totalWeeks!==1?'s':''}</span></div>
           <div class="info-item"><strong>Joined</strong><span>${b.joinDate||'—'}</span></div>
-          <div class="info-item"><strong>Expired</strong><span style="color:#e57373">${b.expiryDate||'—'}</span></div>
+          <div class="info-item"><strong>Expired</strong><span style="color:#e57373">${getExpiryDate(b)}</span></div>
+          <div class="info-item"><strong>Weeks Attended</strong><span style="color:var(--yellow)">${weeksAttended}</span></div>
         </div>
       </div>`;
     });
