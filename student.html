@@ -490,7 +490,9 @@ function getWeeksLeft(s){
 }
 
 function getTotalWeeks(s){
-  return s.subscription==='Weekly' ? 1 : 4;
+  // Base weeks + any extension weeks
+  const base = s.subscription==='Weekly' ? 1 : 4;
+  return base + parseInt(s.extendedDays||0);
 }
 
 function getExpiryDate(s){
@@ -604,8 +606,8 @@ async function renderBatches(batches, phone){
           <div class="info-item"><strong>Days</strong><span>${cfg.days||'—'}</span></div>
           <div class="info-item"><strong>Subscription</strong><span>${s.subscription||'—'} · ${totalWeeks} week${totalWeeks!==1?'s':''}</span></div>
           <div class="info-item"><strong>Joined</strong><span>${s.joinDate||'—'}</span></div>
-          <div class="info-item"><strong>Weeks Attended</strong><span style="color:var(--yellow)">${weeksAttended}</span></div>
-          <div class="info-item"><strong>Weeks Remaining</strong><span style="color:${!isActive?'#e57373':weeksLeft<=1?'var(--orange)':'var(--green)'}">${isActive?weeksLeft:'0'}</span></div>
+          <div class="info-item"><strong>Weeks Attended</strong><span id="wa-${s.id}" style="color:var(--yellow)">—</span></div>
+          <div class="info-item"><strong>Weeks Remaining</strong><span id="wr-${s.id}" style="color:var(--green)">—</span></div>
           <div class="info-item"><strong>Valid Until</strong><span style="color:${!isActive?'#e57373':weeksLeft<=1?'var(--orange)':'var(--text)'}">${getExpiryDate(s)}</span></div>
           <div class="info-item"><strong>Fee Paid</strong><span style="color:var(--yellow)">₹${parseFloat(s.fee||0).toLocaleString('en-IN')}</span></div>
         </div>
@@ -613,7 +615,7 @@ async function renderBatches(batches, phone){
           <div class="expiry-track"><div class="expiry-fill" style="width:${pct}%;background:${barColor}"></div></div>
           <div class="expiry-label">
             <span>Joined ${s.joinDate||'—'}</span>
-            <span>${isActive ? weeksLeft+' week'+(weeksLeft!==1?'s':'')+' remaining' : 'Subscription expired'}</span>
+            <span id="wb-${s.id}">${isActive ? weeksLeft+' week'+(weeksLeft!==1?'s':'')+' remaining' : 'Subscription expired'}</span>
           </div>
         </div>
       </div>`;
@@ -632,22 +634,66 @@ async function renderAttendance(s, phone){
       .map(d=>({id:d.id,...d.data()}))
       .filter(d=>d.batchId===s.batchId && d.artistId===s.artistId)
       .sort((a,b)=>b.weekKey.localeCompare(a.weekKey))
-      .slice(0,12); // Last 12 weeks
+      .slice(0,12);
 
-    if(!docs.length) return `<div style="padding:1rem 1.5rem 1.5rem"><p style="font-size:0.82rem;color:var(--text-muted)">No attendance recorded yet.</p></div>`;
-
-    const totalWeeks   = docs.length;
+    const totalWeeks   = getTotalWeeks(s);
     const weeksPresent = docs.filter(wk=>{
       const rec = wk.records?.[s.id];
-      // Support both new flat format (string) and old day-based format (object)
       if(typeof rec === 'string')  return rec === 'present';
       if(typeof rec === 'object' && rec !== null) return Object.values(rec).includes('present');
       return false;
     }).length;
+    const weeksRemaining = Math.max(0, totalWeeks - weeksPresent);
+
+    // Push live values back to the batch card spans
+    const waEl = document.getElementById('wa-'+s.id);
+    const wrEl = document.getElementById('wr-'+s.id);
+    const wbEl = document.getElementById('wb-'+s.id);
+    if(waEl) waEl.textContent = weeksPresent;
+    if(wrEl){
+      wrEl.textContent = weeksRemaining;
+      wrEl.style.color = weeksRemaining===0 ? '#e57373' : weeksRemaining===1 ? 'var(--orange)' : 'var(--green)';
+    }
+    if(wbEl) wbEl.textContent = weeksRemaining > 0
+      ? `${weeksPresent} of ${totalWeeks} weeks used · ${weeksRemaining} remaining`
+      : `${weeksPresent} of ${totalWeeks} weeks used · subscription complete`;
+
+    if(!docs.length) return `<div style="padding:1rem 1.5rem 1.5rem"><p style="font-size:0.82rem;color:var(--text-muted)">No attendance recorded yet.</p></div>`;
 
     let html = `<div class="attendance-section" style="padding:0 1.5rem 1.5rem">
       <p style="font-size:0.68rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.5rem;font-family:'Syne',sans-serif;font-weight:600">Attendance History</p>
       <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:1rem">${weeksPresent} of ${totalWeeks} weeks attended</p>`;
+
+    for(const wk of docs){
+      const weekStart = new Date(
+        wk.weekKey.slice(0,4)+'-'+wk.weekKey.slice(4,6)+'-'+wk.weekKey.slice(6,8)
+      );
+      const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6);
+      const weekLabel = weekStart.toLocaleDateString('en-IN',{day:'numeric',month:'short'})
+        + ' – ' + weekEnd.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+
+      const rec = wk.records?.[s.id];
+      let status = '';
+      if(typeof rec === 'string') status = rec;
+      else if(typeof rec === 'object' && rec !== null)
+        status = Object.values(rec).includes('present') ? 'present' : Object.values(rec).includes('absent') ? 'absent' : '';
+
+      const dot   = status==='present' ? '✓' : status==='absent' ? '✗' : '·';
+      const color = status==='present' ? 'var(--green)' : status==='absent' ? '#e57373' : 'var(--text-muted)';
+      const label = status==='present' ? 'Present' : status==='absent' ? 'Absent' : 'Not recorded';
+
+      html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+        <span style="font-size:0.78rem;color:var(--text-mid)">${weekLabel}</span>
+        <span style="font-size:0.75rem;font-weight:600;color:${color};display:flex;align-items:center;gap:0.35rem">
+          <span style="font-size:0.9rem">${dot}</span>${label}
+        </span>
+      </div>`;
+    }
+
+    html += `</div>`;
+    return html;
+  } catch(e){ return ''; }
+}
 
     for(const wk of docs){
       const weekStart = new Date(

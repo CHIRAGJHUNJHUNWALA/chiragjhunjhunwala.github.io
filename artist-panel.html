@@ -1950,8 +1950,10 @@ window.saveAttendance = async function(){
   const startStr = document.getElementById('weekStart').value;
   if(!startStr||!currentAttBatch){ showToast('Select a batch and week first','error'); return; }
   const [yr,mo,dy] = startStr.split('-').map(Number);
-  const start = new Date(yr, mo-1, dy);
+  const start  = new Date(yr, mo-1, dy);
   const weekKey = start.toLocaleDateString('en-CA').replace(/-/g,'');
+
+  // Save weekly attendance record
   await setDoc(doc(db,'attendance',`${currentArtist.user}_${currentAttBatch}_${weekKey}`),{
     artistId: currentArtist.user,
     batchId:  currentAttBatch,
@@ -1959,6 +1961,27 @@ window.saveAttendance = async function(){
     records:  attendance,
     savedAt:  Date.now(),
   });
+
+  // Update weeksAttended count on each student's record
+  // Count all weeks where they were marked present across all attendance docs for this batch
+  try {
+    const allAttSnap = await getDocs(collection(db,'attendance'));
+    const batchDocs  = allAttSnap.docs
+      .map(d=>d.data())
+      .filter(d=>d.artistId===currentArtist.user && d.batchId===currentAttBatch);
+
+    const studentsInBatch = students.filter(s=>s.batchId===currentAttBatch);
+    for(const s of studentsInBatch){
+      const weeksAttended = batchDocs.filter(d=>{
+        const rec = d.records?.[s.id];
+        if(typeof rec === 'string')  return rec === 'present';
+        if(typeof rec === 'object' && rec !== null) return Object.values(rec).includes('present');
+        return false;
+      }).length;
+      await setDoc(doc(db,'batchStudents',s.id),{weeksAttended},{merge:true});
+    }
+  } catch(e){ console.warn('Could not update weeksAttended:',e); }
+
   showToast('Attendance saved ✓');
 };
 
