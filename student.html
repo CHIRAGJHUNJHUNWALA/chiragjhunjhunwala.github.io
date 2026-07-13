@@ -410,7 +410,12 @@ window.sendOtp = async function(){
 
   } catch(e){
     console.error('OTP send error:', e);
-    errEl.textContent = 'Failed to send OTP. Please try again.';
+    const msg = e.code === 'auth/too-many-requests'    ? 'Too many attempts. Please wait a few minutes and try again.'
+              : e.code === 'auth/quota-exceeded'        ? 'SMS quota exceeded. Please contact the studio.'
+              : e.code === 'auth/invalid-phone-number'  ? 'Invalid phone number format.'
+              : e.code === 'auth/captcha-check-failed'  ? 'reCAPTCHA failed. Please refresh and try again.'
+              : `Failed to send OTP (${e.code||'unknown'}). Please try again.`;
+    errEl.textContent = msg;
     // Reset recaptcha on error
     try {
       window.recaptchaVerifier.clear();
@@ -673,37 +678,6 @@ async function renderAttendance(s, phone){
         + ' – ' + weekEnd.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
 
       const rec = wk.records?.[s.id];
-      let status = '';
-      if(typeof rec === 'string') status = rec;
-      else if(typeof rec === 'object' && rec !== null)
-        status = Object.values(rec).includes('present') ? 'present' : Object.values(rec).includes('absent') ? 'absent' : '';
-
-      const dot   = status==='present' ? '✓' : status==='absent' ? '✗' : '·';
-      const color = status==='present' ? 'var(--green)' : status==='absent' ? '#e57373' : 'var(--text-muted)';
-      const label = status==='present' ? 'Present' : status==='absent' ? 'Absent' : 'Not recorded';
-
-      html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
-        <span style="font-size:0.78rem;color:var(--text-mid)">${weekLabel}</span>
-        <span style="font-size:0.75rem;font-weight:600;color:${color};display:flex;align-items:center;gap:0.35rem">
-          <span style="font-size:0.9rem">${dot}</span>${label}
-        </span>
-      </div>`;
-    }
-
-    html += `</div>`;
-    return html;
-  } catch(e){ return ''; }
-}
-
-    for(const wk of docs){
-      const weekStart = new Date(
-        wk.weekKey.slice(0,4)+'-'+wk.weekKey.slice(4,6)+'-'+wk.weekKey.slice(6,8)
-      );
-      const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6);
-      const weekLabel = weekStart.toLocaleDateString('en-IN',{day:'numeric',month:'short'})
-        + ' – ' + weekEnd.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
-
-      const rec    = wk.records?.[s.id];
       let status = '';
       if(typeof rec === 'string') status = rec;
       else if(typeof rec === 'object' && rec !== null)
