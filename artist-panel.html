@@ -819,30 +819,32 @@ async function initApp(){
     mon.setDate(now.getDate() + toMon);
     document.getElementById('weekStart').value = mon.toLocaleDateString('en-CA');
     // Auto-populate batches from Firestore batchDefs matched by trainer name
-    // This handles both hardcoded trainers AND dynamically added ones
-    // and supports a trainer having multiple batches automatically
     try {
-      const bSnap = await getDocs(collection(db,'batchDefs'));
-      const allDefs = bSnap.docs.map(d=>({id:d.id,...d.data()}));
+      const bSnap   = await getDocs(collection(db,'batchDefs'));
+      const allDefs = bSnap.docs.map(d=>({docId:d.id,...d.data()}));
       const myDefs  = allDefs.filter(b=>
         b.trainer?.toLowerCase()===currentArtist.name?.toLowerCase() ||
         b.batchId===currentArtist.user ||
         b.batchId===currentArtist.artistId
       );
       if(myDefs.length){
-        // Merge with any already set — deduplicate by id
-        const existing = new Set(currentArtist.batches.map(b=>b.id));
+        // Build a set of all IDs already in batches (both .id values)
+        const existingIds = new Set(
+          currentArtist.batches.flatMap(b=>[b.id, b.batchId].filter(Boolean))
+        );
         myDefs.forEach(b=>{
-          if(!existing.has(b.id)){
-            currentArtist.batches.push({
-              id:   b.batchId||b.id,
-              name: b.name,
-              time: b.time,
-              days: b.days,
-              style:b.style,
-              fee:  b.fee,
-            });
-          }
+          const resolvedId = b.batchId||b.docId;
+          // Skip if already present under any ID variant
+          if(existingIds.has(resolvedId)||existingIds.has(b.docId)) return;
+          existingIds.add(resolvedId);
+          currentArtist.batches.push({
+            id:    resolvedId,
+            name:  b.name,
+            time:  b.time,
+            days:  b.days,
+            style: b.style,
+            fee:   b.fee,
+          });
         });
       }
     } catch(e){ console.warn('Could not load batchDefs:',e); }
