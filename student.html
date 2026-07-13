@@ -627,54 +627,54 @@ async function renderBatches(batches, phone){
 
 async function renderAttendance(s, phone){
   try {
-    // Get all attendance docs for this batch and artist
     const attSnap = await getDocs(collection(db,'attendance'));
     const docs    = attSnap.docs
       .map(d=>({id:d.id,...d.data()}))
       .filter(d=>d.batchId===s.batchId && d.artistId===s.artistId)
       .sort((a,b)=>b.weekKey.localeCompare(a.weekKey))
-      .slice(0,8); // Last 8 weeks
+      .slice(0,12); // Last 12 weeks
 
     if(!docs.length) return `<div style="padding:1rem 1.5rem 1.5rem"><p style="font-size:0.82rem;color:var(--text-muted)">No attendance recorded yet.</p></div>`;
 
-    const days    = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const totalWeeks   = docs.length;
+    const weeksPresent = docs.filter(wk=>{
+      const rec = wk.records?.[s.id];
+      // Support both new flat format (string) and old day-based format (object)
+      if(typeof rec === 'string')  return rec === 'present';
+      if(typeof rec === 'object' && rec !== null) return Object.values(rec).includes('present');
+      return false;
+    }).length;
+
     let html = `<div class="attendance-section" style="padding:0 1.5rem 1.5rem">
-      <p style="font-size:0.68rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.85rem;font-family:'Syne',sans-serif;font-weight:600">Attendance History</p>`;
+      <p style="font-size:0.68rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.5rem;font-family:'Syne',sans-serif;font-weight:600">Attendance History</p>
+      <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:1rem">${weeksPresent} of ${totalWeeks} weeks attended</p>`;
 
     for(const wk of docs){
       const weekStart = new Date(
         wk.weekKey.slice(0,4)+'-'+wk.weekKey.slice(4,6)+'-'+wk.weekKey.slice(6,8)
       );
-      const weekDates = Array.from({length:7},(_,i)=>{
-        const d=new Date(weekStart); d.setDate(weekStart.getDate()+i); return d;
-      });
-      const records   = wk.records?.[s.id] || {};
-      const present   = Object.values(records).filter(v=>v==='present').length;
-      const total     = Object.values(records).filter(v=>v!=='').length;
+      const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6);
+      const weekLabel = weekStart.toLocaleDateString('en-IN',{day:'numeric',month:'short'})
+        + ' – ' + weekEnd.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
 
-      const weekLabel = weekDates[0].toLocaleDateString('en-IN',{day:'numeric',month:'short'})
-        + ' – ' + weekDates[6].toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+      const rec    = wk.records?.[s.id];
+      let status = '';
+      if(typeof rec === 'string') status = rec;
+      else if(typeof rec === 'object' && rec !== null)
+        status = Object.values(rec).includes('present') ? 'present' : Object.values(rec).includes('absent') ? 'absent' : '';
 
-      html += `<div class="att-week">
-        <div class="att-week-header">
-          <span class="att-week-label">${weekLabel}</span>
-          <span class="att-week-count">${present}/${total} classes attended</span>
-        </div>
-        <div class="att-days-row">
-          ${days.map((d,i)=>{
-            const isClass  = [0,1,2].includes(i);
-            const dateKey  = weekDates[i].toISOString().split('T')[0];
-            const status   = records[dateKey]||'';
-            const dotClass = !isClass ? 'att-noclass' : status==='present' ? 'att-present' : status==='absent' ? 'att-absent' : 'att-noclass';
-            const symbol   = !isClass ? '—' : status==='present' ? '✓' : status==='absent' ? '✗' : '·';
-            return `<div class="att-day">
-              <span class="att-day-name">${d}</span>
-              <span class="att-day-dot ${dotClass}">${symbol}</span>
-            </div>`;
-          }).join('')}
-        </div>
+      const dot   = status==='present' ? '✓' : status==='absent' ? '✗' : '·';
+      const color = status==='present' ? 'var(--green)' : status==='absent' ? '#e57373' : 'var(--text-muted)';
+      const label = status==='present' ? 'Present' : status==='absent' ? 'Absent' : 'Not recorded';
+
+      html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+        <span style="font-size:0.78rem;color:var(--text-mid)">${weekLabel}</span>
+        <span style="font-size:0.75rem;font-weight:600;color:${color};display:flex;align-items:center;gap:0.35rem">
+          <span style="font-size:0.9rem">${dot}</span>${label}
+        </span>
       </div>`;
     }
+
     html += `</div>`;
     return html;
   } catch(e){ return ''; }
