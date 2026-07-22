@@ -118,10 +118,19 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
 .status-active{background:rgba(106,175,126,0.15);color:var(--green);border:1px solid rgba(106,175,126,0.3)}
 .status-expired{background:rgba(229,115,115,0.12);color:#e57373;border:1px solid rgba(229,115,115,0.25)}
 .status-expiring{background:rgba(232,134,58,0.15);color:var(--orange);border:1px solid rgba(232,134,58,0.3)}
-.batch-info-body{padding:1.5rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1.25rem}
+.batch-info-body{padding:1.25rem 1.5rem;display:grid;grid-template-columns:repeat(4,1fr);gap:1rem 1.5rem;border-bottom:1px solid var(--border)}
 .info-item strong{display:block;font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.25rem;font-weight:500}
 .info-item span{font-size:0.9rem;color:var(--text)}
-.expiry-bar{padding:0 1.5rem 1.25rem}
+.att-weeks-wrap{padding:1.25rem 1.5rem;display:flex;flex-wrap:wrap;gap:0.6rem}
+.att-week-box{display:flex;flex-direction:column;align-items:center;gap:0.3rem;padding:0.6rem 0.5rem;border:1px solid var(--border);min-width:72px}
+.att-week-box.present{background:rgba(92,184,122,0.12);border-color:rgba(92,184,122,0.45)}
+.att-week-box.absent{background:rgba(229,115,115,0.1);border-color:rgba(229,115,115,0.35)}
+.att-week-box.future{background:transparent;border-color:rgba(255,255,255,0.08)}
+.att-week-icon{font-size:1.1rem;font-weight:700;line-height:1}
+.att-week-box.present .att-week-icon{color:var(--green)}
+.att-week-box.absent .att-week-icon{color:#e57373}
+.att-week-box.future .att-week-icon{color:rgba(255,255,255,0.1)}
+.att-week-date{font-size:0.58rem;color:var(--text-muted);text-align:center;line-height:1.4;margin-top:0.1rem}
 .expiry-track{height:4px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;margin-bottom:0.35rem}
 .expiry-fill{height:100%;border-radius:2px;transition:width 0.5s ease}
 .expiry-label{font-size:0.7rem;color:var(--text-muted);display:flex;justify-content:space-between}
@@ -578,7 +587,7 @@ async function renderBatches(batches, phone){
     el.innerHTML = `<div class="empty-state">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
       <h3>No Batch Enrollment</h3>
-      <p>You're not enrolled in any regular batch yet.<br>Contact us on WhatsApp to join one.</p>
+      <p>You\'re not enrolled in any regular batch yet.<br>Contact us to join one.</p>
     </div>`;
     return;
   }
@@ -586,15 +595,10 @@ async function renderBatches(batches, phone){
   let html = `<p class="section-eyebrow">Your Batches</p><h2 class="section-title">REGULAR BATCHES</h2>`;
 
   for(const s of batches){
-    const cfg       = BATCHES_CONFIG[s.batchId] || {};
-    const weeksLeft = getWeeksLeft(s);
-    const totalWeeks= getTotalWeeks(s);
-    const isActive  = weeksLeft > 0;
-    const pct       = Math.max(0, Math.min(100, (weeksLeft/totalWeeks)*100));
-    const chipClass = !isActive ? 'status-expired' : weeksLeft<=1 ? 'status-expiring' : 'status-active';
-    const chipText  = !isActive ? 'Expired' : weeksLeft<=1 ? `⚡ Last week` : `${weeksLeft} week${weeksLeft!==1?'s':''} left`;
-    const barColor  = !isActive ? '#e57373' : weeksLeft<=1 ? 'var(--orange)' : 'var(--green)';
-    const weeksAttended = s.weeksAttended !== undefined ? s.weeksAttended : (s.daysAttended ? Math.ceil(s.daysAttended/3) : '—');
+    const cfg      = BATCHES_CONFIG[s.batchId] || {};
+    const isActive = getDaysLeft(s) > 0;
+    const chipClass= !isActive ? 'status-expired' : getWeeksLeft(s)<=1 ? 'status-expiring' : 'status-active';
+    const chipText = !isActive ? 'Expired' : getWeeksLeft(s)<=1 ? '⚡ Last week' : 'Active';
 
     html += `
       <div class="batch-info-card">
@@ -608,95 +612,99 @@ async function renderBatches(batches, phone){
         <div class="batch-info-body">
           <div class="info-item"><strong>Time</strong><span>${cfg.time||'—'}</span></div>
           <div class="info-item"><strong>Days</strong><span>${cfg.days||'—'}</span></div>
-          <div class="info-item"><strong>Subscription</strong><span>${s.subscription||'—'} · ${totalWeeks} week${totalWeeks!==1?'s':''}</span></div>
-          <div class="info-item"><strong>Joined</strong><span>${s.joinDate||'—'}</span></div>
+          <div class="info-item"><strong>Subscription</strong><span>${s.subscription||'—'}</span></div>
+          <div class="info-item"><strong>Joined On</strong><span>${s.joinDate||'—'}</span></div>
           <div class="info-item"><strong>Weeks Attended</strong><span id="wa-${s.id}" style="color:var(--yellow)">—</span></div>
           <div class="info-item"><strong>Weeks Remaining</strong><span id="wr-${s.id}" style="color:var(--green)">—</span></div>
-          <div class="info-item"><strong>Valid Until</strong><span style="color:${!isActive?'#e57373':weeksLeft<=1?'var(--orange)':'var(--text)'}">${getExpiryDate(s)}</span></div>
+          <div class="info-item"><strong>Valid Until</strong><span style="color:${!isActive?'#e57373':getWeeksLeft(s)<=1?'var(--orange)':'var(--text)'}">${getExpiryDate(s)}</span></div>
           <div class="info-item"><strong>Fee Paid</strong><span style="color:var(--yellow)">₹${parseFloat(s.fee||0).toLocaleString('en-IN')}</span></div>
         </div>
-        <div class="expiry-bar">
-          <div class="expiry-track"><div class="expiry-fill" style="width:${pct}%;background:${barColor}"></div></div>
-          <div class="expiry-label">
-            <span>Joined ${s.joinDate||'—'}</span>
-            <span id="wb-${s.id}">${isActive ? weeksLeft+' week'+(weeksLeft!==1?'s':'')+' remaining' : 'Subscription expired'}</span>
-          </div>
+        <div class="att-weeks-wrap" id="aw-${s.id}">
+          <p style="font-size:0.72rem;color:var(--text-muted)">Loading…</p>
         </div>
       </div>`;
-
-    // Load attendance for this student + batch
-    html += await renderAttendance(s, phone);
   }
 
   el.innerHTML = html;
+
+  // Load attendance for each batch and update in place
+  for(const s of batches){
+    renderAttendance(s);
+  }
 }
+async function renderAttendance(s){
+  const container = document.getElementById('aw-'+s.id);
+  if(!container) return;
 
-async function renderAttendance(s, phone){
   try {
+    // Load all attendance docs for this batch
     const attSnap = await getDocs(collection(db,'attendance'));
-    const docs    = attSnap.docs
+    const attDocs = attSnap.docs
       .map(d=>({id:d.id,...d.data()}))
-      .filter(d=>d.batchId===s.batchId)
-      .sort((a,b)=>b.weekKey.localeCompare(a.weekKey))
-      .slice(0,12);
+      .filter(d=>d.batchId===s.batchId);
 
-    const totalWeeks   = getTotalWeeks(s);
-    const weeksPresent = docs.filter(wk=>{
-      const rec = wk.records?.[s.id];
-      if(typeof rec === 'string')  return rec === 'present';
-      if(typeof rec === 'object' && rec !== null) return Object.values(rec).includes('present');
-      return false;
-    }).length;
-    const weeksRemaining = Math.max(0, totalWeeks - weeksPresent);
+    // Build status map: weekKey → 'present'|'absent'
+    const statusMap = {};
+    attDocs.forEach(d=>{
+      const rec = d.records?.[s.id];
+      if(typeof rec === 'string') statusMap[d.weekKey] = rec;
+      else if(typeof rec === 'object' && rec !== null)
+        statusMap[d.weekKey] = Object.values(rec).includes('present') ? 'present' : 'absent';
+    });
 
-    // Push live values back to the batch card spans
+    // Subscription period: Weekly = 1 week, Monthly = 4 weeks (always)
+    const baseWeeks = s.subscription==='Weekly' ? 1 : 4;
+
+    // Current period: count backwards from expiry date
+    const totalDays = (baseWeeks + parseInt(s.extendedDays||0)) * 7;
+    const joined    = s.joinDate ? new Date(s.joinDate+'T00:00') : null;
+    const expiry    = joined ? new Date(joined.getTime() + totalDays*24*60*60*1000) : null;
+    const periodStart = expiry ? new Date(expiry.getTime() - baseWeeks*7*24*60*60*1000) : joined;
+
+    // Generate current period weeks (1 or 4)
+    const weeks = [];
+    if(periodStart){
+      for(let i=0; i<baseWeeks; i++){
+        const ws = new Date(periodStart); ws.setDate(periodStart.getDate() + i*7);
+        const we = new Date(ws); we.setDate(ws.getDate()+6);
+        const wk = ws.toLocaleDateString('en-CA').replace(/-/g,'');
+        weeks.push({ ws, we, wk });
+      }
+    }
+
+    // Lifetime attended (across all renewal periods)
+    const lifetimePresent = Object.values(statusMap).filter(v=>v==='present').length;
+
+    // Current period stats
+    const weeksPresent   = weeks.filter(w=>statusMap[w.wk]==='present').length;
+    const weeksRemaining = Math.max(0, baseWeeks - weeksPresent);
+
+    // Update info card spans
     const waEl = document.getElementById('wa-'+s.id);
     const wrEl = document.getElementById('wr-'+s.id);
-    const wbEl = document.getElementById('wb-'+s.id);
-    if(waEl) waEl.textContent = weeksPresent;
+    if(waEl) waEl.textContent = lifetimePresent;
     if(wrEl){
       wrEl.textContent = weeksRemaining;
       wrEl.style.color = weeksRemaining===0 ? '#e57373' : weeksRemaining===1 ? 'var(--orange)' : 'var(--green)';
     }
-    if(wbEl) wbEl.textContent = weeksRemaining > 0
-      ? `${weeksPresent} of ${totalWeeks} weeks used · ${weeksRemaining} remaining`
-      : `${weeksPresent} of ${totalWeeks} weeks used · subscription complete`;
 
-    if(!docs.length) return `<div style="padding:1rem 1.5rem 1.5rem"><p style="font-size:0.82rem;color:var(--text-muted)">No attendance recorded yet.</p></div>`;
-
-    let html = `<div class="attendance-section" style="padding:0 1.5rem 1.5rem">
-      <p style="font-size:0.68rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.5rem;font-family:'Syne',sans-serif;font-weight:600">Attendance History</p>
-      <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:1rem">${weeksPresent} of ${totalWeeks} weeks attended</p>`;
-
-    for(const wk of docs){
-      const weekStart = new Date(
-        wk.weekKey.slice(0,4)+'-'+wk.weekKey.slice(4,6)+'-'+wk.weekKey.slice(6,8)
-      );
-      const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6);
-      const weekLabel = weekStart.toLocaleDateString('en-IN',{day:'numeric',month:'short'})
-        + ' – ' + weekEnd.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
-
-      const rec = wk.records?.[s.id];
-      let status = '';
-      if(typeof rec === 'string') status = rec;
-      else if(typeof rec === 'object' && rec !== null)
-        status = Object.values(rec).includes('present') ? 'present' : Object.values(rec).includes('absent') ? 'absent' : '';
-
-      const dot   = status==='present' ? '✓' : status==='absent' ? '✗' : '·';
-      const color = status==='present' ? 'var(--green)' : status==='absent' ? '#e57373' : 'var(--text-muted)';
-      const label = status==='present' ? 'Present' : status==='absent' ? 'Absent' : 'Not recorded';
-
-      html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
-        <span style="font-size:0.78rem;color:var(--text-mid)">${weekLabel}</span>
-        <span style="font-size:0.75rem;font-weight:600;color:${color};display:flex;align-items:center;gap:0.35rem">
-          <span style="font-size:0.9rem">${dot}</span>${label}
-        </span>
+    // Render week boxes
+    const fmt = d => d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+    const boxes = weeks.map(({ws,we,wk})=>{
+      const status = statusMap[wk] || 'future';
+      const icon   = status==='present' ? '✓' : status==='absent' ? '✗' : '';
+      const dates  = fmt(ws)+'<br>'+fmt(we);
+      return `<div class="att-week-box ${status}">
+        <span class="att-week-icon">${icon||'○'}</span>
+        <span class="att-week-date">${dates}</span>
       </div>`;
-    }
+    }).join('');
 
-    html += `</div>`;
-    return html;
-  } catch(e){ return ''; }
+    container.innerHTML = boxes || '<p style="font-size:0.72rem;color:var(--text-muted)">No subscription weeks found.</p>';
+
+  } catch(e){
+    container.innerHTML = '<p style="font-size:0.72rem;color:var(--text-muted)">Could not load attendance.</p>';
+  }
 }
 
 /* ══════ WORKSHOPS ══════ */
@@ -827,7 +835,7 @@ function renderHistory(expiredBatches, completedRegs){
           <span class="status-chip status-expired">Expired</span>
         </div>
         <div class="batch-info-body">
-          <div class="info-item"><strong>Subscription</strong><span>${b.subscription||'—'} · ${totalWeeks} week${totalWeeks!==1?'s':''}</span></div>
+          <div class="info-item"><strong>Subscription</strong><span>${b.subscription||'—'}</span></div>
           <div class="info-item"><strong>Joined</strong><span>${b.joinDate||'—'}</span></div>
           <div class="info-item"><strong>Expired</strong><span style="color:#e57373">${getExpiryDate(b)}</span></div>
           <div class="info-item"><strong>Weeks Attended</strong><span style="color:var(--yellow)">${weeksAttended}</span></div>
