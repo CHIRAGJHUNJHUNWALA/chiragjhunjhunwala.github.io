@@ -767,14 +767,47 @@ document.addEventListener('artistLoggedIn', async e => {
 
 // Auto-login on page load — always re-check blocked status
 document.addEventListener('DOMContentLoaded', async () => {
+
+  // ── ADMIN IMPERSONATION ───────────────────────────────
+  const impData = localStorage.getItem('ths_artist_impersonate');
+  if(impData){
+    try {
+      const token = JSON.parse(impData);
+      if(token._adminImpersonate && Date.now() < token._expires){
+        localStorage.removeItem('ths_artist_impersonate'); // one-time use
+        currentArtist = {
+          user:    token.user,
+          name:    token.name,
+          role:    token.role||'trainer',
+          phone:   token.phone||'',
+          batches: [],
+          artistId:token.user,
+          _impersonated: true,
+        };
+        // Sign in anonymously so Firestore rules (isArtist) are satisfied
+        try { await signInAnonymously(auth); } catch(e){}
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('appShell').style.display    = 'block';
+        // Show banner so you know you're in impersonation mode
+        const banner = document.createElement('div');
+        banner.style.cssText='position:fixed;bottom:0;left:0;right:0;background:var(--red);color:#fff;text-align:center;padding:0.5rem;font-size:0.75rem;font-family:"Syne",sans-serif;font-weight:700;letter-spacing:0.1em;z-index:9999';
+        banner.textContent=`Admin View — Logged in as ${token.name}`;
+        document.body.appendChild(banner);
+        initApp();
+        return;
+      } else {
+        localStorage.removeItem('ths_artist_impersonate');
+      }
+    } catch(e){ localStorage.removeItem('ths_artist_impersonate'); }
+  }
+
+  // ── NORMAL SESSION RESTORE ────────────────────────────
   const saved = sessionStorage.getItem('ths_artist');
   if(!saved) return;
   try {
     const s = JSON.parse(saved);
-    // Find in hardcoded array OR build from session data (for Firebase-added artists)
     let found = ARTISTS.find(a=>a.user===s.user);
     if(!found){
-      // Artist added dynamically — reconstruct from session + Firebase
       found = {user:s.user, name:s.name, role:s.role||'trainer', batches:[], artistId:s.user};
     }
     currentArtist = found;

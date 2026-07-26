@@ -5954,7 +5954,7 @@ window.filterAdminBatch = function(id, el){
 /* ══════════════════════════════════════
    BATCH ATTENDANCE GRID (Admin)
 ══════════════════════════════════════ */
-async function renderBatchAttGrid(){
+window.renderBatchAttGrid = async function(){
   const section = document.getElementById('batchAttSection');
   const grid    = document.getElementById('batchAttGrid');
   if(!section||!grid) return;
@@ -8461,6 +8461,9 @@ function _renderArtistRosterHTML(){
         <button onclick="editArtistPhone(${i})" class="btn btn-outline btn-sm" style="border-color:rgba(100,180,255,0.4);color:#6ab0f5;margin-top:0.25rem">📱 Edit Phone</button>
       </div>
       <div style="display:flex;gap:0.5rem;flex-direction:column;align-items:flex-end">
+        <button onclick="openAsTrainer(${i})" class="btn btn-sm" style="background:rgba(188,31,46,0.1);border:1px solid rgba(188,31,46,0.35);color:var(--red);font-size:0.72rem;white-space:nowrap">
+          ↗ Open as Trainer
+        </button>
         <button onclick="toggleArtistBlock(${i})" class="btn btn-sm" style="${a.blocked?'background:rgba(92,184,122,0.12);border:1px solid rgba(92,184,122,0.35);color:var(--green)':'background:rgba(229,115,115,0.1);border:1px solid rgba(229,115,115,0.35);color:#e57373'}">
           ${a.blocked?'✓ Unblock':'⊘ Block'}
         </button>
@@ -8470,6 +8473,22 @@ function _renderArtistRosterHTML(){
       </div>
     </div>`).join('') || `<div style="padding:2rem;text-align:center;color:var(--muted);border:1px dashed var(--border)">No artists found. Click "Add New Artist" to create one.</div>`;
 }
+
+window.openAsTrainer = function(i){
+  const a = ARTIST_ROSTER[i];
+  if(!a){ showToast('Artist not found','error'); return; }
+  const token = {
+    user:      a.user,
+    name:      a.name,
+    role:      a.role||'trainer',
+    phone:     a.phone||'',
+    _adminImpersonate: true,
+    _expires:  Date.now() + 2*60*1000, // 2 minute window
+  };
+  localStorage.setItem('ths_artist_impersonate', JSON.stringify(token));
+  window.open('artist-panel.html', '_blank');
+  showToast(`Opening panel as ${a.name}…`);
+};
 
 window.toggleArtistBlock = async function(i){
   ARTIST_ROSTER[i].blocked=!ARTIST_ROSTER[i].blocked;
