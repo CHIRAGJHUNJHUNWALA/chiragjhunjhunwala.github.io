@@ -518,7 +518,13 @@ function getExpiryDate(s){
 }
 
 function isBatchExpired(s){
-  return getDaysLeft(s) <= 0;
+  // Expired by time
+  if(getDaysLeft(s) <= 0) return true;
+  // Expired by usage — attended all subscription weeks (including extensions)
+  const totalWeeks = (s.subscription==='Weekly' ? 1 : 4) + parseInt(s.extendedDays||0);
+  const attended   = parseInt(s.weeksAttended||0);
+  if(attended >= totalWeeks && totalWeeks > 0) return true;
+  return false;
 }
 
 /* ══════ LOGIN ══════ */
@@ -638,8 +644,9 @@ async function renderAttendance(s){
 
   try {
     // Load all attendance docs for this batch
-    const attSnap = await getDocs(collection(db,'attendance'));
-    const attDocs = attSnap.docs
+    const attSnap  = await getDocs(collection(db,'attendance'));
+    const songSnap = await getDocs(collection(db,'weeklySongs'));
+    const attDocs  = attSnap.docs
       .map(d=>({id:d.id,...d.data()}))
       .filter(d=>d.batchId===s.batchId);
 
@@ -650,6 +657,13 @@ async function renderAttendance(s){
       if(typeof rec === 'string') statusMap[d.weekKey] = rec;
       else if(typeof rec === 'object' && rec !== null)
         statusMap[d.weekKey] = Object.values(rec).includes('present') ? 'present' : 'absent';
+    });
+
+    // Build song map: weekKey → song name
+    const songMap = {};
+    songSnap.docs.forEach(d=>{
+      const data = d.data();
+      if(data.batchId===s.batchId) songMap[data.weekKey] = data.song||'';
     });
 
     // Subscription period: Weekly = 1 week, Monthly = 4 weeks (always)
@@ -688,15 +702,17 @@ async function renderAttendance(s){
       wrEl.style.color = weeksRemaining===0 ? '#e57373' : weeksRemaining===1 ? 'var(--orange)' : 'var(--green)';
     }
 
-    // Render week boxes
+    // Render week boxes with song names
     const fmt = d => d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
     const boxes = weeks.map(({ws,we,wk})=>{
       const status = statusMap[wk] || 'future';
-      const icon   = status==='present' ? '✓' : status==='absent' ? '✗' : '';
-      const dates  = fmt(ws)+'<br>'+fmt(we);
+      const icon   = status==='present' ? '✓' : status==='absent' ? '✗' : '○';
+      const dates  = fmt(ws)+' – '+fmt(we);
+      const song   = songMap[wk] || '';
       return `<div class="att-week-box ${status}">
-        <span class="att-week-icon">${icon||'○'}</span>
+        <span class="att-week-icon">${icon}</span>
         <span class="att-week-date">${dates}</span>
+        ${song ? `<span style="font-size:0.55rem;color:var(--yellow);text-align:center;line-height:1.3;margin-top:0.15rem">♪ ${song}</span>` : ''}
       </div>`;
     }).join('');
 

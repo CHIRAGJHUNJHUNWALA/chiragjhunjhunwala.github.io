@@ -812,9 +812,14 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <!-- Students table for selected batch -->
       <div class="section-bar">
         <span class="section-bar-title" id="batchViewTitle">All Batches</span>
-        <button class="btn btn-outline btn-sm" onclick="exportBatchCSV()">
-          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV
-        </button>
+        <div style="display:flex;gap:0.5rem">
+          <button class="btn btn-outline btn-sm" id="takeAttBtn" onclick="openTakeAttModal()" style="display:none">
+            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Take Attendance
+          </button>
+          <button class="btn btn-outline btn-sm" onclick="exportBatchCSV()">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV
+          </button>
+        </div>
       </div>
 
       <!-- Active students -->
@@ -838,7 +843,54 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <table><thead><tr><th>Name</th><th>Phone</th><th>Batch</th><th>Trainer</th><th>Subscription</th><th>Fee</th><th>Payment</th><th>Joined</th><th>Expiry</th><th>Notes</th><th></th></tr></thead>
         <tbody id="inactiveBatchStudents"></tbody></table>
       </div>
+
+      <!-- BATCH ATTENDANCE GRID -->
+      <div id="batchAttSection" style="margin-top:2rem;display:none">
+        <div class="section-bar" style="margin-bottom:0">
+          <span class="section-bar-title">Attendance Overview</span>
+          <div style="display:flex;align-items:center;gap:0.75rem">
+            <label style="font-size:0.72rem;color:var(--muted)">Week of</label>
+            <input type="date" id="attGridWeek" style="background:var(--bg3);border:1px solid var(--border2);padding:0.4rem 0.6rem;color:var(--text);font-size:0.8rem;outline:none;color-scheme:dark" onchange="renderBatchAttGrid()">
+          </div>
+        </div>
+        <div id="batchAttGrid" style="margin-top:0.75rem;overflow-x:auto"></div>
+      </div>
     </div>
+
+    <!-- TAKE ATTENDANCE MODAL -->
+    <div class="modal-backdrop" id="takeAttModal">
+      <div class="modal" style="max-width:560px;width:100%">
+        <div class="modal-head">
+          <h2 class="modal-title">Take Attendance</h2>
+          <button class="modal-close" onclick="closeModal('takeAttModal')">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap">
+            <div style="flex:1;min-width:160px">
+              <p style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem;font-family:'Syne',sans-serif">Batch</p>
+              <select id="attModalBatch" onchange="loadAttModalStudents()" style="width:100%;background:var(--bg3);border:1px solid var(--border2);padding:0.6rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none;appearance:none"></select>
+            </div>
+            <div>
+              <p style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem;font-family:'Syne',sans-serif">Week of</p>
+              <input type="date" id="attModalWeek" style="background:var(--bg3);border:1px solid var(--border2);padding:0.6rem 0.75rem;color:var(--text);font-size:0.82rem;outline:none;color-scheme:dark" onchange="loadAttModalStudents()">
+            </div>
+          </div>
+          <div id="attModalSongWrap" style="margin-bottom:1rem;padding:0.75rem;background:rgba(245,230,66,0.05);border:1px solid rgba(245,230,66,0.2)">
+            <p style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--yellow);margin-bottom:0.4rem;font-family:'Syne',sans-serif">Song This Week</p>
+            <div style="display:flex;gap:0.5rem">
+              <input type="text" id="attModalSong" placeholder="Song name" style="flex:1;background:var(--bg3);border:1px solid var(--border2);padding:0.5rem 0.75rem;color:var(--text);font-size:0.82rem;outline:none">
+              <input type="text" id="attModalFilm" placeholder="Film (optional)" style="flex:1;background:var(--bg3);border:1px solid var(--border2);padding:0.5rem 0.75rem;color:var(--text);font-size:0.82rem;outline:none">
+            </div>
+          </div>
+          <div id="attModalList" style="max-height:340px;overflow-y:auto"></div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-ghost" onclick="closeModal('takeAttModal')">Cancel</button>
+          <button class="btn btn-red" onclick="saveAdminAttendance()">Save Attendance</button>
+        </div>
+      </div>
+    </div>
+
 
     <!-- REGISTRATIONS -->
     <div class="view" id="view-registrations">
@@ -5892,7 +5944,249 @@ window.dismissEnquiry = async function(enquiryId){
 
 window.filterAdminBatch = function(id, el){
   currentAdminBatch = id;
+  // Show Take Attendance button only when a specific batch is selected
+  const btn = document.getElementById('takeAttBtn');
+  if(btn) btn.style.display = (id!=='all') ? 'flex' : 'none';
   renderBatchesView();
+  renderBatchAttGrid();
+};
+
+/* ══════════════════════════════════════
+   BATCH ATTENDANCE GRID (Admin)
+══════════════════════════════════════ */
+async function renderBatchAttGrid(){
+  const section = document.getElementById('batchAttSection');
+  const grid    = document.getElementById('batchAttGrid');
+  if(!section||!grid) return;
+
+  if(currentAdminBatch==='all'){ section.style.display='none'; return; }
+  section.style.display = 'block';
+
+  // Default week picker to current Monday
+  const weekInput = document.getElementById('attGridWeek');
+  if(!weekInput.value){
+    const today = new Date();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - ((today.getDay()+6)%7));
+    weekInput.value = monday.toLocaleDateString('en-CA');
+  }
+  const weekStart = new Date(weekInput.value+'T00:00');
+  const weekKey   = weekInput.value.replace(/-/g,'');
+
+  // Students in this batch
+  const students = batchStudents.filter(s=>s.batchId===currentAdminBatch);
+  if(!students.length){ grid.innerHTML='<p style="color:var(--muted);font-size:0.82rem">No students in this batch.</p>'; return; }
+
+  // Load last 8 weeks of attendance + song
+  const weeks = [];
+  for(let i=7; i>=0; i--){
+    const ws = new Date(weekStart); ws.setDate(weekStart.getDate() - i*7);
+    const we = new Date(ws); we.setDate(ws.getDate()+6);
+    const wk = ws.toLocaleDateString('en-CA').replace(/-/g,'');
+    weeks.push({ws, we, wk});
+  }
+
+  // Load attendance docs and songs for this batch
+  const attSnap  = await getDocs(collection(db,'attendance'));
+  const songSnap = await getDocs(collection(db,'weeklySongs'));
+
+  const attMap  = {}; // weekKey → {studentId: status}
+  const songMap = {}; // weekKey → songName
+
+  attSnap.docs.forEach(d=>{
+    const data = d.data();
+    if(data.batchId===currentAdminBatch) attMap[data.weekKey] = data.records||{};
+  });
+  songSnap.docs.forEach(d=>{
+    const data = d.data();
+    if(data.batchId===currentAdminBatch) songMap[data.weekKey] = data;
+  });
+
+  const fmtDate = d => d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+
+  let html = `<div style="overflow-x:auto"><table style="min-width:600px;border-collapse:collapse;width:100%">
+    <thead>
+      <tr>
+        <th style="text-align:left;padding:0.6rem 1rem;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);background:var(--bg3);border:1px solid var(--border);white-space:nowrap;min-width:140px">Student</th>
+        ${weeks.map(({ws,we,wk})=>{
+          const song = songMap[wk];
+          return `<th style="padding:0.5rem 0.75rem;font-size:0.62rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);background:var(--bg3);border:1px solid var(--border);text-align:center;white-space:nowrap">
+            <div>${fmtDate(ws)}</div>
+            <div style="color:var(--text);font-size:0.58rem;margin-top:0.15rem">–${fmtDate(we)}</div>
+            ${song?`<div style="color:var(--yellow);font-size:0.58rem;margin-top:0.15rem">♪ ${song.song}</div>`:''}
+          </th>`;
+        }).join('')}
+      </tr>
+    </thead>
+    <tbody>
+      ${students.map(s=>{
+        const iActive = isBatchStudentActive(s);
+        return `<tr style="${iActive?'':'opacity:0.55'}">
+          <td style="padding:0.6rem 1rem;border:1px solid var(--border);font-size:0.8rem;font-weight:500;color:var(--text);white-space:nowrap">
+            ${s.name||'—'}
+            <span style="display:block;font-size:0.65rem;color:var(--muted);font-weight:400">${s.subscription||''}</span>
+          </td>
+          ${weeks.map(({wk})=>{
+            const rec = attMap[wk]?.[s.id];
+            let status = '';
+            if(typeof rec==='string') status=rec;
+            else if(typeof rec==='object'&&rec!==null) status=Object.values(rec).includes('present')?'present':'absent';
+            const bg    = status==='present'?'rgba(92,184,122,0.15)':status==='absent'?'rgba(229,115,115,0.1)':'transparent';
+            const color = status==='present'?'var(--green)':status==='absent'?'#e57373':'var(--border2)';
+            const sym   = status==='present'?'✓':status==='absent'?'✗':'·';
+            return `<td style="text-align:center;padding:0.5rem;border:1px solid var(--border);background:${bg}">
+              <span style="font-size:0.9rem;font-weight:700;color:${color}">${sym}</span>
+            </td>`;
+          }).join('')}
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table></div>`;
+
+  grid.innerHTML = html;
+}
+
+/* ══════════════════════════════════════
+   TAKE ATTENDANCE (Admin)
+══════════════════════════════════════ */
+let _adminAttRecord = {}; // studentId → 'present'|'absent'|''
+
+window.openTakeAttModal = async function(){
+  _adminAttRecord = {};
+
+  // Populate batch selector
+  const sel = document.getElementById('attModalBatch');
+  sel.innerHTML = BATCHES_CONFIG.map(b=>`<option value="${b.id}">${b.name} · ${b.time}</option>`).join('');
+  if(currentAdminBatch!=='all'){
+    sel.value = currentAdminBatch;
+  }
+
+  // Set current week (Monday)
+  const today = new Date();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((today.getDay()+6)%7));
+  document.getElementById('attModalWeek').value = monday.toLocaleDateString('en-CA');
+
+  await loadAttModalStudents();
+  openModal('takeAttModal');
+};
+
+window.loadAttModalStudents = async function(){
+  const batchId = document.getElementById('attModalBatch').value;
+  const weekStr = document.getElementById('attModalWeek').value;
+  if(!batchId||!weekStr) return;
+
+  const weekKey = weekStr.replace(/-/g,'');
+  const list    = document.getElementById('attModalList');
+  list.innerHTML = '<p style="color:var(--muted);font-size:0.8rem">Loading…</p>';
+
+  // Load existing attendance for this week
+  const students = batchStudents.filter(s=>s.batchId===batchId && isBatchStudentActive(s));
+
+  // Try to load saved attendance
+  const attSnap  = await getDocs(collection(db,'attendance'));
+  const attDoc   = attSnap.docs.find(d=>d.data().batchId===batchId && d.data().weekKey===weekKey);
+  const saved    = attDoc ? attDoc.data().records||{} : {};
+  _adminAttRecord = {};
+  students.forEach(s=>{ _adminAttRecord[s.id] = saved[s.id]||''; });
+
+  // Load song for this week
+  try {
+    const songDoc = await getDoc(doc(db,'weeklySongs',`${batchId}_${weekKey}`));
+    if(songDoc.exists()){
+      document.getElementById('attModalSong').value = songDoc.data().song||'';
+      document.getElementById('attModalFilm').value = songDoc.data().film||'';
+    } else {
+      document.getElementById('attModalSong').value = '';
+      document.getElementById('attModalFilm').value = '';
+    }
+  } catch(e){}
+
+  if(!students.length){
+    list.innerHTML = '<p style="color:var(--muted);font-size:0.8rem;padding:1rem 0">No active students in this batch.</p>';
+    return;
+  }
+
+  list.innerHTML = students.map(s=>{
+    const status = _adminAttRecord[s.id]||'';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0;border-bottom:1px solid var(--border)">
+      <div>
+        <p style="font-size:0.85rem;font-weight:500;color:var(--text)">${s.name||'—'}</p>
+        <p style="font-size:0.7rem;color:var(--muted)">${s.phone||''}</p>
+      </div>
+      <div style="display:flex;gap:0.4rem">
+        <button id="att-p-${s.id}" onclick="setAdminAtt('${s.id}','present')"
+          style="padding:0.4rem 0.85rem;font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;border:1px solid ${status==='present'?'rgba(92,184,122,0.5)':'var(--border2)'};background:${status==='present'?'rgba(92,184,122,0.15)':'transparent'};color:${status==='present'?'var(--green)':'var(--muted)'};cursor:pointer">✓ Present</button>
+        <button id="att-a-${s.id}" onclick="setAdminAtt('${s.id}','absent')"
+          style="padding:0.4rem 0.85rem;font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;border:1px solid ${status==='absent'?'rgba(229,115,115,0.5)':'var(--border2)'};background:${status==='absent'?'rgba(229,115,115,0.1)':'transparent'};color:${status==='absent'?'#e57373':'var(--muted)'};cursor:pointer">✗ Absent</button>
+      </div>
+    </div>`;
+  }).join('');
+};
+
+window.setAdminAtt = function(studentId, status){
+  _adminAttRecord[studentId] = _adminAttRecord[studentId]===status ? '' : status;
+  const cur = _adminAttRecord[studentId];
+  const pBtn = document.getElementById(`att-p-${studentId}`);
+  const aBtn = document.getElementById(`att-a-${studentId}`);
+  if(pBtn){
+    pBtn.style.border      = cur==='present'?'1px solid rgba(92,184,122,0.5)':'1px solid var(--border2)';
+    pBtn.style.background  = cur==='present'?'rgba(92,184,122,0.15)':'transparent';
+    pBtn.style.color       = cur==='present'?'var(--green)':'var(--muted)';
+  }
+  if(aBtn){
+    aBtn.style.border      = cur==='absent'?'1px solid rgba(229,115,115,0.5)':'1px solid var(--border2)';
+    aBtn.style.background  = cur==='absent'?'rgba(229,115,115,0.1)':'transparent';
+    aBtn.style.color       = cur==='absent'?'#e57373':'var(--muted)';
+  }
+};
+
+window.saveAdminAttendance = async function(){
+  const batchId = document.getElementById('attModalBatch').value;
+  const weekStr = document.getElementById('attModalWeek').value;
+  const song    = document.getElementById('attModalSong').value.trim();
+  const film    = document.getElementById('attModalFilm').value.trim();
+  if(!batchId||!weekStr){ showToast('Select batch and week','error'); return; }
+
+  const weekKey = weekStr.replace(/-/g,'');
+
+  // Save attendance
+  const trainerUser = Object.values(batchStudents.find(s=>s.batchId===batchId)||{}).length
+    ? (BATCHES_CONFIG.find(b=>b.id===batchId)?.trainer||'admin')
+    : 'admin';
+
+  await setDoc(doc(db,'attendance',`admin_${batchId}_${weekKey}`),{
+    artistId: 'admin',
+    batchId,  weekKey,
+    records:  _adminAttRecord,
+    savedAt:  Date.now(),
+  });
+
+  // Save song if entered
+  if(song){
+    await setDoc(doc(db,'weeklySongs',`${batchId}_${weekKey}`),{
+      batchId, weekStart: weekStr, weekKey,
+      song, film: film||'',
+      setBy: 'Admin',
+      setAt: new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
+    });
+  }
+
+  // Update weeksAttended on each student
+  const allAttSnap = await getDocs(collection(db,'attendance'));
+  const batchDocs  = allAttSnap.docs.map(d=>d.data()).filter(d=>d.batchId===batchId);
+  const students   = batchStudents.filter(s=>s.batchId===batchId);
+  for(const s of students){
+    const weeksAttended = batchDocs.filter(d=>{
+      const rec = d.records?.[s.id];
+      return typeof rec==='string' ? rec==='present' : typeof rec==='object'&&rec!==null ? Object.values(rec).includes('present') : false;
+    }).length;
+    await setDoc(doc(db,'batchStudents',s.id),{weeksAttended},{merge:true});
+  }
+
+  closeModal('takeAttModal');
+  renderBatchAttGrid();
+  showToast('Attendance saved ✓');
 };
 
 /* ══════════════════════════════════════
