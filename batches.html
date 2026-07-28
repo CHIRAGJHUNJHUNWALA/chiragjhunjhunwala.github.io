@@ -334,23 +334,34 @@ async function loadBatches(){
 
   if(!batches.length) batches = FALLBACK_BATCHES;
 
-  // Calculate current week key (Monday of this week)
-  const today   = new Date();
-  const monday  = new Date(today);
-  monday.setDate(today.getDate() - ((today.getDay()+6)%7));
-  const weekKey = monday.toLocaleDateString('en-CA').replace(/-/g,'');
+  // Calculate current week key — Monday of the week containing today
+  // Use local date string to avoid timezone offset issues
+  const today      = new Date();
+  const dayOfWeek  = today.getDay(); // 0=Sun,1=Mon,...,6=Sat
+  const daysToMon  = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Mon=0 offset
+  const monday     = new Date(today);
+  monday.setDate(today.getDate() - daysToMon);
+  // Format as YYYYMMDD using local date parts
+  const yy  = monday.getFullYear();
+  const mm  = String(monday.getMonth()+1).padStart(2,'0');
+  const dd  = String(monday.getDate()).padStart(2,'0');
+  const weekKey = `${yy}${mm}${dd}`;
+  console.log('[THS Batches] weekKey:', weekKey, '| today:', today.toDateString());
 
   // Load songs for this week from Firestore
   const songMap = {}; // batchId → {song, film}
   try {
     const songSnap = await getDocs(collection(db,'weeklySongs'));
+    console.log('[THS Batches] Total weeklySongs docs:', songSnap.size);
     songSnap.docs.forEach(d=>{
       const data = d.data();
+      console.log('[THS Batches] song doc:', d.id, '| weekKey:', data.weekKey, '| song:', data.song);
       if(data.weekKey === weekKey && data.batchId && data.song){
         songMap[data.batchId] = data;
       }
     });
-  } catch(e){}
+    console.log('[THS Batches] Songs matched this week:', Object.keys(songMap).length);
+  } catch(e){ console.error('[THS Batches] weeklySongs query failed:', e); }
 
   const grid = document.getElementById('batchesGrid');
   grid.innerHTML = batches.map((b,i)=>{
