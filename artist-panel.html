@@ -251,6 +251,9 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <div class="nav-item" onclick="showView('attendance')">
           <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Attendance
         </div>
+        <div class="nav-item" onclick="showView('studentSearch')">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Student Search
+        </div>
       </div>
       <!-- WORKSHOP ARTIST NAV -->
       <div id="workshopNav" style="display:none">
@@ -395,6 +398,15 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <span>Attendance for this week</span>
         <span style="font-size:0.65rem;color:var(--muted)">Tap to mark Present → Absent → Clear</span>
       </div>
+      <!-- Daily check counter (not saved) -->
+      <div id="dailyCheckBar" style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 1rem;background:rgba(92,184,122,0.06);border:1px solid rgba(92,184,122,0.2);border-bottom:none">
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          <svg viewBox="0 0 24 24" width="13" height="13" stroke="var(--green)" fill="none" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--green);font-family:'Syne',sans-serif">Checked Today</span>
+          <span id="dailyCheckCount" style="font-size:0.68rem;color:var(--muted)">0 checked</span>
+        </div>
+        <button onclick="resetDailyChecks()" style="font-size:0.62rem;color:var(--muted);background:none;border:none;cursor:pointer;font-family:'Syne',sans-serif;letter-spacing:0.06em;text-transform:uppercase">Reset</button>
+      </div>
       <!-- Attendance list -->
       <div class="table-wrap">
         <div class="table-header"><span class="table-title" id="attTableTitle">Attendance</span></div>
@@ -415,6 +427,20 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
 
   </div>
+</div>
+
+<!-- STUDENT SEARCH VIEW -->
+<div class="view" id="view-studentSearch" style="display:none">
+  <div class="page-header">
+    <div><h1 class="page-title">Student Search</h1><p class="page-sub">Search by name or phone number</p></div>
+  </div>
+  <div style="position:relative;margin-bottom:1.25rem">
+    <svg viewBox="0 0 24 24" width="15" height="15" stroke="var(--muted)" fill="none" stroke-width="2" style="position:absolute;left:1rem;top:50%;transform:translateY(-50%)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="studentSearchInput" type="text" placeholder="Name or phone number…"
+      oninput="runStudentSearch(this.value)"
+      style="width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.85rem 1rem 0.85rem 2.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none">
+  </div>
+  <div id="studentSearchResults"></div>
 </div>
 
 <!-- WEEKLY SONG MODAL -->
@@ -1845,12 +1871,12 @@ window.loadWeekAttendance = async function(){
     html += activeInWeek.map(s=>{
       const weeksLeft = Math.ceil((s.expiry - new Date()) / (1000*60*60*24*7));
       const status    = attendance[s.id]||'';
-      return `<div class="att-row">
+      return `<div class="att-row" onclick="toggleDailyCheck('${s.id}',this)" style="cursor:pointer" title="Tap to check in daily (not saved)">
         <div style="min-width:0;flex:1">
           <p class="att-name">${s.name}</p>
           <p class="att-phone">${s.phone} · <span style="color:var(--green);font-size:0.65rem">${weeksLeft>0?weeksLeft+' week'+(weeksLeft!==1?'s':'')+' left':'expires this week'}</span></p>
         </div>
-        <button class="att-week-btn ${status}" onclick="toggleWeekAtt('${s.id}',this)">
+        <button class="att-week-btn ${status}" onclick="event.stopPropagation();toggleWeekAtt('${s.id}',this)">
           ${status==='present'?'✓ Present':status==='absent'?'✗ Absent':'Mark Attendance'}
         </button>
       </div>`;
@@ -2022,6 +2048,149 @@ window.saveAttendance = async function(){
 /* ══════════════════════════════════════
    NAV / MODAL / TOAST
 ══════════════════════════════════════ */
+/* ══════════════════════════════════════
+   DAILY VISUAL CHECK (not saved)
+══════════════════════════════════════ */
+const _dailyChecked = new Set(); // studentIds checked today
+
+window.toggleDailyCheck = function(studentId, el){
+  if(_dailyChecked.has(studentId)){
+    _dailyChecked.delete(studentId);
+    el.style.background   = '';
+    el.style.borderLeft   = '';
+    const badge = el.querySelector('.daily-check-badge');
+    if(badge) badge.remove();
+  } else {
+    _dailyChecked.add(studentId);
+    el.style.background   = 'rgba(92,184,122,0.1)';
+    el.style.borderLeft   = '3px solid var(--green)';
+    if(!el.querySelector('.daily-check-badge')){
+      const badge = document.createElement('span');
+      badge.className = 'daily-check-badge';
+      badge.style.cssText = 'position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#fff;font-weight:700';
+      badge.textContent = '✓';
+      el.style.position = 'relative';
+      el.appendChild(badge);
+    }
+  }
+  updateDailyCheckCount();
+};
+
+function updateDailyCheckCount(){
+  const el = document.getElementById('dailyCheckCount');
+  if(el) el.textContent = _dailyChecked.size > 0
+    ? `${_dailyChecked.size} checked in`
+    : '0 checked — tap a student to check in';
+}
+
+window.resetDailyChecks = function(){
+  _dailyChecked.clear();
+  document.querySelectorAll('.att-row').forEach(row=>{
+    row.style.background = '';
+    row.style.borderLeft = '';
+    const badge = row.querySelector('.daily-check-badge');
+    if(badge) badge.remove();
+  });
+  updateDailyCheckCount();
+};
+
+/* ══════════════════════════════════════
+   STUDENT SEARCH
+══════════════════════════════════════ */
+window.runStudentSearch = async function(query){
+  const q   = query.trim().toLowerCase();
+  const res = document.getElementById('studentSearchResults');
+  if(!q){ res.innerHTML=''; return; }
+
+  // Search in batchStudents
+  const matched = students.filter(s=>
+    s.name?.toLowerCase().includes(q) ||
+    s.phone?.replace(/\D/g,'').includes(q.replace(/\D/g,''))
+  );
+
+  if(!matched.length){
+    res.innerHTML = `<p style="color:var(--muted);font-size:0.85rem;padding:1rem 0">No students found for "${query}"</p>`;
+    return;
+  }
+
+  res.innerHTML = '<p style="color:var(--muted);font-size:0.72rem;margin-bottom:1rem">Loading profiles…</p>';
+
+  // Load attendance and songs for context
+  const attSnap  = await getDocs(collection(db,'attendance'));
+  const songSnap = await getDocs(collection(db,'weeklySongs'));
+
+  const allAtt  = attSnap.docs.map(d=>({id:d.id,...d.data()}));
+  const allSong = {};
+  songSnap.docs.forEach(d=>{ allSong[d.id]=d.data(); });
+
+  let html = '';
+
+  for(const s of matched){
+    const batch = currentArtist.batches.find(b=>b.id===s.batchId);
+    const joined = s.joinDate ? new Date(s.joinDate+'T00:00') : null;
+    const baseDays = s.subscription==='Weekly' ? 7 : 28;
+    const totalDays = baseDays + parseInt(s.extendedDays||0)*7;
+    const expiry = joined ? new Date(joined.getTime()+totalDays*86400000) : null;
+    const expired = expiry ? expiry < new Date() : false;
+
+    // Attendance history for this student
+    const attDocs = allAtt
+      .filter(d=>d.batchId===s.batchId)
+      .sort((a,b)=>b.weekKey?.localeCompare(a.weekKey||'')||0)
+      .slice(0,12);
+
+    const weeksPresent = attDocs.filter(d=>{
+      const rec=d.records?.[s.id];
+      return typeof rec==='string'?rec==='present':typeof rec==='object'&&rec!==null?Object.values(rec).includes('present'):false;
+    }).length;
+
+    const attRows = attDocs.map(d=>{
+      const wk = d.weekKey||'';
+      const ws = wk ? new Date(`${wk.slice(0,4)}-${wk.slice(4,6)}-${wk.slice(6,8)}T00:00`) : null;
+      const we = ws ? new Date(ws.getTime()+6*86400000) : null;
+      const label = ws ? ws.toLocaleDateString('en-IN',{day:'numeric',month:'short'})+' – '+we.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : wk;
+      const rec   = d.records?.[s.id];
+      let status  = '';
+      if(typeof rec==='string') status=rec;
+      else if(typeof rec==='object'&&rec!==null) status=Object.values(rec).includes('present')?'present':'absent';
+      const songData = allSong[`${s.batchId}_${wk}`];
+      const color = status==='present'?'var(--green)':status==='absent'?'#e57373':'var(--muted)';
+      const sym   = status==='present'?'✓':status==='absent'?'✗':'·';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:0.45rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+        <span style="font-size:0.75rem;color:var(--text-mid)">${label}</span>
+        ${songData?`<span style="font-size:0.68rem;color:var(--yellow)">♪ ${songData.song}</span>`:'<span></span>'}
+        <span style="font-weight:700;color:${color}">${sym}</span>
+      </div>`;
+    }).join('');
+
+    html += `
+    <div style="background:var(--bg2);border:1px solid var(--border);padding:1.25rem;margin-bottom:1rem">
+      <!-- Header -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
+        <div>
+          <p style="font-size:1rem;font-weight:600;color:var(--text)">${s.name||'—'}</p>
+          <p style="font-size:0.75rem;color:var(--muted)">${s.phone||'—'}</p>
+        </div>
+        <span class="pill ${expired?'pill-orange':'pill-green'}" style="font-size:0.62rem">${expired?'Expired':'Active'}</span>
+      </div>
+      <!-- Info grid -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem 1rem;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
+        <div><p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem;font-family:'Syne',sans-serif">Batch</p><p style="font-size:0.82rem;color:var(--text)">${batch?.name||s.batchId||'—'}</p></div>
+        <div><p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem;font-family:'Syne',sans-serif">Subscription</p><p style="font-size:0.82rem;color:var(--text)">${s.subscription||'—'}</p></div>
+        <div><p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem;font-family:'Syne',sans-serif">Fee Paid</p><p style="font-size:0.82rem;color:var(--yellow)">₹${parseFloat(s.fee||0).toLocaleString('en-IN')}</p></div>
+        <div><p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem;font-family:'Syne',sans-serif">Joined</p><p style="font-size:0.82rem;color:var(--text)">${s.joinDate||'—'}</p></div>
+        <div><p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem;font-family:'Syne',sans-serif">Valid Until</p><p style="font-size:0.82rem;color:${expired?'#e57373':'var(--text)'}">${expiry?expiry.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'—'}</p></div>
+        <div><p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem;font-family:'Syne',sans-serif">Weeks Attended</p><p style="font-size:0.82rem;color:var(--yellow)">${weeksPresent}</p></div>
+      </div>
+      <!-- Attendance history -->
+      <p style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;font-family:'Syne',sans-serif">Attendance History</p>
+      ${attRows || '<p style="font-size:0.75rem;color:var(--muted)">No attendance recorded yet.</p>'}
+    </div>`;
+  }
+
+  res.innerHTML = html;
+};
+
 window.showView = function(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
