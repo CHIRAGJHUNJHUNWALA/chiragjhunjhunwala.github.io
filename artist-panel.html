@@ -2103,10 +2103,16 @@ window.runStudentSearch = async function(query){
   if(!q){ res.innerHTML=''; return; }
 
   // Search in batchStudents
-  const matched = students.filter(s=>
-    s.name?.toLowerCase().includes(q) ||
-    s.phone?.replace(/\D/g,'').includes(q.replace(/\D/g,''))
-  );
+  const qDigits = q.replace(/\D/g,'');
+  const hasLetters = /[a-zA-Z\u0900-\u097F]/.test(q);
+
+  const matched = students.filter(s=>{
+    // Name match — only when query has letters
+    if(hasLetters && s.name?.toLowerCase().includes(q)) return true;
+    // Phone match — only when query has at least 3 digits
+    if(qDigits.length >= 3 && s.phone?.replace(/\D/g,'').includes(qDigits)) return true;
+    return false;
+  });
 
   if(!matched.length){
     res.innerHTML = `<p style="color:var(--muted);font-size:0.85rem;padding:1rem 0">No students found for "${query}"</p>`;
