@@ -485,7 +485,7 @@ let selectedSlots = [];
 let _allRegsCache = null;
 let _allBatchCache = null;
 
-async function autoFillName(digits){
+window.autoFillName = async function autoFillName(digits){
   const phone  = '+91' + digits;
   const nameEl = document.getElementById('inp-name');
   const hint   = document.getElementById('phone-autofill-hint');
@@ -507,7 +507,7 @@ async function autoFillName(digits){
   } catch(e){ resetNameAutofill(); }
 }
 
-function resetNameAutofill(){
+window.resetNameAutofill = function(){
   const nameEl = document.getElementById('inp-name');
   const hint   = document.getElementById('phone-autofill-hint');
   if(nameEl?.readOnly){
