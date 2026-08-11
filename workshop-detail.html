@@ -276,17 +276,15 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
       <p style="font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif;margin-bottom:0.75rem">Group Members</p>
       <div id="groupMembersFields"></div>
     </div>
-    <!-- OTS — shown last, styled like a package card but not clickable -->
-    <div id="otsBanner" style="display:none;border:1px solid var(--border);padding:1rem 1.25rem;margin-bottom:1.5rem;opacity:0.75;position:relative;overflow:hidden">
-      <div style="position:absolute;top:0;right:0;background:rgba(245,230,66,0.12);padding:0.2rem 0.6rem;font-size:0.58rem;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.1em;color:var(--yellow);text-transform:uppercase">At The Door</div>
-      <div style="display:flex;align-items:center;gap:1rem">
-        <div style="width:16px;height:16px;border:1px solid rgba(255,255,255,0.15);border-radius:50%;flex-shrink:0"></div>
-        <div style="flex:1">
-          <p style="font-size:0.88rem;font-weight:500;color:var(--text)">On The Spot</p>
-          <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.15rem">Subject to Availability · Register online to secure your spot</p>
-        </div>
-        <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:0.04em;color:var(--text-muted)">₹<span id="otsAmount"></span></span>
+    <!-- OTS — same visual as other packages, not clickable -->
+    <div id="otsBanner" style="display:none;border:1px solid var(--border);padding:1.1rem 1.25rem;position:relative;display:none;align-items:center;gap:1rem">
+      <span style="position:absolute;top:-1px;right:1rem;background:rgba(245,230,66,0.18);color:var(--yellow);font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:0.2rem 0.6rem;font-family:'Syne',sans-serif">At The Door</span>
+      <div style="width:18px;height:18px;border:1px solid rgba(255,255,255,0.15);border-radius:50%;flex-shrink:0"></div>
+      <div style="flex:1">
+        <p class="pkg-name">On The Spot</p>
+        <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem">Subject to availability · Pay at studio</p>
       </div>
+      <span class="pkg-price">₹<span id="otsAmount"></span></span>
     </div>
     <div class="section-heading">
       <span class="section-heading-text">Choose your Class</span>
@@ -629,7 +627,8 @@ function renderPage(){
   const otsBanner = document.getElementById('otsBanner');
   if(w.otsPrice > 0){
     document.getElementById('otsAmount').textContent = '₹'+w.otsPrice.toLocaleString('en-IN');
-    otsBanner.style.display = 'block';
+    otsBanner.style.display = 'flex';
+    otsBanner.style.marginBottom = '0';
   } else {
     otsBanner.style.display = 'none';
   }
