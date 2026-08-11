@@ -297,11 +297,6 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
   <div class="enroll-card">
     <h3 class="enroll-title">Secure Your Spot</h3>
     <p class="enroll-sub">Fill in your details and choose a package to enroll.</p>
-    <div class="field" id="field-name">
-      <label>Full Name</label>
-      <input type="text" id="inp-name" placeholder="Your full name" autocomplete="name">
-      <p class="err">Please enter your name</p>
-    </div>
     <div class="field" id="field-phone">
       <label>WhatsApp Number</label>
       <div style="display:flex;align-items:center">
@@ -311,7 +306,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
           style="flex:1">
       </div>
       <p class="err">Please enter a valid 10-digit number</p>
-      <p id="phone-autofill-hint" style="font-size:0.72rem;color:var(--green);margin-top:0.35rem;display:none">✓ Name autofilled from previous booking</p>
+      <p id="phone-autofill-hint" style="font-size:0.72rem;color:var(--green);margin-top:0.35rem;display:none"></p>
+    </div>
+    <div class="field" id="field-name">
+      <label>Full Name</label>
+      <input type="text" id="inp-name" placeholder="Your full name" autocomplete="name" oninput="updateEnrollBtn()">
+      <p class="err">Please enter your name</p>
     </div>
     <div class="field">
       <label>Workshop</label>
@@ -459,7 +459,7 @@ function generateQR(canvasId, text){
 </script>
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCvGMYRUhDAr4r2zoTbnRJ3PiCwhCWxLFs",
@@ -489,26 +489,10 @@ async function autoFillName(digits){
   const phone  = '+91' + digits;
   const nameEl = document.getElementById('inp-name');
   const hint   = document.getElementById('phone-autofill-hint');
-
   try {
-    // Cache registrations
-    if(!_allRegsCache){
-      const snap = await getDocs(collection(db,'registrations'));
-      _allRegsCache = snap.docs.map(d=>d.data());
-    }
-    // Cache batch students
-    if(!_allBatchCache){
-      try {
-        const snap = await getDocs(collection(db,'batchStudents'));
-        _allBatchCache = snap.docs.map(d=>d.data());
-      } catch(e){ _allBatchCache = []; }
-    }
-
-    const found = _allRegsCache.find(r=>r.phone===phone)
-               || _allBatchCache.find(s=>s.phone===phone);
-
+    const snap = await getDoc(doc(db,'phoneNames',phone));
+    const found = snap.exists() ? snap.data() : null;
     if(found?.name){
-      // Lock the name field — one phone, one name
       nameEl.value    = found.name;
       nameEl.readOnly = true;
       nameEl.style.opacity = '0.7';
@@ -517,20 +501,16 @@ async function autoFillName(digits){
       hint.style.display   = 'block';
       hint.style.color     = 'var(--green)';
     } else {
-      // New student — keep editable
-      nameEl.readOnly = false;
-      nameEl.style.opacity = '';
-      nameEl.style.cursor  = '';
-      hint.style.display   = 'none';
+      resetNameAutofill();
     }
     updateEnrollBtn();
-  } catch(e){ /* silent fail */ }
+  } catch(e){ resetNameAutofill(); }
 }
 
 function resetNameAutofill(){
   const nameEl = document.getElementById('inp-name');
   const hint   = document.getElementById('phone-autofill-hint');
-  if(nameEl && nameEl.readOnly){
+  if(nameEl?.readOnly){
     nameEl.value    = '';
     nameEl.readOnly = false;
     nameEl.style.opacity = '';
@@ -986,6 +966,7 @@ window.initiatePayment = async function(){
           };
           const ref = await addDoc(collection(db,'registrations'), data);
           regIds.push(ref.id);
+          try { await setDoc(doc(db,'phoneNames',data.phone),{name:data.name,updatedAt:Date.now()},{merge:true}); } catch(e){}
           // Deduct spot per member
           try {
             const wsDoc = await getDoc(doc(db,'workshops',workshop.id));
@@ -1062,6 +1043,7 @@ window.initiatePayment = async function(){
         try{
           const ref = await addDoc(collection(db,'registrations'), data);
           regIds.push(ref.id);
+          try { await setDoc(doc(db,'phoneNames',data.phone),{name:data.name,updatedAt:Date.now()},{merge:true}); } catch(e){}
         } catch(e){ regIds.push(paymentId); }
       }
 
