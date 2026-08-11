@@ -472,7 +472,7 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
 const RAZORPAY_KEY = 'rzp_test_SuqUn8n9z5zkae';
-const CONVENIENCE  = 2;
+const CONVENIENCE  = 0;
 
 let workshop      = null;
 let selectedPkg   = null;
@@ -803,7 +803,7 @@ function updateFormSummary(){
     el.innerHTML=`
       <div class="form-summary-row"><span>GROUP OF ${selectedCombo.people}</span><span>₹${price.toLocaleString('en-IN')}</span></div>
       <div class="form-summary-row"><span>₹${perP.toLocaleString('en-IN')} per person</span></div>
-      <div class="form-summary-row"><span>Convenience fee (${CONVENIENCE}%)</span><span>₹${fee.toLocaleString('en-IN')}</span></div>
+      ${fee>0?`<div class="form-summary-row"><span>Convenience fee (${CONVENIENCE}%)</span><span>₹${fee.toLocaleString('en-IN')}</span></div>`:''}
       <div class="form-summary-row total"><span>Total</span><span>₹${total.toLocaleString('en-IN')}</span></div>`;
     return;
   }
@@ -816,7 +816,7 @@ function updateFormSummary(){
   const peopleNote = people > 1 ? ` × ${people} people` : '';
   el.innerHTML=`
     <div class="form-summary-row"><span>${selectedPkg.name}${peopleNote}</span><span>₹${subtotal.toLocaleString('en-IN')}</span></div>
-    <div class="form-summary-row"><span>Convenience fee (${CONVENIENCE}%)</span><span>₹${fee.toLocaleString('en-IN')}</span></div>
+    ${fee>0?`<div class="form-summary-row"><span>Convenience fee (${CONVENIENCE}%)</span><span>₹${fee.toLocaleString('en-IN')}</span></div>`:''}
     <div class="form-summary-row total"><span>Total</span><span>₹${total.toLocaleString('en-IN')}</span></div>
     ${people>1?`<div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.4rem">₹${base.toLocaleString('en-IN')} per person × ${people} people</div>`:''}`;
 }
@@ -872,7 +872,7 @@ window.openConfirmPopup = function(){
       <div class="popup-row"><span>Slot</span><span>${selectedSlots.map(s=>s.date+' · '+s.time).join(', ')}</span></div>
       ${memberRows}
       <div class="popup-row"><span>Group Price</span><span>₹${price.toLocaleString('en-IN')}</span></div>
-      <div class="popup-row"><span>Convenience fee</span><span>₹${fee.toLocaleString('en-IN')}</span></div>
+      ${fee>0?`<div class="popup-row"><span>Convenience fee</span><span>₹${fee.toLocaleString('en-IN')}</span></div>`:''}
       <div class="popup-row total"><span>Total Payable</span><span>₹${total.toLocaleString('en-IN')}</span></div>`;
     document.getElementById('popupBackdrop').classList.add('open');
     document.body.style.overflow='hidden';
@@ -895,7 +895,7 @@ window.openConfirmPopup = function(){
     <div class="popup-row"><span>Slot(s)</span><span style="line-height:1.6">${selectedSlots.map(s=>s.song?'♪ '+s.song+' · '+s.time:s.date+' · '+s.time).join('<br>')}</span></div>
     ${people>1?`<div class="popup-row"><span>Price per person</span><span>₹${base.toLocaleString('en-IN')}</span></div>`:''}
     <div class="popup-row"><span>Subtotal (${people} ${people>1?'people':'person'})</span><span>₹${subtotal.toLocaleString('en-IN')}</span></div>
-    <div class="popup-row"><span>Convenience fee</span><span>₹${fee.toLocaleString('en-IN')}</span></div>
+    ${fee>0?`<div class="popup-row"><span>Convenience fee</span><span>₹${fee.toLocaleString('en-IN')}</span></div>`:''}
     <div class="popup-row total"><span>Total Payable</span><span>₹${total.toLocaleString('en-IN')}</span></div>`;
   document.getElementById('popupBackdrop').classList.add('open');
   document.body.style.overflow='hidden';
