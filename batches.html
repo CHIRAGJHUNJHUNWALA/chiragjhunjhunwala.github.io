@@ -440,9 +440,10 @@ loadBatches();
         <div style="display:flex">
           <span style="background:#1c1c1c;border:1px solid rgba(255,255,255,0.12);border-right:none;padding:0.75rem;color:rgba(240,237,230,0.4);font-size:0.9rem;white-space:nowrap">+91</span>
           <input id="enrolPhone" type="tel" placeholder="98765 43210" maxlength="10"
-            oninput="this.value=this.value.replace(/\D/g,'').slice(0,10)"
+            oninput="this.value=this.value.replace(/\D/g,'').slice(0,10);if(this.value.length===10)enrolAutoFillName(this.value);else resetEnrolName();"
             style="flex:1;background:#1c1c1c;border:1px solid rgba(255,255,255,0.12);border-left:none;padding:0.75rem 1rem;color:#f0ede6;font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none">
         </div>
+        <p id="enrolNameHint" style="display:none;font-size:0.72rem;color:#5cb87a;margin-top:0.35rem"></p>
       </div>
 
       <div>
@@ -500,12 +501,55 @@ const db = getFirestore(app);
 
 let _enrolBatch = {};
 
+window.enrolAutoFillName = async function(digits){
+  const phone   = '+91' + digits;
+  const nameEl  = document.getElementById('enrolName');
+  const hintEl  = document.getElementById('enrolNameHint');
+  try {
+    const [regSnap, batchSnap] = await Promise.all([
+      getDocs(collection(db,'registrations')),
+      getDocs(collection(db,'batchStudents')),
+    ]);
+    const found =
+      regSnap.docs.map(d=>d.data()).find(r=>r.phone===phone) ||
+      batchSnap.docs.map(d=>d.data()).find(s=>s.phone===phone);
+
+    if(found?.name){
+      nameEl.value    = found.name;
+      nameEl.readOnly = true;
+      nameEl.style.opacity = '0.7';
+      nameEl.style.cursor  = 'not-allowed';
+      hintEl.textContent   = `✓ Welcome back, ${found.name.split(' ')[0]}!`;
+      hintEl.style.display = 'block';
+    } else {
+      resetEnrolName();
+    }
+  } catch(e){}
+};
+
+window.resetEnrolName = function(){
+  const nameEl = document.getElementById('enrolName');
+  const hintEl = document.getElementById('enrolNameHint');
+  if(nameEl?.readOnly){
+    nameEl.value    = '';
+    nameEl.readOnly = false;
+    nameEl.style.opacity = '';
+    nameEl.style.cursor  = '';
+  }
+  if(hintEl) hintEl.style.display = 'none';
+};
+
 window.openEnrolModal = function(batchId, batchName, trainer, time, fee, feeWeekly){
   _enrolBatch = { batchId, batchName, trainer, time, fee, feeWeekly };
 
   document.getElementById('enrolBatchLabel').textContent = batchName + (trainer?' · by '+trainer:'') + (time?' · '+time:'');
   document.getElementById('enrolName').value    = '';
+  document.getElementById('enrolName').readOnly = false;
+  document.getElementById('enrolName').style.opacity = '';
+  document.getElementById('enrolName').style.cursor  = '';
   document.getElementById('enrolPhone').value   = '';
+  const hint = document.getElementById('enrolNameHint');
+  if(hint) hint.style.display = 'none';
   document.getElementById('enrolJoinDate').value= '';
   document.getElementById('enrolErr').style.display     = 'none';
   document.getElementById('enrolSuccess').style.display = 'none';

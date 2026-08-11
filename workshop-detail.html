@@ -307,7 +307,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
       <div style="display:flex;align-items:center">
         <span style="padding:0.75rem 0.85rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-right:none;color:rgba(255,255,255,0.5);font-size:0.9rem;white-space:nowrap;font-family:'DM Sans',sans-serif">+91</span>
         <input type="tel" id="inp-phone" placeholder="98765 43210" maxlength="10" autocomplete="tel"
-          oninput="this.value=this.value.replace(/\D/g,'').slice(0,10);if(this.value.length===10)autoFillName(this.value);"
+          oninput="this.value=this.value.replace(/\D/g,'').slice(0,10);if(this.value.length===10)autoFillName(this.value);else resetNameAutofill();"
           style="flex:1">
       </div>
       <p class="err">Please enter a valid 10-digit number</p>
@@ -486,14 +486,17 @@ let _allRegsCache = null;
 let _allBatchCache = null;
 
 async function autoFillName(digits){
-  const phone = '+91' + digits;
+  const phone  = '+91' + digits;
+  const nameEl = document.getElementById('inp-name');
+  const hint   = document.getElementById('phone-autofill-hint');
+
   try {
-    // Load registrations once and cache
+    // Cache registrations
     if(!_allRegsCache){
       const snap = await getDocs(collection(db,'registrations'));
       _allRegsCache = snap.docs.map(d=>d.data());
     }
-    // Load batchStudents once and cache
+    // Cache batch students
     if(!_allBatchCache){
       try {
         const snap = await getDocs(collection(db,'batchStudents'));
@@ -501,21 +504,39 @@ async function autoFillName(digits){
       } catch(e){ _allBatchCache = []; }
     }
 
-    // Search registrations first, then batchStudents
     const found = _allRegsCache.find(r=>r.phone===phone)
                || _allBatchCache.find(s=>s.phone===phone);
 
-    const nameEl = document.getElementById('inp-name');
-    const hint   = document.getElementById('phone-autofill-hint');
-
-    if(found && found.name && !nameEl.value){
-      nameEl.value = found.name;
-      hint.style.display = 'block';
-      updateEnrollBtn();
+    if(found?.name){
+      // Lock the name field — one phone, one name
+      nameEl.value    = found.name;
+      nameEl.readOnly = true;
+      nameEl.style.opacity = '0.7';
+      nameEl.style.cursor  = 'not-allowed';
+      hint.textContent     = `✓ Welcome back, ${found.name.split(' ')[0]}!`;
+      hint.style.display   = 'block';
+      hint.style.color     = 'var(--green)';
     } else {
-      hint.style.display = 'none';
+      // New student — keep editable
+      nameEl.readOnly = false;
+      nameEl.style.opacity = '';
+      nameEl.style.cursor  = '';
+      hint.style.display   = 'none';
     }
+    updateEnrollBtn();
   } catch(e){ /* silent fail */ }
+}
+
+function resetNameAutofill(){
+  const nameEl = document.getElementById('inp-name');
+  const hint   = document.getElementById('phone-autofill-hint');
+  if(nameEl && nameEl.readOnly){
+    nameEl.value    = '';
+    nameEl.readOnly = false;
+    nameEl.style.opacity = '';
+    nameEl.style.cursor  = '';
+  }
+  if(hint) hint.style.display = 'none';
 }
 
 /* INIT */
