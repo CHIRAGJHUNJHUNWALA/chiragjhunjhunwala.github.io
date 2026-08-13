@@ -9,28 +9,30 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap">
   <style>
-    /* ── Reset ── */
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
-    /* ── Design tokens ── */
     :root{
       --accent:#E8935A;
       --accent-dark:#C56A38;
-      --accent-glow:rgba(232,147,90,0.38);
       --text:rgba(255,255,255,0.95);
-      --muted:rgba(255,255,255,0.60);
-      --dim:rgba(255,255,255,0.35);
-      --border:rgba(255,255,255,0.12);
+      --muted:rgba(255,255,255,0.58);
+      --dim:rgba(255,255,255,0.32);
       --font-display:'Playfair Display',Georgia,serif;
       --font-body:'DM Sans',system-ui,sans-serif;
       --font-mono:'DM Mono','Fira Mono',monospace;
       --safe-t:max(1.1rem, env(safe-area-inset-top));
-      --safe-b:max(1.25rem, env(safe-area-inset-bottom));
+      --safe-b:max(1.5rem, env(safe-area-inset-bottom));
       --safe-l:max(1rem, env(safe-area-inset-left));
       --safe-r:max(1rem, env(safe-area-inset-right));
     }
 
-    html,body{height:100%;overflow:hidden;font-family:var(--font-body);color:var(--text);-webkit-font-smoothing:antialiased}
+    html,body{
+      height:100%;
+      overflow:hidden;
+      font-family:var(--font-body);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+    }
 
     /* ── Background ── */
     .bg{
@@ -38,45 +40,48 @@
       background:url('happening-gaane-bg.png') center/cover no-repeat;
     }
 
-    /* ── Gradient overlay ── */
+    /* ── Overlay ── */
     .overlay{
       position:fixed;inset:0;z-index:-15;
-      background:linear-gradient(to bottom,
-        rgba(10,5,2,0.55) 0%,
-        rgba(10,5,2,0.10) 35%,
-        rgba(10,5,2,0.15) 60%,
-        rgba(10,5,2,0.82) 100%);
+      background:linear-gradient(
+        to bottom,
+        rgba(8,4,2,0.58) 0%,
+        rgba(8,4,2,0.08) 30%,
+        rgba(8,4,2,0.12) 60%,
+        rgba(8,4,2,0.80) 100%
+      );
     }
 
-    /* ── Film grain ── */
+    /* ── Grain ── */
     .grain{
       position:fixed;inset:0;z-index:-10;
-      mix-blend-mode:overlay;opacity:0.22;pointer-events:none;
+      mix-blend-mode:overlay;opacity:0.2;pointer-events:none;
       background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='320' height='320' filter='url(%23g)'/%3E%3C/svg%3E");
     }
 
     /* ── Top bar ── */
     .top-bar{
       position:fixed;
-      top:var(--safe-t);left:var(--safe-l);right:var(--safe-r);
+      top:var(--safe-t);
+      left:var(--safe-l);right:var(--safe-r);
       z-index:100;
       display:flex;align-items:center;justify-content:space-between;
     }
 
     .clock{
       font-family:var(--font-mono);font-size:0.78rem;font-weight:500;
-      letter-spacing:0.06em;color:var(--muted);line-height:1;
+      letter-spacing:0.06em;color:var(--muted);
       min-width:80px;
     }
     .clock .sep{animation:blink 1s step-start infinite}
     @keyframes blink{50%{opacity:0}}
 
     .top-center{
-      display:flex;flex-direction:column;align-items:center;gap:0.2rem;
+      display:flex;flex-direction:column;align-items:center;gap:0.25rem;
     }
     .page-title{
       font-family:var(--font-display);font-style:italic;font-weight:400;
-      font-size:clamp(1rem,2.5vw,1.25rem);
+      font-size:clamp(1rem,2.5vw,1.3rem);
       letter-spacing:0.01em;color:var(--text);line-height:1;
     }
     .page-title em{color:var(--accent);font-style:normal}
@@ -86,11 +91,12 @@
       font-family:var(--font-mono);font-size:0.6rem;
       color:var(--dim);letter-spacing:0.06em;
     }
-    .listener-dot{
-      width:5px;height:5px;border-radius:50%;background:var(--accent);
-      animation:pulse-dot 2.4s ease-in-out infinite;
+    .dot{
+      width:5px;height:5px;border-radius:50%;
+      background:var(--accent);
+      animation:pulse 2.4s ease-in-out infinite;
     }
-    @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.75)}}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.35;transform:scale(0.7)}}
 
     .top-links{
       display:flex;align-items:center;gap:0.5rem;
@@ -99,196 +105,78 @@
     .top-link{
       display:flex;align-items:center;justify-content:center;
       width:28px;height:28px;border-radius:50%;
-      border:1px solid rgba(255,255,255,0.18);color:var(--muted);
-      text-decoration:none;transition:color 0.2s,border-color 0.2s;
+      border:1px solid rgba(255,255,255,0.18);
+      color:var(--muted);text-decoration:none;
+      transition:color 0.2s,border-color 0.2s;
     }
     .top-link:hover{color:var(--text);border-color:rgba(255,255,255,0.45)}
     .top-link svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
-    /* ── Glass ── */
-    .glass{
-      background:linear-gradient(to bottom,rgba(255,255,255,0.16),rgba(255,255,255,0.055));
-      border:1px solid rgba(255,255,255,0.11);
-      backdrop-filter:blur(32px) saturate(1.75);
-      -webkit-backdrop-filter:blur(32px) saturate(1.75);
-      box-shadow:0 16px 48px -12px rgba(0,0,0,0.85),inset 0 1px 0 rgba(255,255,255,0.22);
-    }
-
-    /* ── Player wrap ── */
+    /* ── Player card ── */
     .player-wrap{
       position:fixed;
       bottom:var(--safe-b);
       left:var(--safe-l);right:var(--safe-r);
       z-index:200;
-      display:flex;flex-direction:column;align-items:center;gap:0.65rem;
+      display:flex;flex-direction:column;align-items:center;gap:0;
     }
 
-    /* ── Playlist tabs ── */
-    .playlist-tabs{display:flex;gap:0.45rem}
-    .pl-tab{
-      padding:0.28rem 0.85rem;border-radius:999px;
-      font-size:0.62rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
-      border:1px solid rgba(255,255,255,0.15);
-      background:rgba(0,0,0,0.28);color:var(--dim);
-      cursor:pointer;transition:all 0.2s;font-family:var(--font-body);
-    }
-    .pl-tab.active{background:var(--accent);border-color:var(--accent);color:rgba(0,0,0,0.82)}
-    .pl-tab:hover:not(.active){color:var(--muted);border-color:rgba(255,255,255,0.3)}
-
-    /* ══ DESKTOP PILL ══════════════════ */
-    .player-desktop{
-      display:flex;width:100%;max-width:620px;
-      border-radius:999px;padding:10px 22px 10px 10px;
-      align-items:center;gap:16px;
-    }
-
-    /* Spinning vinyl */
-    .vinyl-wrap{
-      position:relative;flex-shrink:0;
-      width:80px;height:80px;border-radius:50%;overflow:hidden;
-    }
-    .vinyl-ring{
-      width:100%;height:100%;border-radius:50%;
-      animation:spin 8s linear infinite;animation-play-state:paused;
-      position:relative;
-    }
-    .vinyl-ring.spinning{animation-play-state:running}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .vinyl-img{
-      width:100%;height:100%;border-radius:50%;object-fit:cover;
-      display:block;
-    }
-    .vinyl-hole{
-      position:absolute;top:50%;left:50%;
-      width:14px;height:14px;transform:translate(-50%,-50%);
-      border-radius:50%;background:rgba(0,0,0,0.72);
-      box-shadow:0 0 0 2px rgba(255,255,255,0.38);
-      z-index:5;pointer-events:none;
-    }
-
-    /* YouTube mini — sits at left, always visible */
-    .yt-mini-wrap{
-      flex-shrink:0;width:128px;height:72px;
-      border-radius:10px;overflow:hidden;
+    .player-card{
+      width:100%;max-width:420px;
+      border-radius:20px;
+      overflow:hidden;
+      background:linear-gradient(to bottom,rgba(255,255,255,0.16),rgba(255,255,255,0.055));
       border:1px solid rgba(255,255,255,0.12);
-      background:#000;position:relative;
-    }
-    .yt-mini-wrap iframe{width:100%;height:100%;border:none;display:block}
-
-    /* Track info block */
-    .track-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-    .track-title{font-size:0.92rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
-    .track-artist{font-size:0.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
-
-    /* Seek bar */
-    .seek-wrap{
-      position:relative;height:24px;display:flex;align-items:center;
-      cursor:pointer;touch-action:none;margin-top:4px;
-    }
-    .seek-rail{
-      width:100%;height:3px;border-radius:999px;
-      background:rgba(255,255,255,0.15);position:relative;
-    }
-    .seek-fill{
-      height:100%;border-radius:999px;width:0%;
-      background:var(--accent);box-shadow:0 0 10px var(--accent-glow);
-      position:relative;transition:none;
-    }
-    .seek-knob{
-      position:absolute;right:-5px;top:50%;
-      width:10px;height:10px;border-radius:50%;background:#fff;
-      transform:translateY(-50%);opacity:0;transition:opacity 0.15s;
-      box-shadow:0 0 0 2px var(--accent);
-    }
-    .seek-wrap:hover .seek-knob{opacity:1}
-    .time-row{
-      display:flex;justify-content:space-between;
-      font-family:var(--font-mono);font-size:0.64rem;color:var(--dim);
-      letter-spacing:0.04em;margin-top:2px;
+      backdrop-filter:blur(32px) saturate(1.75);
+      -webkit-backdrop-filter:blur(32px) saturate(1.75);
+      box-shadow:
+        0 16px 56px -12px rgba(0,0,0,0.9),
+        inset 0 1px 0 rgba(255,255,255,0.22);
     }
 
-    /* Transport */
-    .transport{display:flex;align-items:center;gap:10px;flex-shrink:0}
-    .btn-skip{
-      background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;
-      display:flex;align-items:center;justify-content:center;transition:color 0.2s;
+    /* Card header — title above Spotify embed */
+    .card-header{
+      padding:14px 18px 10px;
+      display:flex;align-items:center;justify-content:space-between;
     }
-    .btn-skip:hover{color:var(--text)}
-    .btn-skip svg{width:17px;height:17px;fill:currentColor}
-    .btn-play{
-      width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;
-      background:linear-gradient(to bottom,var(--accent),var(--accent-dark));
-      display:flex;align-items:center;justify-content:center;
-      box-shadow:0 4px 18px var(--accent-glow),inset 0 1px 0 rgba(255,255,255,0.28);
-      transition:transform 0.15s,box-shadow 0.15s;
+    .card-label{
+      font-size:0.58rem;letter-spacing:0.14em;text-transform:uppercase;
+      color:var(--dim);font-family:'DM Sans',sans-serif;font-weight:600;
     }
-    .btn-play:hover{transform:scale(1.06);box-shadow:0 6px 22px var(--accent-glow)}
-    .btn-play:active{transform:scale(0.96)}
-    .btn-play svg{width:18px;height:18px;fill:#fff;margin-left:2px}
-    .btn-play .pause-icon{margin-left:0}
-
-    /* ══ MOBILE CARD ══════════════════ */
-    .player-mobile{
-      display:none;width:100%;max-width:420px;
-      border-radius:26px;overflow:hidden;
+    .card-playlist-name{
+      font-size:0.82rem;font-weight:600;color:var(--text);
     }
-
-    /* YouTube full-width at top */
-    .yt-mobile-wrap{
-      width:100%;aspect-ratio:16/9;background:#000;
+    .spotify-badge{
+      display:flex;align-items:center;gap:0.3rem;
+      font-size:0.6rem;letter-spacing:0.06em;color:var(--dim);
     }
-    .yt-mobile-wrap iframe{width:100%;height:100%;border:none;display:block}
+    .spotify-badge svg{width:14px;height:14px;fill:#1DB954;flex-shrink:0}
 
-    .mobile-body{padding:14px 18px 18px;display:flex;flex-direction:column;gap:11px}
-
-    .mobile-row1{display:flex;align-items:center;gap:11px}
-    .mobile-vinyl{
-      width:46px;height:46px;border-radius:50%;overflow:hidden;flex-shrink:0;
-      animation:spin 8s linear infinite;animation-play-state:paused;
+    /* Spotify embed wrapper — radius clips the corners cleanly */
+    .spotify-wrap{
+      width:100%;
+      /* Clip the player to match card radius at bottom */
+      border-radius:0 0 19px 19px;
+      overflow:hidden;
+      /* Remove the default Spotify iframe border/bg bleed */
+      line-height:0;
     }
-    .mobile-vinyl.spinning{animation-play-state:running}
-    .mobile-vinyl img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-
-    .mobile-info{flex:1;min-width:0}
-    .mobile-title{font-size:0.97rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .mobile-artist{font-size:0.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-    /* Mobile seek */
-    .m-seek{position:relative;height:24px;display:flex;align-items:center;cursor:pointer;touch-action:none}
-    .m-rail{width:100%;height:3px;border-radius:999px;background:rgba(255,255,255,0.15)}
-    .m-fill{height:100%;border-radius:999px;background:var(--accent);box-shadow:0 0 10px var(--accent-glow);width:0%}
-
-    /* Mobile bottom row */
-    .mobile-bottom{display:flex;align-items:center}
-    .m-time{font-family:var(--font-mono);font-size:0.63rem;color:var(--dim)}
-    .m-transport{flex:1;display:flex;align-items:center;justify-content:center;gap:18px}
-    .m-btn-skip{
-      background:none;border:none;cursor:pointer;color:var(--muted);
-      min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;
-      transition:color 0.2s;
-    }
-    .m-btn-skip:hover{color:var(--text)}
-    .m-btn-skip svg{width:20px;height:20px;fill:currentColor}
-    .m-btn-play{
-      width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;
-      background:linear-gradient(to bottom,var(--accent),var(--accent-dark));
-      display:flex;align-items:center;justify-content:center;
-      box-shadow:0 4px 20px var(--accent-glow),0 0 0 1px rgba(255,255,255,0.22);
-      transition:transform 0.15s;min-width:44px;min-height:44px;
-    }
-    .m-btn-play:hover{transform:scale(1.05)}
-    .m-btn-play svg{width:22px;height:22px;fill:#fff;margin-left:2px}
-    .m-btn-play .pause-icon{margin-left:0}
-
-    /* Responsive */
-    @media (max-width:640px){
-      .player-desktop{display:none!important}
-      .player-mobile{display:block}
+    .spotify-wrap iframe{
+      width:100%;
+      border:none;
+      display:block;
+      border-radius:0 0 19px 19px;
     }
 
-    /* Reduced motion */
+    /* Mobile adjustments */
+    @media (max-width:480px){
+      .player-card{max-width:100%;border-radius:18px}
+      .spotify-wrap{border-radius:0 0 17px 17px}
+      .spotify-wrap iframe{border-radius:0 0 17px 17px}
+    }
+
     @media (prefers-reduced-motion:reduce){
-      .vinyl-ring,.mobile-vinyl,.listener-dot{animation:none!important}
+      .dot{animation:none}
     }
   </style>
 </head>
@@ -305,7 +193,7 @@
     <div class="top-center">
       <div class="page-title">happening <em>gaane</em></div>
       <div class="listeners">
-        <div class="listener-dot"></div>
+        <div class="dot"></div>
         <span id="listenerCount">14 listening</span>
       </div>
     </div>
@@ -320,363 +208,54 @@
     </nav>
   </header>
 
-  <!-- Player -->
+  <!-- Spotify Player -->
   <div class="player-wrap">
-
-    <div class="playlist-tabs" id="playlistTabs"></div>
-
-    <!-- DESKTOP: horizontal pill -->
-    <div class="player-desktop glass" id="playerDesktop">
-
-      <!-- Spinning vinyl (decorative, uses bg image) -->
-      <div class="vinyl-wrap">
-        <div class="vinyl-ring" id="vinylDesktop">
-          <img class="vinyl-img" src="happening-gaane-bg.png" alt="THS">
+    <div class="player-card">
+      <div class="card-header">
+        <div>
+          <p class="card-label">Now Playing</p>
+          <p class="card-playlist-name">Happening Playlist</p>
         </div>
-        <div class="vinyl-hole"></div>
-      </div>
-
-      <!-- YouTube mini player (VISIBLE per YouTube policy) -->
-      <div class="yt-mini-wrap" id="ytMiniWrap">
-        <div id="ytDesktop"></div>
-      </div>
-
-      <!-- Track info -->
-      <div class="track-info">
-        <div class="track-title" id="dTitle">Select a playlist</div>
-        <div class="track-artist" id="dArtist">Add your tracks below</div>
-        <div class="seek-wrap" id="seekDesktop">
-          <div class="seek-rail">
-            <div class="seek-fill" id="fillDesktop">
-              <div class="seek-knob"></div>
-            </div>
-          </div>
-        </div>
-        <div class="time-row">
-          <span id="dElapsed">0:00</span>
-          <span id="dDuration">0:00</span>
+        <div class="spotify-badge">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.371-.721.49-1.101.24C13.74 15.671 10.56 15 6.991 15.84c-.43.12-.87-.13-.99-.56-.12-.43.13-.87.56-.99 3.981-.9 7.401-.51 10.141 1.35.38.24.5.72.24 1.101zm1.47-3.27c-.3.46-.93.6-1.39.3-2.641-1.62-6.661-2.1-9.791-1.14-.54.15-1.11-.15-1.26-.69-.15-.54.15-1.11.69-1.26 3.581-1.08 8.04-.54 11.101 1.32.45.3.6.93.3 1.39l-.15.06zm.12-3.39C15.601 8.99 9.571 8.79 6.6 9.729c-.649.19-1.35-.18-1.54-.84-.19-.651.18-1.35.84-1.54 3.421-1.05 9.091-.84 12.661 1.2.54.33.72 1.02.39 1.56-.33.54-1.02.72-1.56.39l-.15-.15z"/></svg>
+          via Spotify
         </div>
       </div>
-
-      <!-- Transport -->
-      <div class="transport">
-        <button class="btn-skip" id="dPrev" title="Previous">
-          <svg viewBox="0 0 24 24"><path d="M19 20L9 12l10-8v16zM5 4h2v16H5z"/></svg>
-        </button>
-        <button class="btn-play" id="dPlay" title="Play / Pause">
-          <svg viewBox="0 0 24 24" id="dPlayIcon"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-        <button class="btn-skip" id="dNext" title="Next">
-          <svg viewBox="0 0 24 24"><path d="M5 4l10 8-10 8V4zM17 4h2v16h-2z"/></svg>
-        </button>
+      <div class="spotify-wrap">
+        <iframe
+          src="https://open.spotify.com/embed/playlist/3drKAGwIWcfbr1sTXRGyH9?utm_source=generator&theme=0"
+          height="380"
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+          loading="lazy">
+        </iframe>
       </div>
     </div>
-
-    <!-- MOBILE: stacked card -->
-    <div class="player-mobile glass" id="playerMobile">
-
-      <!-- YouTube full-width (VISIBLE per YouTube policy) -->
-      <div class="yt-mobile-wrap" id="ytMobileWrap">
-        <div id="ytMobile"></div>
-      </div>
-
-      <div class="mobile-body">
-        <div class="mobile-row1">
-          <div class="mobile-vinyl" id="vinylMobile">
-            <img src="happening-gaane-bg.png" alt="THS">
-          </div>
-          <div class="mobile-info">
-            <div class="mobile-title" id="mTitle">Select a playlist</div>
-            <div class="mobile-artist" id="mArtist">The Happening Space</div>
-          </div>
-        </div>
-
-        <div class="m-seek" id="seekMobile">
-          <div class="m-rail"><div class="m-fill" id="fillMobile"></div></div>
-        </div>
-
-        <div class="mobile-bottom">
-          <span class="m-time" id="mTime">0:00 / 0:00</span>
-          <div class="m-transport">
-            <button class="m-btn-skip" id="mPrev" title="Previous">
-              <svg viewBox="0 0 24 24"><path d="M19 20L9 12l10-8v16zM5 4h2v16H5z"/></svg>
-            </button>
-            <button class="m-btn-play" id="mPlay" title="Play / Pause">
-              <svg viewBox="0 0 24 24" id="mPlayIcon"><path d="M8 5v14l11-7z"/></svg>
-            </button>
-            <button class="m-btn-skip" id="mNext" title="Next">
-              <svg viewBox="0 0 24 24"><path d="M5 4l10 8-10 8V4zM17 4h2v16h-2z"/></svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div><!-- /player-wrap -->
+  </div>
 
   <script>
-  /* ══════════════════════════════════════════════════════════
-     PLAYLISTS
-     ─────────────────────────────────────────────────────────
-     Each track is ONE line:
-       { id, title, artist, year, videoId }
-
-     videoId MUST be from an official rights-holder YouTube
-     upload with embedding enabled. To find it: open the
-     official channel upload → copy the 11-char ID from the URL.
-
-     ⚠️  Do NOT add tracks you don't have rights to use.
-         The onError handler auto-skips unembeddable videos.
-  ══════════════════════════════════════════════════════════ */
-  const PLAYLISTS = [
-    {
-      name: 'Happening Playlist',
-      tracks: [
-        // Official Big Beat Records upload
-        { id: 1, title: 'Taka',             artist: 'SIDEPIECE & San Pacho',  year: '2024', videoId: 'evie7OpdVZc' },
-        // Official Argy channel (Afterlife label)
-        { id: 2, title: 'Aria',             artist: 'Argy & Omnya',           year: '2023', videoId: 'aA_cOQWpaFM' },
-        // Official Mutant Disco Records upload
-        { id: 3, title: 'Sonic Masala',     artist: 'Zentura (Asgard Remix)', year: '2025', videoId: 'UGLQFBuj9_w' },
-        // ⚠️ No official YT channel found — onError auto-skips if embedding blocked
-        { id: 4, title: 'Papi (Bhabi)',     artist: 'Eden Shalev',            year: '2023', videoId: 'FHhZnnKcQ68' },
-      ]
-    },
-    {
-      name: 'Floor Feelz',
-      tracks: [
-        // Add: { id: 1, title: '...', artist: '...', year: '...', videoId: '...' }
-      ]
-    },
-    {
-      name: 'Soulful',
-      tracks: [
-        // Add: { id: 1, title: '...', artist: '...', year: '...', videoId: '...' }
-      ]
+    /* ── IST Clock ── */
+    function tickClock() {
+      const p = new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        hour: 'numeric', minute: '2-digit', hour12: true
+      }).formatToParts(new Date());
+      const h    = p.find(x => x.type === 'hour')?.value    || '12';
+      const min  = p.find(x => x.type === 'minute')?.value  || '00';
+      const ampm = p.find(x => x.type === 'dayperiod')?.value || 'AM';
+      document.getElementById('clock').innerHTML =
+        `${h}<span class="sep">:</span>${min} <span style="font-size:0.6em;opacity:0.65">${ampm}</span>`;
     }
-  ];
-
-  /* ── State ── */
-  let ytDesktopPlayer = null;
-  let ytMobilePlayer  = null;
-  let plIdx  = 0;   // current playlist index
-  let trIdx  = 0;   // current track index
-  let playing = false;
-  let seekTick = null;
-  const isMob = () => window.innerWidth < 640;
-
-  const pl    = () => PLAYLISTS[plIdx];
-  const track = () => (pl()?.tracks.length ? pl().tracks[trIdx] : null);
-  const fmtT  = s => {
-    if (!s || isNaN(s)) return '0:00';
-    const m = Math.floor(s / 60), ss = Math.floor(s % 60);
-    return `${m}:${String(ss).padStart(2,'0')}`;
-  };
-
-  /* ── YouTube API ready ── */
-  function onYouTubeIframeAPIReady() {
-    const vid = track()?.videoId || '';
-
-    ytDesktopPlayer = new YT.Player('ytDesktop', {
-      width: '100%', height: '100%',
-      videoId: vid,
-      playerVars: { autoplay:0, controls:1, modestbranding:1, rel:0, playsinline:1 },
-      events: { onReady: onReady, onStateChange: onState, onError: onError }
-    });
-
-    ytMobilePlayer = new YT.Player('ytMobile', {
-      width: '100%', height: '100%',
-      videoId: vid,
-      playerVars: { autoplay:0, controls:1, modestbranding:1, rel:0, playsinline:1 },
-      events: { onStateChange: onState, onError: onError }
-    });
-  }
-
-  function onReady() { updateUI(); }
-
-  function onState(e) {
-    const S = YT.PlayerState;
-    if (e.data === S.PLAYING) {
-      playing = true;
-      setPlayIcon(true);
-      setVinylSpin(true);
-      startSeek();
-    } else if (e.data === S.PAUSED || e.data === S.BUFFERING) {
-      playing = false;
-      setPlayIcon(false);
-      if (e.data === S.PAUSED) setVinylSpin(false);
-    } else if (e.data === S.ENDED) {
-      playing = false;
-      setVinylSpin(false);
-      next();
-    }
-  }
-
-  function onError(e) {
-    // Video unavailable or embedding disabled — skip automatically
-    console.warn('[HappeningGaane] Skipping video:', track()?.videoId, 'Error:', e.data);
-    next();
-  }
-
-  /* ── Sync both players ── */
-  function activePlayer() {
-    return isMob() ? ytMobilePlayer : ytDesktopPlayer;
-  }
-
-  function loadTrack(autoplay) {
-    const t = track();
-    updateUI();
-    if (!t) return;
-    [ytDesktopPlayer, ytMobilePlayer].forEach(p => {
-      if (!p?.loadVideoById) return;
-      autoplay ? p.loadVideoById(t.videoId) : p.cueVideoById(t.videoId);
-    });
-  }
-
-  /* ── Controls ── */
-  function togglePlay() {
-    const p = activePlayer();
-    if (!p || !track()) return;
-    playing ? p.pauseVideo() : p.playVideo();
-  }
-
-  function prev() {
-    if (!pl()?.tracks.length) return;
-    const ap = activePlayer();
-    if (ap && ap.getCurrentTime && ap.getCurrentTime() > 3) {
-      [ytDesktopPlayer, ytMobilePlayer].forEach(p => p?.seekTo?.(0, true));
-      return;
-    }
-    trIdx = (trIdx - 1 + pl().tracks.length) % pl().tracks.length;
-    loadTrack(playing);
-  }
-
-  function next() {
-    if (!pl()?.tracks.length) return;
-    trIdx = (trIdx + 1) % pl().tracks.length;
-    loadTrack(playing);
-  }
-
-  function switchPl(idx) {
-    plIdx = idx;
-    trIdx = 0;
-    playing = false;
-    setPlayIcon(false);
-    setVinylSpin(false);
-    loadTrack(false);
-    buildTabs();
-  }
-
-  /* ── Seek bar ── */
-  function startSeek() {
-    clearInterval(seekTick);
-    seekTick = setInterval(() => {
-      const ap = activePlayer();
-      if (!ap?.getCurrentTime) return;
-      const cur = ap.getCurrentTime() || 0;
-      const tot = ap.getDuration() || 0;
-      const pct = tot > 0 ? (cur / tot) * 100 : 0;
-      document.getElementById('fillDesktop').style.width = pct + '%';
-      document.getElementById('fillMobile').style.width  = pct + '%';
-      document.getElementById('dElapsed').textContent   = fmtT(cur);
-      document.getElementById('dDuration').textContent  = fmtT(tot);
-      document.getElementById('mTime').textContent      = `${fmtT(cur)} / ${fmtT(tot)}`;
-    }, 200);
-  }
-
-  function bindSeek(wrapId) {
-    const wrap = document.getElementById(wrapId);
-    if (!wrap) return;
-    let dragging = false;
-    const doSeek = e => {
-      const ap = activePlayer();
-      if (!ap?.getDuration) return;
-      const r   = wrap.getBoundingClientRect();
-      const x   = Math.max(0, Math.min(e.clientX - r.left, r.width));
-      ap.seekTo((x / r.width) * ap.getDuration(), true);
-      [ytDesktopPlayer, ytMobilePlayer].forEach(p => {
-        if (p !== ap) p?.seekTo?.((x / r.width) * (p?.getDuration?.() || 0), true);
-      });
-    };
-    wrap.addEventListener('pointerdown', e => { dragging = true; wrap.setPointerCapture(e.pointerId); doSeek(e); });
-    wrap.addEventListener('pointermove', e => { if (dragging) doSeek(e); });
-    wrap.addEventListener('pointerup',   () => { dragging = false; });
-  }
-
-  /* ── UI helpers ── */
-  function updateUI() {
-    const t  = track();
-    const ti = t?.title  || (pl()?.tracks.length === 0 ? 'Add tracks to get started' : 'No track loaded');
-    const ar = t?.artist || 'The Happening Space';
-    document.getElementById('dTitle').textContent  = ti;
-    document.getElementById('dArtist').textContent = ar;
-    document.getElementById('mTitle').textContent  = ti;
-    document.getElementById('mArtist').textContent = ar;
-  }
-
-  function setPlayIcon(isPlaying) {
-    const play  = '<path d="M8 5v14l11-7z"/>';
-    const pause = '<path class="pause-icon" d="M6 4h4v16H6zm8 0h4v16h-4z"/>';
-    const svg   = isPlaying ? pause : play;
-    document.getElementById('dPlayIcon').innerHTML = svg;
-    document.getElementById('mPlayIcon').innerHTML = svg;
-  }
-
-  function setVinylSpin(spin) {
-    ['vinylDesktop','vinylMobile'].forEach(id => {
-      document.getElementById(id)?.classList.toggle('spinning', spin);
-    });
-  }
-
-  function buildTabs() {
-    document.getElementById('playlistTabs').innerHTML = PLAYLISTS.map((p,i) =>
-      `<button class="pl-tab${i===plIdx?' active':''}" onclick="switchPl(${i})">${p.name}</button>`
-    ).join('');
-  }
-
-  /* ── Clock (IST) ── */
-  function tickClock() {
-    const p = new Intl.DateTimeFormat('en-IN', {
-      timeZone:'Asia/Kolkata', hour:'numeric', minute:'2-digit', hour12:true
-    }).formatToParts(new Date());
-    const h    = p.find(x=>x.type==='hour')?.value || '12';
-    const min  = p.find(x=>x.type==='minute')?.value || '00';
-    const ampm = p.find(x=>x.type==='dayperiod')?.value || 'AM';
-    document.getElementById('clock').innerHTML =
-      `${h}<span class="sep">:</span>${min} <span style="font-size:0.6em;opacity:0.65">${ampm}</span>`;
-  }
-
-  /* ── Simulated listener count ── */
-  function refreshListeners() {
-    const n = 10 + Math.floor(Math.random() * 12);
-    document.getElementById('listenerCount').textContent = `${n} listening`;
-  }
-
-  /* ── Boot ── */
-  document.addEventListener('DOMContentLoaded', () => {
     tickClock();
     setInterval(tickClock, 1000);
-    buildTabs();
-    updateUI();
+
+    /* ── Simulated listener count ── */
+    function refreshListeners() {
+      const n = 10 + Math.floor(Math.random() * 12);
+      document.getElementById('listenerCount').textContent = `${n} listening`;
+    }
     refreshListeners();
     setInterval(refreshListeners, 18000);
-    bindSeek('seekDesktop');
-    bindSeek('seekMobile');
-
-    document.getElementById('dPrev').addEventListener('click', prev);
-    document.getElementById('dPlay').addEventListener('click', togglePlay);
-    document.getElementById('dNext').addEventListener('click', next);
-    document.getElementById('mPrev').addEventListener('click', prev);
-    document.getElementById('mPlay').addEventListener('click', togglePlay);
-    document.getElementById('mNext').addEventListener('click', next);
-  });
-
-  /* Load YouTube IFrame API */
-  (function() {
-    const s = document.createElement('script');
-    s.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(s);
-  })();
   </script>
+
 </body>
 </html>
