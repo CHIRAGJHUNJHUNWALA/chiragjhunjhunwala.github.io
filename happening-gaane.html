@@ -27,32 +27,23 @@
     }
 
     html,body{
-      height:100%;
-      overflow:hidden;
-      font-family:var(--font-body);
-      color:var(--text);
+      height:100%;overflow:hidden;
+      font-family:var(--font-body);color:var(--text);
       -webkit-font-smoothing:antialiased;
     }
 
-    /* ── Background ── */
     .bg{
       position:fixed;inset:0;z-index:-20;
-      background:url('happening-gaane-bg.png') center/cover no-repeat;
+      background:url('happening-gaane-bg.png?v=2') center/cover no-repeat;
     }
-
-    /* ── Overlay ── */
     .overlay{
       position:fixed;inset:0;z-index:-15;
-      background:linear-gradient(
-        to bottom,
+      background:linear-gradient(to bottom,
         rgba(8,4,2,0.58) 0%,
         rgba(8,4,2,0.08) 30%,
-        rgba(8,4,2,0.12) 60%,
-        rgba(8,4,2,0.80) 100%
-      );
+        rgba(8,4,2,0.15) 60%,
+        rgba(8,4,2,0.82) 100%);
     }
-
-    /* ── Grain ── */
     .grain{
       position:fixed;inset:0;z-index:-10;
       mix-blend-mode:overlay;opacity:0.2;pointer-events:none;
@@ -61,86 +52,92 @@
 
     /* ── Top bar ── */
     .top-bar{
-      position:fixed;
-      top:var(--safe-t);
+      position:fixed;top:var(--safe-t);
       left:var(--safe-l);right:var(--safe-r);
-      z-index:100;
-      display:flex;align-items:center;justify-content:space-between;
+      z-index:100;display:flex;align-items:center;justify-content:space-between;
     }
-
     .clock{
       font-family:var(--font-mono);font-size:0.78rem;font-weight:500;
-      letter-spacing:0.06em;color:var(--muted);
-      min-width:80px;
+      letter-spacing:0.06em;color:var(--muted);min-width:80px;
     }
     .clock .sep{animation:blink 1s step-start infinite}
     @keyframes blink{50%{opacity:0}}
 
-    .top-center{
-      display:flex;flex-direction:column;align-items:center;gap:0.25rem;
-    }
+    .top-center{display:flex;flex-direction:column;align-items:center;gap:0.25rem}
     .page-title{
       font-family:var(--font-display);font-style:italic;font-weight:400;
-      font-size:clamp(1rem,2.5vw,1.3rem);
-      letter-spacing:0.01em;color:var(--text);line-height:1;
+      font-size:clamp(1rem,2.5vw,1.3rem);letter-spacing:0.01em;color:var(--text);line-height:1;
     }
     .page-title em{color:var(--accent);font-style:normal}
-
     .listeners{
       display:flex;align-items:center;gap:0.35rem;
       font-family:var(--font-mono);font-size:0.6rem;
       color:var(--dim);letter-spacing:0.06em;
     }
-    .dot{
-      width:5px;height:5px;border-radius:50%;
-      background:var(--accent);
-      animation:pulse 2.4s ease-in-out infinite;
-    }
+    .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pulse 2.4s ease-in-out infinite}
     @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.35;transform:scale(0.7)}}
 
-    .top-links{
-      display:flex;align-items:center;gap:0.5rem;
-      min-width:80px;justify-content:flex-end;
-    }
+    .top-links{display:flex;align-items:center;gap:0.5rem;min-width:80px;justify-content:flex-end}
     .top-link{
       display:flex;align-items:center;justify-content:center;
       width:28px;height:28px;border-radius:50%;
-      border:1px solid rgba(255,255,255,0.18);
-      color:var(--muted);text-decoration:none;
+      border:1px solid rgba(255,255,255,0.18);color:var(--muted);text-decoration:none;
       transition:color 0.2s,border-color 0.2s;
     }
     .top-link:hover{color:var(--text);border-color:rgba(255,255,255,0.45)}
     .top-link svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
-    /* ── Player card ── */
+    /* ── Player ── */
     .player-wrap{
-      position:fixed;
-      bottom:var(--safe-b);
+      position:fixed;bottom:var(--safe-b);
       left:var(--safe-l);right:var(--safe-r);
-      z-index:200;
-      display:flex;flex-direction:column;align-items:center;
+      z-index:200;display:flex;flex-direction:column;align-items:center;gap:0.75rem;
     }
 
+    /* Track counter + nav */
+    .player-controls{
+      display:flex;align-items:center;gap:1.25rem;
+    }
+    .btn-nav{
+      width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      background:rgba(255,255,255,0.1);
+      border:1px solid rgba(255,255,255,0.15);
+      color:var(--muted);
+      backdrop-filter:blur(12px);
+      transition:background 0.2s,color 0.2s,transform 0.15s;
+    }
+    .btn-nav:hover{background:rgba(255,255,255,0.18);color:var(--text);transform:scale(1.06)}
+    .btn-nav:active{transform:scale(0.95)}
+    .btn-nav svg{width:16px;height:16px;fill:currentColor}
+
+    .track-count{
+      font-family:var(--font-mono);font-size:0.72rem;
+      color:var(--dim);letter-spacing:0.08em;
+      min-width:36px;text-align:center;
+    }
+
+    /* Glass pill wrapping the Spotify embed */
     .player-card{
       width:100%;max-width:480px;
-      border-radius:999px;
+      border-radius:16px;
       overflow:hidden;
       background:linear-gradient(to bottom,rgba(255,255,255,0.17),rgba(255,255,255,0.055));
       border:1px solid rgba(255,255,255,0.12);
       backdrop-filter:blur(32px) saturate(1.75);
       -webkit-backdrop-filter:blur(32px) saturate(1.75);
       box-shadow:0 16px 56px -12px rgba(0,0,0,0.9),inset 0 1px 0 rgba(255,255,255,0.22);
+      transition:opacity 0.25s ease;
     }
+    .player-card.loading{opacity:0.5}
 
     .spotify-wrap{width:100%;overflow:hidden;line-height:0}
     .spotify-wrap iframe{width:100%;border:none;display:block}
 
-    @media (prefers-reduced-motion:reduce){.dot{animation:none}}
-    }
+    @media (prefers-reduced-motion:reduce){.dot,.btn-nav{animation:none;transition:none}}
   </style>
 </head>
 <body>
-
   <div class="bg"></div>
   <div class="overlay"></div>
   <div class="grain"></div>
@@ -148,7 +145,6 @@
   <!-- Top bar -->
   <header class="top-bar">
     <div class="clock" id="clock">12<span class="sep">:</span>00 <span style="font-size:0.6em;opacity:0.65">AM</span></div>
-
     <div class="top-center">
       <div class="page-title">happening <em>gaane</em></div>
       <div class="listeners">
@@ -156,7 +152,6 @@
         <span id="listenerCount">14 listening</span>
       </div>
     </div>
-
     <nav class="top-links">
       <a class="top-link" href="https://instagram.com/happening.surat" target="_blank" rel="noopener" title="@happening.surat">
         <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none"/></svg>
@@ -167,27 +162,75 @@
     </nav>
   </header>
 
-  <!-- Spotify Player -->
+  <!-- Player -->
   <div class="player-wrap">
-    <div class="player-card">
 
+    <!-- Prev / counter / Next -->
+    <div class="player-controls">
+      <button class="btn-nav" id="btnPrev" title="Previous">
+        <svg viewBox="0 0 24 24"><path d="M19 20L9 12l10-8v16zM5 4h2v16H5z"/></svg>
+      </button>
+      <span class="track-count" id="trackCount">1 / 4</span>
+      <button class="btn-nav" id="btnNext" title="Next">
+        <svg viewBox="0 0 24 24"><path d="M5 4l10 8-10 8V4zM17 4h2v16h-2z"/></svg>
+      </button>
+    </div>
+
+    <!-- Spotify single-track embed -->
+    <div class="player-card" id="playerCard">
       <div class="spotify-wrap">
         <iframe
-          src="https://open.spotify.com/embed/playlist/3drKAGwIWcfbr1sTXRGyH9?utm_source=generator&theme=0"
+          id="spotifyFrame"
+          src=""
           height="152"
           allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
           loading="lazy">
         </iframe>
       </div>
     </div>
+
   </div>
 
   <script>
+    /* ── Tracks — Spotify track IDs from the Happening Playlist ── */
+    const TRACKS = [
+      { title: 'Taka',                   artist: 'SIDEPIECE & San Pacho',  spotifyId: '2DxP7y3GFruzMeKdSWFQZ2' },
+      { title: 'Aria',                   artist: 'Argy & Omnya',           spotifyId: '5vFJOD9V4rHgTLWaBRGQ4N' },
+      { title: 'Sonic Masala',           artist: 'Zentura (Asgard Remix)', spotifyId: '2HPx07JT2srQ7wc1Ln26XC' },
+      { title: 'Papi (Bhabi)',           artist: 'Eden Shalev',            spotifyId: '2jxJzUWxqX2fnQTD9lmi2x' },
+    ];
+
+    let current = 0;
+
+    function loadTrack(idx, animate) {
+      current = (idx + TRACKS.length) % TRACKS.length;
+      const card   = document.getElementById('playerCard');
+      const frame  = document.getElementById('spotifyFrame');
+      const count  = document.getElementById('trackCount');
+
+      if (animate) {
+        card.classList.add('loading');
+        setTimeout(() => {
+          frame.src = `https://open.spotify.com/embed/track/${TRACKS[current].spotifyId}?utm_source=generator&theme=0`;
+          count.textContent = `${current + 1} / ${TRACKS.length}`;
+          card.classList.remove('loading');
+        }, 220);
+      } else {
+        frame.src = `https://open.spotify.com/embed/track/${TRACKS[current].spotifyId}?utm_source=generator&theme=0`;
+        count.textContent = `${current + 1} / ${TRACKS.length}`;
+      }
+    }
+
+    document.getElementById('btnPrev').addEventListener('click', () => loadTrack(current - 1, true));
+    document.getElementById('btnNext').addEventListener('click', () => loadTrack(current + 1, true));
+
+    // Load first track on boot
+    loadTrack(0, false);
+
     /* ── IST Clock ── */
     function tickClock() {
       const p = new Intl.DateTimeFormat('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        hour: 'numeric', minute: '2-digit', hour12: true
+        timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit', hour12: true
       }).formatToParts(new Date());
       const h    = p.find(x => x.type === 'hour')?.value    || '12';
       const min  = p.find(x => x.type === 'minute')?.value  || '00';
@@ -206,6 +249,5 @@
     refreshListeners();
     setInterval(refreshListeners, 18000);
   </script>
-
 </body>
 </html>
