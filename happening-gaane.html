@@ -118,65 +118,24 @@
       bottom:var(--safe-b);
       left:var(--safe-l);right:var(--safe-r);
       z-index:200;
-      display:flex;flex-direction:column;align-items:center;gap:0;
+      display:flex;flex-direction:column;align-items:center;
     }
 
     .player-card{
-      width:100%;max-width:420px;
-      border-radius:20px;
+      width:100%;max-width:480px;
+      border-radius:999px;
       overflow:hidden;
-      background:linear-gradient(to bottom,rgba(255,255,255,0.16),rgba(255,255,255,0.055));
+      background:linear-gradient(to bottom,rgba(255,255,255,0.17),rgba(255,255,255,0.055));
       border:1px solid rgba(255,255,255,0.12);
       backdrop-filter:blur(32px) saturate(1.75);
       -webkit-backdrop-filter:blur(32px) saturate(1.75);
-      box-shadow:
-        0 16px 56px -12px rgba(0,0,0,0.9),
-        inset 0 1px 0 rgba(255,255,255,0.22);
+      box-shadow:0 16px 56px -12px rgba(0,0,0,0.9),inset 0 1px 0 rgba(255,255,255,0.22);
     }
 
-    /* Card header — title above Spotify embed */
-    .card-header{
-      padding:14px 18px 10px;
-      display:flex;align-items:center;justify-content:space-between;
-    }
-    .card-label{
-      font-size:0.58rem;letter-spacing:0.14em;text-transform:uppercase;
-      color:var(--dim);font-family:'DM Sans',sans-serif;font-weight:600;
-    }
-    .card-playlist-name{
-      font-size:0.82rem;font-weight:600;color:var(--text);
-    }
-    .spotify-badge{
-      display:flex;align-items:center;gap:0.3rem;
-      font-size:0.6rem;letter-spacing:0.06em;color:var(--dim);
-    }
-    .spotify-badge svg{width:14px;height:14px;fill:#1DB954;flex-shrink:0}
+    .spotify-wrap{width:100%;overflow:hidden;line-height:0}
+    .spotify-wrap iframe{width:100%;border:none;display:block}
 
-    /* Spotify embed wrapper — radius clips the corners cleanly */
-    .spotify-wrap{
-      width:100%;
-      /* Clip the player to match card radius at bottom */
-      border-radius:0 0 19px 19px;
-      overflow:hidden;
-      /* Remove the default Spotify iframe border/bg bleed */
-      line-height:0;
-    }
-    .spotify-wrap iframe{
-      width:100%;
-      border:none;
-      display:block;
-      border-radius:0 0 19px 19px;
-    }
-
-    /* Mobile adjustments */
-    @media (max-width:480px){
-      .player-card{max-width:100%;border-radius:18px}
-      .spotify-wrap{border-radius:0 0 17px 17px}
-      .spotify-wrap iframe{border-radius:0 0 17px 17px}
-    }
-
-    @media (prefers-reduced-motion:reduce){
-      .dot{animation:none}
+    @media (prefers-reduced-motion:reduce){.dot{animation:none}}
     }
   </style>
 </head>
@@ -211,20 +170,11 @@
   <!-- Spotify Player -->
   <div class="player-wrap">
     <div class="player-card">
-      <div class="card-header">
-        <div>
-          <p class="card-label">Now Playing</p>
-          <p class="card-playlist-name">Happening Playlist</p>
-        </div>
-        <div class="spotify-badge">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.371-.721.49-1.101.24C13.74 15.671 10.56 15 6.991 15.84c-.43.12-.87-.13-.99-.56-.12-.43.13-.87.56-.99 3.981-.9 7.401-.51 10.141 1.35.38.24.5.72.24 1.101zm1.47-3.27c-.3.46-.93.6-1.39.3-2.641-1.62-6.661-2.1-9.791-1.14-.54.15-1.11-.15-1.26-.69-.15-.54.15-1.11.69-1.26 3.581-1.08 8.04-.54 11.101 1.32.45.3.6.93.3 1.39l-.15.06zm.12-3.39C15.601 8.99 9.571 8.79 6.6 9.729c-.649.19-1.35-.18-1.54-.84-.19-.651.18-1.35.84-1.54 3.421-1.05 9.091-.84 12.661 1.2.54.33.72 1.02.39 1.56-.33.54-1.02.72-1.56.39l-.15-.15z"/></svg>
-          via Spotify
-        </div>
-      </div>
+
       <div class="spotify-wrap">
         <iframe
           src="https://open.spotify.com/embed/playlist/3drKAGwIWcfbr1sTXRGyH9?utm_source=generator&theme=0"
-          height="380"
+          height="152"
           allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
           loading="lazy">
         </iframe>
