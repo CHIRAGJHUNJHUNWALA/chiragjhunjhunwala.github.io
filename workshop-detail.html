@@ -187,7 +187,15 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
 .success-note{font-size:0.72rem;color:var(--text-muted);letter-spacing:0.05em}
 @keyframes btnSpin{to{transform:rotate(360deg)}}
 .btn-spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:btnSpin 0.7s linear infinite;vertical-align:middle}
-@media(max-width:900px){.main{grid-template-columns:1fr;gap:2rem;padding:2rem 1.25rem 5rem}.enroll-card{position:static}*{cursor:auto!important}nav{padding:1rem 1.25rem}.back-link{padding-left:1.25rem}}
+@media(max-width:900px){
+  .main{grid-template-columns:1fr;gap:2rem;padding:2rem 1rem 5rem}
+  .enroll-card{position:static;padding:1.5rem 1.25rem;border-radius:0}
+  .packages{gap:0.6rem}
+  .package-opt{padding:1rem 1rem}
+  *{cursor:auto!important}
+  nav{padding:1rem 1.25rem}
+  .back-link{padding-left:1.25rem}
+}
 </style>
 </head>
 <body>
@@ -650,9 +658,9 @@ function getSessionCount(p){
 
 function renderSlots(count){
   const slt=(workshop.slots||[]).filter(s=>!s.cancelled); // hide cancelled slots
-  selectedSlots=slt.slice(0,count);
+  selectedSlots=[];
   document.getElementById('slotList').innerHTML = slt.length ? slt.map((s,i)=>`
-    <div class="slot-opt ${i<count?'selected':''}" id="slot-${s.id}" onclick="selectSlotToggle('${s.id}')">
+    <div class="slot-opt" id="slot-${s.id}" onclick="selectSlotToggle('${s.id}')">
       <div class="slot-radio"></div>
       <div class="slot-info">
         ${s.song?`<p class="slot-song">♪ ${s.song}</p>`:''}
@@ -737,7 +745,7 @@ window.selectSlotToggle = function(id){
   const max=(getSessionCount(selectedPkg));
   const slot=(workshop.slots||[]).find(s=>s.id===id);
   const idx=selectedSlots.findIndex(s=>s.id===id);
-  if(idx>-1){if(selectedSlots.length>max)selectedSlots.splice(idx,1);}
+  if(idx>-1){selectedSlots.splice(idx,1);} // deselect always
   else{if(selectedSlots.length>=max)selectedSlots.pop();selectedSlots.push(slot);}
   document.querySelectorAll('.slot-opt').forEach(el=>el.classList.remove('selected'));
   selectedSlots.forEach(s=>{const el=document.getElementById('slot-'+s.id);if(el)el.classList.add('selected');});
