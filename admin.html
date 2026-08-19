@@ -1493,7 +1493,13 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <div class="form-group"><label>Batch ID *</label><input type="text" id="beBatchId" placeholder="e.g. ladies-batch"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>Trainer Name *</label><input type="text" id="beTrainer" placeholder="e.g. Divyanshi Singhvi"></div>
+        <div class="form-group">
+          <label>Trainer *</label>
+          <select id="beTrainerPicker" onchange="document.getElementById('beTrainer').value=this.options[this.selectedIndex]?.dataset.name||''" style="background:var(--bg2);border:1px solid var(--border2);padding:0.55rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;width:100%">
+            <option value="">— Select Trainer —</option>
+          </select>
+          <input type="hidden" id="beTrainer">
+        </div>
         <div class="form-group"><label>Style / Level</label><input type="text" id="beStyle" placeholder="e.g. Intermediate, Beginners"></div>
       </div>
       <div class="form-group">
@@ -1579,6 +1585,16 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           <span style="background:var(--bg3);padding:0.55rem 0.75rem;color:var(--muted);font-size:0.82rem;border-right:1px solid var(--border2);white-space:nowrap">+91</span>
           <input type="tel" id="artistNewPhone" maxlength="10" placeholder="10-digit mobile number"
             style="background:var(--bg2);border:none;padding:0.55rem 0.85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;flex:1">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>PAN Card <span style="font-weight:300;color:var(--muted);font-size:0.75em">— for settlements</span></label>
+          <input type="text" id="artistNewPan" placeholder="ABCDE1234F" style="text-transform:uppercase" maxlength="10">
+        </div>
+        <div class="form-group">
+          <label>UPI ID <span style="font-weight:300;color:var(--muted);font-size:0.75em">— optional</span></label>
+          <input type="text" id="artistNewUpi" placeholder="name@upi">
         </div>
       </div>
     </div>
@@ -1781,10 +1797,35 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
     <div class="modal-body">
       <input type="hidden" id="wsEditId">
-      <div class="form-row">
-        <div class="form-group"><label>Artist Name *</label><input type="text" id="wsArtist" placeholder="e.g. Om Tarphe"></div>
-        <div class="form-group"><label>Artist ID <span style="font-weight:300;color:var(--muted);font-size:0.75em">(for artist login)</span></label><input type="text" id="wsArtistId" placeholder="e.g. omtarphe"></div>
+      <!-- Artist Picker -->
+      <div class="form-row" style="align-items:flex-end">
+        <div class="form-group" style="flex:1">
+          <label>Artist *</label>
+          <select id="wsArtistPicker" onchange="onWsArtistChange()" style="background:var(--bg2);border:1px solid var(--border2);padding:0.55rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;width:100%">
+            <option value="">— Select Artist —</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex:0 0 auto;padding-bottom:0.1rem">
+          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;user-select:none;white-space:nowrap;margin-bottom:0.6rem">
+            <input type="checkbox" id="wsIsCollab" onchange="toggleWsCollab()" style="width:15px;height:15px;accent-color:var(--red)">
+            Collab Class
+          </label>
+        </div>
       </div>
+      <!-- Second artist (collab only) -->
+      <div id="wsCollabRow" style="display:none" class="form-group">
+        <label>Second Artist *</label>
+        <select id="wsArtistPicker2" onchange="onWsArtistChange()" style="background:var(--bg2);border:1px solid var(--border2);padding:0.55rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;width:100%">
+          <option value="">— Select Second Artist —</option>
+        </select>
+      </div>
+      <!-- Collab name preview -->
+      <div id="wsCollabPreview" style="display:none;background:rgba(188,31,46,0.08);border:1px solid rgba(188,31,46,0.25);padding:0.6rem 0.85rem;margin-bottom:0.75rem;font-size:0.82rem;color:var(--red)">
+        Workshop name: <strong id="wsCollabName"></strong>
+      </div>
+      <!-- Hidden fields used by save function -->
+      <input type="hidden" id="wsArtist">
+      <input type="hidden" id="wsArtistId">
       <div class="form-row">
         <div class="form-group"><label>Dance Style *</label><input type="text" id="wsStyle" placeholder="Hip-Hop · Breaking"></div>
         <div class="form-group"><label>Status</label>
@@ -4461,6 +4502,67 @@ function loadPoster(file){
 /* ══════════════════════════════════════
    ADD / EDIT WORKSHOP
 ══════════════════════════════════════ */
+/* ══════════════════════════════════════
+   ARTIST MASTER PICKERS
+══════════════════════════════════════ */
+function buildArtistOptions(selectId, selectedUser){
+  const sel = document.getElementById(selectId);
+  if(!sel) return;
+  sel.innerHTML = `<option value="">— Select Artist —</option>` +
+    ARTIST_ROSTER.map(a =>
+      `<option value="${a.user}" data-name="${a.name}" ${a.user===selectedUser?'selected':''}>${a.name}</option>`
+    ).join('');
+}
+
+function buildTrainerOptions(selectId, selectedName){
+  const sel = document.getElementById(selectId);
+  if(!sel) return;
+  sel.innerHTML = `<option value="">— Select Trainer —</option>` +
+    ARTIST_ROSTER.map(a =>
+      `<option value="${a.user}" data-name="${a.name}" ${a.name===selectedName?'selected':''}>${a.name}</option>`
+    ).join('');
+  // sync hidden beTrainer
+  const chosen = ARTIST_ROSTER.find(a=>a.name===selectedName);
+  const ht = document.getElementById('beTrainer');
+  if(ht && chosen) ht.value = chosen.name;
+}
+
+window.toggleWsCollab = function(){
+  const on = document.getElementById('wsIsCollab').checked;
+  document.getElementById('wsCollabRow').style.display    = on ? 'block' : 'none';
+  document.getElementById('wsCollabPreview').style.display = on ? 'block' : 'none';
+  onWsArtistChange();
+};
+
+window.onWsArtistChange = function(){
+  const isCollab = document.getElementById('wsIsCollab').checked;
+  const sel1 = document.getElementById('wsArtistPicker');
+  const a1   = ARTIST_ROSTER.find(a=>a.user===sel1.value);
+
+  if(!isCollab){
+    document.getElementById('wsArtist').value   = a1?.name  || '';
+    document.getElementById('wsArtistId').value = a1?.user  || '';
+    return;
+  }
+
+  const sel2 = document.getElementById('wsArtistPicker2');
+  const a2   = ARTIST_ROSTER.find(a=>a.user===sel2.value);
+
+  // Build "Divyanshi X Hridhay" from first names
+  if(a1 && a2){
+    const fn1  = a1.name.split(' ')[0];
+    const fn2  = a2.name.split(' ')[0];
+    const cName = `${fn1} X ${fn2}`;
+    document.getElementById('wsCollabName').textContent = cName;
+    document.getElementById('wsArtist').value   = cName;
+    document.getElementById('wsArtistId').value = `${a1.user}_${a2.user}`;
+  } else {
+    document.getElementById('wsCollabName').textContent = '—';
+    document.getElementById('wsArtist').value   = '';
+    document.getElementById('wsArtistId').value = '';
+  }
+};
+
 window.openAddWorkshop = function(){
   document.getElementById('wsModalTitle').textContent = 'Add New Workshop';
   document.getElementById('wsEditId').value   = '';
@@ -4478,6 +4580,13 @@ window.openAddWorkshop = function(){
   document.getElementById('packagesEditor').innerHTML = '';
   document.getElementById('comboEditor').innerHTML    = '';
   document.getElementById('slotsEditor').innerHTML    = '';
+  // Reset collab
+  document.getElementById('wsIsCollab').checked = false;
+  document.getElementById('wsCollabRow').style.display     = 'none';
+  document.getElementById('wsCollabPreview').style.display = 'none';
+  // Populate artist pickers
+  buildArtistOptions('wsArtistPicker',  '');
+  buildArtistOptions('wsArtistPicker2', '');
   pendingPosterURL  = null;
   pendingPosterFile = null;
   addPackageRow(); addSlotRow();
@@ -4490,6 +4599,15 @@ window.openEditWorkshop = function(id){
   document.getElementById('wsEditId').value   = id;
   document.getElementById('wsArtist').value   = w.artist||'';
   document.getElementById('wsArtistId').value  = w.artistId||w.initials||'';
+  // Populate picker and pre-select
+  buildArtistOptions('wsArtistPicker',  w.artistId||w.initials||'');
+  buildArtistOptions('wsArtistPicker2', '');
+  // Check if collab
+  const isCollab = w.isCollab || false;
+  document.getElementById('wsIsCollab').checked = isCollab;
+  document.getElementById('wsCollabRow').style.display     = isCollab ? 'block' : 'none';
+  document.getElementById('wsCollabPreview').style.display = isCollab ? 'block' : 'none';
+  if(isCollab && w.collabArtist2Id) buildArtistOptions('wsArtistPicker2', w.collabArtist2Id);
   document.getElementById('wsStyle').value    = w.style||'';
   document.getElementById('wsStatus').value   = w.status||'active';
   document.getElementById('wsDesc').value     = w.desc||'';
@@ -4685,9 +4803,14 @@ window.saveWorkshop = async function(saveStatus){
     posterToSave = await compressImage(pendingPosterURL, 800, 0.85);
   }
 
+  const isCollab = document.getElementById('wsIsCollab')?.checked || false;
+  const collab2  = isCollab ? document.getElementById('wsArtistPicker2')?.value : '';
+
   const wsData = {
     artist, id,
     artistId: document.getElementById('wsArtistId')?.value.trim()||'',
+    isCollab,
+    collabArtist2Id: collab2||'',
     style:    document.getElementById('wsStyle').value.trim(),
     status:   saveStatus || document.getElementById('wsStatus').value,
     poster:   posterToSave,
@@ -7794,9 +7917,11 @@ function setBatchDays(daysStr){
 window.openAddBatch = function(){
   document.getElementById('batchEditTitle').textContent = 'Add New Batch';
   document.getElementById('batchEditId').value = '';
-  ['beBatchName','beBatchId','beTrainer','beStyle','beTime','beDesc','beImage','beFee','beFeeWeekly','beContact'].forEach(id=>{
+  ['beBatchName','beBatchId','beStyle','beTime','beDesc','beImage','beFee','beFeeWeekly','beContact'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
+  document.getElementById('beTrainer').value = '';
+  buildTrainerOptions('beTrainerPicker', '');
   setBatchDays('Mon · Tue · Wed'); // default selection
   document.getElementById('beGradient').value = 'linear-gradient(145deg,#1a0407,#bc1f2e)';
   document.querySelectorAll('#bgGradientPicker div').forEach((d,i)=>d.style.borderColor=i===0?'var(--red)':'transparent');
@@ -7812,6 +7937,7 @@ window.openEditBatch = async function(id){
   document.getElementById('beBatchName').value = b.name||'';
   document.getElementById('beBatchId').value   = b.batchId||b.id||'';
   document.getElementById('beTrainer').value   = b.trainer||'';
+  buildTrainerOptions('beTrainerPicker', b.trainer||'');
   document.getElementById('beStyle').value     = b.style||'';
   setBatchDays(b.days||'');
   document.getElementById('beTime').value      = b.time||'';
@@ -8384,9 +8510,10 @@ window.saveAdminAccount = async function(){
 window.openAddArtist = function(){
   document.getElementById('addArtistTitle').textContent='Add Artist';
   document.getElementById('artistEditIdx').value='';
-  ['artistNewName','artistNewUser','artistNewId','artistNewPhone'].forEach(id=>{
+  ['artistNewName','artistNewUser','artistNewId','artistNewPhone','artistNewPan','artistNewUpi'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
+  document.getElementById('artistEditIdx').value = '';
   document.getElementById('artistNewRole').value='trainer';
   openModal('addArtistModal');
 };
@@ -8402,14 +8529,21 @@ window.saveArtistAccount = async function(){
   const artistId = user;
   const rawPhone = document.getElementById('artistNewPhone').value.trim().replace(/\D/g,'');
   const phone    = rawPhone ? '+91' + rawPhone.slice(-10) : '';
+  const panCard  = (document.getElementById('artistNewPan')?.value||'').trim().toUpperCase();
+  const upiId    = (document.getElementById('artistNewUpi')?.value||'').trim();
   if(!name||!user){ showToast('Name and username are required','error'); return; }
   if(!phone){ showToast('Phone number is required for OTP login','error'); return; }
-  if(ARTIST_ROSTER.find(a=>a.user===user)){ showToast('Username already exists','error'); return; }
-
-  ARTIST_ROSTER.push({user, name, role, artistId, phone, blocked:false});
+  const editIdx = parseInt(document.getElementById('artistEditIdx')?.value);
+  if(!isNaN(editIdx) && editIdx >= 0){
+    // Edit existing
+    ARTIST_ROSTER[editIdx] = {...ARTIST_ROSTER[editIdx], name, user, role, artistId, phone, panCard, upiId};
+  } else {
+    if(ARTIST_ROSTER.find(a=>a.user===user)){ showToast('Username already exists','error'); return; }
+    ARTIST_ROSTER.push({user, name, role, artistId, phone, panCard, upiId, blocked:false});
+  }
   await setDoc(doc(db,'settings','artistPasswords'),{artists:ARTIST_ROSTER},{merge:true});
   closeModal('addArtistModal');
-  showToast(`Artist "${name}" added ✓`);
+  showToast(`Artist "${name}" saved ✓`);
   renderArtistRoster();
 };
 
@@ -8459,6 +8593,14 @@ function _renderArtistRosterHTML(){
             <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.15rem">Phone (OTP Login)</p>
             <p style="font-size:0.82rem;color:${a.phone?'var(--text)':'var(--muted)'};font-weight:${a.phone?'500':'400'};font-style:${a.phone?'normal':'italic'}">${a.phone||'Not set — add phone to enable login'}</p>
           </div>
+          ${a.panCard?`<div>
+            <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.15rem">PAN Card</p>
+            <p style="font-size:0.82rem;color:var(--text);font-family:monospace">${a.panCard}</p>
+          </div>`:''}
+          ${a.upiId?`<div>
+            <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.15rem">UPI ID</p>
+            <p style="font-size:0.82rem;color:var(--green)">${a.upiId}</p>
+          </div>`:''}
         </div>
         <button onclick="editArtistPhone(${i})" class="btn btn-outline btn-sm" style="border-color:rgba(100,180,255,0.4);color:#6ab0f5;margin-top:0.25rem">📱 Edit Phone</button>
       </div>
