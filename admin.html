@@ -2480,8 +2480,9 @@ window.applyFY = async function(fy){
   document.body.style.overflow = '';
   // Update activeFY in Firestore so other panels stay in sync
   try{ await setDoc(doc(db,'settings','general'),{activeFY:fy.key},{merge:true}); }catch(e){}
-  if(typeof renderAllPayments === 'function') renderAllPayments();
-  if(typeof renderBatchesView === 'function'){ if(document.getElementById('view-batches')?.classList.contains('active')) renderBatchesView(); }
+  // Restart all listeners with new FY path
+  await startListeners();
+  if(typeof renderAllPayments==='function') renderAllPayments();
 };
 
 let _fyOptions = []; // global so selectFY(i) can look them up
@@ -2544,14 +2545,12 @@ async function initFY(){
 }
 
 async function initApp(){
-  initFY();
+  await initFY(); // MUST await — listeners need currentFY set first
   applyMasterAccess();
   if(isMaster()){
     const tag = document.querySelector('.sidebar-tag');
     if(tag) tag.textContent = 'Master Admin';
   }
-  listenStaffPayments();
-  listenExpenses();
   document.getElementById('dashDate').textContent =
     new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
@@ -2566,11 +2565,27 @@ async function initApp(){
     const lbl = document.getElementById('periodLabel');
     if(lbl) lbl.textContent = monthNames[now.getMonth()] + ' ' + now.getFullYear();
   }, 100);
+
+  // Only start listeners if FY is already known (returning user)
+  // First-time users see the FY picker first; startListeners() is called from applyFY()
+  if(currentFY) await startListeners();
+}
+
+/* Start / restart all FY-dependent listeners — called after FY is set or changed */
+let _unsubRentals=null, _unsubSchedule=null, _unsubBatchStudents=null,
+    _unsubStaff=null, _unsubExpenses=null;
+
+async function startListeners(){
+  // Unsubscribe any existing FY-dependent listeners
+  [_unsubRentals,_unsubSchedule,_unsubBatchStudents,_unsubStaff,_unsubExpenses]
+    .forEach(u=>{ try{if(u)u()}catch(e){} });
   showToast('Loading data…');
+  _unsubStaff    = listenStaffPayments();
+  _unsubExpenses = listenExpenses();
   await Promise.all([listenWorkshops(), listenRegistrations(), loadWsSettlements()]);
-  listenBatchStudents();
-  listenSchedule();
-  listenRentals();
+  _unsubBatchStudents = listenBatchStudents();
+  _unsubSchedule      = listenSchedule();
+  _unsubRentals       = listenRentals();
 }
 
 /* ══════════════════════════════════════
@@ -6183,7 +6198,7 @@ let batchStudents    = [];
 let currentAdminBatch = 'all';
 
 function listenBatchStudents(){
-  onSnapshot(fyCol('batchStudents'), snap => {
+  return onSnapshot(fyCol('batchStudents'), snap => {
     batchStudents = snap.docs.map(d=>({id:d.id,...d.data()}));
     batchStudents.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
     if(document.getElementById('view-batches')?.classList.contains('active')) renderBatchesView();
@@ -7282,7 +7297,7 @@ let scheduleWeekStart = null;
 let scheduleDayIdx   = 0;
 
 function listenSchedule(){
-  onSnapshot(fyCol('studioSchedule'), snap=>{
+  return onSnapshot(fyCol('studioSchedule'), snap=>{
     scheduleEntries = snap.docs.map(d=>({id:d.id,...d.data()}));
     scheduleEntries.sort((a,b)=>(a.date+a.timeFrom).localeCompare(b.date+b.timeFrom));
     if(document.getElementById('view-schedule')?.classList.contains('active')){
@@ -7596,7 +7611,7 @@ document.addEventListener('change',e=>{
 let rentals=[],rentalFilter='all',rentalSearch='';
 
 function listenRentals(){
-  onSnapshot(fyCol('studioRentals'),snap=>{
+  return onSnapshot(fyCol('studioRentals'),snap=>{
     rentals=snap.docs.map(d=>({id:d.id,...d.data()}));
     rentals.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
     if(document.getElementById('view-rentals')?.classList.contains('active')) renderRentals();
@@ -7879,7 +7894,7 @@ let staffPayments = [];
 let staffRoster   = [];
 
 function listenStaffPayments(){
-  onSnapshot(fyCol('staffPayments'), snap=>{
+  return onSnapshot(fyCol('staffPayments'), snap=>{
     staffPayments=snap.docs.map(d=>({id:d.id,...d.data()}));
     staffPayments.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     if(document.getElementById('view-staff')?.classList.contains('active')) renderStaff();
@@ -8072,7 +8087,7 @@ window.deleteStaffPayment=async function(id,name){
 ══════════════════════════════════════ */
 let expenses=[];
 function listenExpenses(){
-  onSnapshot(fyCol('expenses'),snap=>{
+  return onSnapshot(fyCol('expenses'),snap=>{
     expenses=snap.docs.map(d=>({id:d.id,...d.data()}));
     expenses.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     if(document.getElementById('view-expenses')?.classList.contains('active')) renderExpenses();
