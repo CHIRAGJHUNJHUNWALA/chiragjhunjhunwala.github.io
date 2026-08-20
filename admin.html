@@ -4787,34 +4787,28 @@ window.addComboRow = function(c={}){
   document.getElementById('comboEditor').appendChild(div);
 };
 
-window.addSlotRow = function(s={}, copyFromPrev=false){
-  // If copyFromPrev, pull values from the last existing slot row
-  if(copyFromPrev){
-    const rows = document.querySelectorAll('#slotsEditor > div');
-    if(rows.length){
-      const prev = rows[rows.length-1];
-      s = {
-        dateISO:    prev.querySelector('.slot-date-iso')?.value   || '',
-        totalSpots: prev.querySelector('.slot-spots-inp')?.value  || '',
-      };
-    }
-  }
-
-  // Auto-generate display text from ISO date
+window.addSlotRow = function(s={}){
   function isoToDisplay(iso){
     if(!iso) return '';
     const d = new Date(iso+'T00:00');
     return d.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',year:'numeric'});
   }
 
+  const isFirst = document.querySelectorAll('#slotsEditor > .slot-row').length === 0;
+
   const div = document.createElement('div');
-  div.style.cssText = 'background:var(--bg3);border:1px solid var(--border);padding:0.85rem;margin-bottom:0.6rem;position:relative';
+  div.className = 'slot-row';
+  div.style.cssText = 'background:var(--bg3);border:1px solid var(--border);padding:0.85rem;margin-bottom:0.6rem';
   div.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem">
       <span style="font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Class Details</span>
-      <div style="display:flex;gap:0.4rem">
-        <button type="button" onclick="addSlotRow({},true)" style="font-size:0.62rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--yellow);background:rgba(245,230,66,0.08);border:1px solid rgba(245,230,66,0.25);padding:0.25rem 0.6rem;cursor:pointer;font-family:'Syne',sans-serif">↑ Same as Above</button>
-        <button type="button" onclick="this.closest('div').closest('div').remove()" style="background:none;border:1px solid rgba(229,115,115,0.3);color:#e57373;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.85rem;line-height:1">✕</button>
+      <div style="display:flex;gap:0.4rem;align-items:center">
+        <button type="button" class="same-as-above-btn" onclick="sameAsAbove(this)"
+          style="${isFirst?'display:none;':''}font-size:0.62rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--yellow);background:rgba(245,230,66,0.08);border:1px solid rgba(245,230,66,0.25);padding:0.25rem 0.6rem;cursor:pointer;font-family:'Syne',sans-serif">
+          ↑ Same as Above
+        </button>
+        <button type="button" onclick="this.closest('.slot-row').remove()"
+          style="background:none;border:1px solid rgba(229,115,115,0.3);color:#e57373;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.85rem;line-height:1">✕</button>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
@@ -4853,6 +4847,32 @@ window.addSlotRow = function(s={}, copyFromPrev=false){
   document.getElementById('slotsEditor').appendChild(div);
 };
 
+/* Same as Above — fills THIS card from the card above it */
+window.sameAsAbove = function(btn){
+  const thisCard = btn.closest('.slot-row');
+  const allCards = Array.from(document.querySelectorAll('#slotsEditor > .slot-row'));
+  const idx      = allCards.indexOf(thisCard);
+  if(idx <= 0) return;
+  const prev = allCards[idx - 1];
+
+  // Copy date
+  const prevDateISO = prev.querySelector('.slot-date-iso')?.value || '';
+  const dateInp     = thisCard.querySelector('.slot-date-iso');
+  const dateDisp    = thisCard.querySelector('.slot-date-display');
+  if(dateInp){
+    dateInp.value = prevDateISO;
+    if(dateDisp){
+      dateDisp.textContent = prevDateISO
+        ? new Date(prevDateISO+'T00:00').toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',year:'numeric'})
+        : '';
+    }
+  }
+
+  // Copy total spots
+  const spotsInp = thisCard.querySelector('.slot-spots-inp');
+  if(spotsInp) spotsInp.value = prev.querySelector('.slot-spots-inp')?.value || '';
+};
+
 window.saveWorkshop = async function(saveStatus){
   const artist = document.getElementById('wsArtist').value.trim();
   if(!artist){ showToast('Artist name is required','error'); return; }
@@ -4881,7 +4901,7 @@ window.saveWorkshop = async function(saveStatus){
     badge:row.querySelector('.pkg-badge').value.trim()||null,
   })).filter(p=>p.name);
 
-  const slotRows = document.querySelectorAll('#slotsEditor > div');
+  const slotRows = document.querySelectorAll('#slotsEditor > .slot-row');
   const existing = editId ? workshops.find(w=>w.id===editId) : null;
   const slots    = Array.from(slotRows).map((row,i)=>{
     const total = parseInt(row.querySelector('.slot-spots-inp').value)||20;
