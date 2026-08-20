@@ -1568,8 +1568,9 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <div class="form-group"><label>Full Name *</label><input type="text" id="artistNewName" placeholder="e.g. Ritu Hariyani"></div>
         <div class="form-group"><label>Role</label>
           <select id="artistNewRole">
-            <option value="trainer">Batch Trainer</option>
-            <option value="workshop">Workshop Artist</option>
+            <option value="trainer">Batch Trainer — artist panel ✓</option>
+            <option value="both">Regulars & Workshops Both — artist panel ✓</option>
+            <option value="workshop">Workshop Artist only — no panel needed</option>
           </select>
         </div>
       </div>
@@ -1797,13 +1798,20 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
     <div class="modal-body">
       <input type="hidden" id="wsEditId">
-      <!-- Artist Picker -->
+      <!-- Artist Search -->
       <div class="form-row" style="align-items:flex-end">
-        <div class="form-group" style="flex:1">
+        <div class="form-group" style="flex:1;position:relative">
           <label>Artist *</label>
-          <select id="wsArtistPicker" onchange="onWsArtistChange()" style="background:var(--bg2);border:1px solid var(--border2);padding:0.55rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;width:100%">
-            <option value="">— Select Artist —</option>
-          </select>
+          <input type="text" id="wsArtistSearch" placeholder="Search artist name…" autocomplete="off"
+            oninput="filterArtistSearch('wsArtistSearch','wsArtistResults',1)"
+            onfocus="filterArtistSearch('wsArtistSearch','wsArtistResults',1)"
+            onblur="setTimeout(()=>document.getElementById('wsArtistResults').style.display='none',200)"
+            style="width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.55rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none">
+          <div id="wsArtistSelected" style="display:none;margin-top:0.4rem;display:flex;align-items:center;gap:0.5rem">
+            <span id="wsArtistChip" style="background:rgba(188,31,46,0.12);border:1px solid rgba(188,31,46,0.35);color:var(--red);padding:0.25rem 0.65rem;font-size:0.78rem;font-weight:600"></span>
+            <button type="button" onclick="clearArtistPick(1)" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.78rem">✕ clear</button>
+          </div>
+          <div id="wsArtistResults" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--border2);z-index:999;max-height:180px;overflow-y:auto"></div>
         </div>
         <div class="form-group" style="flex:0 0 auto;padding-bottom:0.1rem">
           <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;user-select:none;white-space:nowrap;margin-bottom:0.6rem">
@@ -1812,12 +1820,21 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           </label>
         </div>
       </div>
-      <!-- Second artist (collab only) -->
+      <!-- Second artist search (collab only) -->
       <div id="wsCollabRow" style="display:none" class="form-group">
         <label>Second Artist *</label>
-        <select id="wsArtistPicker2" onchange="onWsArtistChange()" style="background:var(--bg2);border:1px solid var(--border2);padding:0.55rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;width:100%">
-          <option value="">— Select Second Artist —</option>
-        </select>
+        <div style="position:relative">
+          <input type="text" id="wsArtistSearch2" placeholder="Search second artist…" autocomplete="off"
+            oninput="filterArtistSearch('wsArtistSearch2','wsArtistResults2',2)"
+            onfocus="filterArtistSearch('wsArtistSearch2','wsArtistResults2',2)"
+            onblur="setTimeout(()=>document.getElementById('wsArtistResults2').style.display='none',200)"
+            style="width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.55rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none">
+          <div id="wsArtist2Selected" style="display:none;margin-top:0.4rem;display:flex;align-items:center;gap:0.5rem">
+            <span id="wsArtist2Chip" style="background:rgba(188,31,46,0.12);border:1px solid rgba(188,31,46,0.35);color:var(--red);padding:0.25rem 0.65rem;font-size:0.78rem;font-weight:600"></span>
+            <button type="button" onclick="clearArtistPick(2)" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.78rem">✕ clear</button>
+          </div>
+          <div id="wsArtistResults2" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--border2);z-index:999;max-height:180px;overflow-y:auto"></div>
+        </div>
       </div>
       <!-- Collab name preview -->
       <div id="wsCollabPreview" style="display:none;background:rgba(188,31,46,0.08);border:1px solid rgba(188,31,46,0.25);padding:0.6rem 0.85rem;margin-bottom:0.75rem;font-size:0.82rem;color:var(--red)">
@@ -1826,6 +1843,9 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <!-- Hidden fields used by save function -->
       <input type="hidden" id="wsArtist">
       <input type="hidden" id="wsArtistId">
+      <!-- Hidden pickers kept for compatibility -->
+      <input type="hidden" id="wsArtistPicker">
+      <input type="hidden" id="wsArtistPicker2">
       <div class="form-row">
         <div class="form-group"><label>Dance Style *</label><input type="text" id="wsStyle" placeholder="Hip-Hop · Breaking"></div>
         <div class="form-group"><label>Status</label>
@@ -4506,15 +4526,86 @@ function loadPoster(file){
    ARTIST MASTER PICKERS
 ══════════════════════════════════════ */
 function buildArtistOptions(selectId, selectedUser){
+  // Legacy — kept for batch trainer picker which still uses select
   const sel = document.getElementById(selectId);
-  if(!sel) return;
+  if(!sel || sel.tagName !== 'SELECT') return;
   sel.innerHTML = `<option value="">— Select Artist —</option>` +
     ARTIST_ROSTER.map(a =>
       `<option value="${a.user}" data-name="${a.name}" ${a.user===selectedUser?'selected':''}>${a.name}</option>`
     ).join('');
 }
 
-function buildTrainerOptions(selectId, selectedName){
+/* ── Artist typeahead search (workshop modal) ── */
+window.filterArtistSearch = function(inputId, resultsId, slot){
+  const input   = document.getElementById(inputId);
+  const results = document.getElementById(resultsId);
+  if(!input||!results) return;
+  const q = input.value.trim().toLowerCase();
+  const matches = q
+    ? ARTIST_ROSTER.filter(a=>a.name.toLowerCase().includes(q))
+    : ARTIST_ROSTER;
+  if(!matches.length){ results.style.display='none'; return; }
+  results.innerHTML = matches.map(a=>`
+    <div onmousedown="selectArtistPick(${slot},'${a.user}','${a.name.replace(/'/g,"\\'")}','${inputId}','${resultsId}')"
+      style="padding:0.6rem 0.85rem;cursor:pointer;font-size:0.84rem;color:var(--text);border-bottom:1px solid var(--border);transition:background 0.15s"
+      onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
+      ${a.name}
+      <span style="font-size:0.68rem;color:var(--muted);margin-left:0.4rem">${a.role==='trainer'?'Trainer':a.role==='both'?'Trainer + Workshop':'Workshop'}</span>
+    </div>`).join('');
+  results.style.display = 'block';
+};
+
+window.selectArtistPick = function(slot, user, name, inputId, resultsId){
+  document.getElementById(inputId).value = '';
+  document.getElementById(resultsId).style.display = 'none';
+  if(slot===1){
+    document.getElementById('wsArtistPicker').value = user;
+    document.getElementById('wsArtistChip').textContent  = name;
+    document.getElementById('wsArtistSelected').style.display = 'flex';
+  } else {
+    document.getElementById('wsArtistPicker2').value = user;
+    document.getElementById('wsArtist2Chip').textContent  = name;
+    document.getElementById('wsArtist2Selected').style.display = 'flex';
+  }
+  onWsArtistChange();
+};
+
+window.clearArtistPick = function(slot){
+  if(slot===1){
+    document.getElementById('wsArtistPicker').value = '';
+    document.getElementById('wsArtistSearch').value = '';
+    document.getElementById('wsArtistSelected').style.display = 'none';
+  } else {
+    document.getElementById('wsArtistPicker2').value = '';
+    document.getElementById('wsArtistSearch2').value = '';
+    document.getElementById('wsArtist2Selected').style.display = 'none';
+  }
+  onWsArtistChange();
+};
+
+function resetArtistSearch(){
+  ['wsArtistSearch','wsArtistSearch2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['wsArtistSelected','wsArtist2Selected'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  ['wsArtistPicker','wsArtistPicker2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('wsArtist').value='';
+  document.getElementById('wsArtistId').value='';
+}
+
+function presetArtistSearch(slot, user){
+  const a = ARTIST_ROSTER.find(x=>x.user===user);
+  if(!a) return;
+  if(slot===1){
+    document.getElementById('wsArtistPicker').value = user;
+    document.getElementById('wsArtistChip').textContent = a.name;
+    document.getElementById('wsArtistSelected').style.display = 'flex';
+  } else {
+    document.getElementById('wsArtistPicker2').value = user;
+    document.getElementById('wsArtist2Chip').textContent = a.name;
+    document.getElementById('wsArtist2Selected').style.display = 'flex';
+  }
+}
+
+function toggleWsCollab(){
   const sel = document.getElementById(selectId);
   if(!sel) return;
   sel.innerHTML = `<option value="">— Select Trainer —</option>` +
@@ -4536,8 +4627,8 @@ window.toggleWsCollab = function(){
 
 window.onWsArtistChange = function(){
   const isCollab = document.getElementById('wsIsCollab').checked;
-  const sel1 = document.getElementById('wsArtistPicker');
-  const a1   = ARTIST_ROSTER.find(a=>a.user===sel1.value);
+  const user1    = document.getElementById('wsArtistPicker').value;
+  const a1       = ARTIST_ROSTER.find(a=>a.user===user1);
 
   if(!isCollab){
     document.getElementById('wsArtist').value   = a1?.name  || '';
@@ -4545,13 +4636,12 @@ window.onWsArtistChange = function(){
     return;
   }
 
-  const sel2 = document.getElementById('wsArtistPicker2');
-  const a2   = ARTIST_ROSTER.find(a=>a.user===sel2.value);
+  const user2 = document.getElementById('wsArtistPicker2').value;
+  const a2    = ARTIST_ROSTER.find(a=>a.user===user2);
 
-  // Build "Divyanshi X Hridhay" from first names
   if(a1 && a2){
-    const fn1  = a1.name.split(' ')[0];
-    const fn2  = a2.name.split(' ')[0];
+    const fn1   = a1.name.split(' ')[0];
+    const fn2   = a2.name.split(' ')[0];
     const cName = `${fn1} X ${fn2}`;
     document.getElementById('wsCollabName').textContent = cName;
     document.getElementById('wsArtist').value   = cName;
@@ -4584,9 +4674,8 @@ window.openAddWorkshop = function(){
   document.getElementById('wsIsCollab').checked = false;
   document.getElementById('wsCollabRow').style.display     = 'none';
   document.getElementById('wsCollabPreview').style.display = 'none';
-  // Populate artist pickers
-  buildArtistOptions('wsArtistPicker',  '');
-  buildArtistOptions('wsArtistPicker2', '');
+  // Reset artist search
+  resetArtistSearch();
   pendingPosterURL  = null;
   pendingPosterFile = null;
   addPackageRow(); addSlotRow();
@@ -4599,15 +4688,15 @@ window.openEditWorkshop = function(id){
   document.getElementById('wsEditId').value   = id;
   document.getElementById('wsArtist').value   = w.artist||'';
   document.getElementById('wsArtistId').value  = w.artistId||w.initials||'';
-  // Populate picker and pre-select
-  buildArtistOptions('wsArtistPicker',  w.artistId||w.initials||'');
-  buildArtistOptions('wsArtistPicker2', '');
+  // Reset then pre-fill artist search
+  resetArtistSearch();
+  if(w.artistId||w.initials) presetArtistSearch(1, w.artistId||w.initials);
   // Check if collab
   const isCollab = w.isCollab || false;
   document.getElementById('wsIsCollab').checked = isCollab;
   document.getElementById('wsCollabRow').style.display     = isCollab ? 'block' : 'none';
   document.getElementById('wsCollabPreview').style.display = isCollab ? 'block' : 'none';
-  if(isCollab && w.collabArtist2Id) buildArtistOptions('wsArtistPicker2', w.collabArtist2Id);
+  if(isCollab && w.collabArtist2Id) presetArtistSearch(2, w.collabArtist2Id);
   document.getElementById('wsStyle').value    = w.style||'';
   document.getElementById('wsStatus').value   = w.status||'active';
   document.getElementById('wsDesc').value     = w.desc||'';
@@ -8612,7 +8701,7 @@ function _renderArtistRosterHTML(){
       <div>
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;flex-wrap:wrap">
           <p style="font-weight:600;color:var(--text)">${a.name}</p>
-          <span class="pill ${a.role==='trainer'?'pill-blue':'pill-yellow'}" style="font-size:0.6rem">${a.role==='trainer'?'Batch Trainer':'Workshop Artist'}</span>
+          <span class="pill ${a.role==='trainer'?'pill-blue':a.role==='both'?'pill-green':'pill-yellow'}" style="font-size:0.6rem">${a.role==='trainer'?'Batch Trainer':a.role==='both'?'Regulars & Workshops':'Workshop Artist'}</span>
           ${a.blocked?`<span class="pill" style="background:rgba(229,115,115,0.15);color:#e57373;border:1px solid rgba(229,115,115,0.3);font-size:0.6rem">BLOCKED</span>`:''}
         </div>
         <!-- Username = Artist ID row -->
@@ -8637,9 +8726,9 @@ function _renderArtistRosterHTML(){
         <button onclick="editArtistPhone(${i})" class="btn btn-outline btn-sm" style="border-color:rgba(100,180,255,0.4);color:#6ab0f5;margin-top:0.25rem">📱 Edit Phone</button>
       </div>
       <div style="display:flex;gap:0.5rem;flex-direction:column;align-items:flex-end">
-        <button onclick="openAsTrainer(${i})" class="btn btn-sm" style="background:rgba(188,31,46,0.1);border:1px solid rgba(188,31,46,0.35);color:var(--red);font-size:0.72rem;white-space:nowrap">
+        ${a.role!=='workshop' ? `<button onclick="openAsTrainer(${i})" class="btn btn-sm" style="background:rgba(188,31,46,0.1);border:1px solid rgba(188,31,46,0.35);color:var(--red);font-size:0.72rem;white-space:nowrap">
           ↗ Open as Trainer
-        </button>
+        </button>` : `<span style="font-size:0.65rem;color:var(--muted);padding:0.3rem 0;display:block">No panel — workshop only</span>`}
         <button onclick="toggleArtistBlock(${i})" class="btn btn-sm" style="${a.blocked?'background:rgba(92,184,122,0.12);border:1px solid rgba(92,184,122,0.35);color:var(--green)':'background:rgba(229,115,115,0.1);border:1px solid rgba(229,115,115,0.35);color:#e57373'}">
           ${a.blocked?'✓ Unblock':'⊘ Block'}
         </button>
