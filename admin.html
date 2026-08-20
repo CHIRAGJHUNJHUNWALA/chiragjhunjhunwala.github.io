@@ -5377,6 +5377,10 @@ function renderAllPayments(){
   const totalExpAll  = staffTotal + expTotal + artistTotal;
   const netPL        = totalRev - totalExpAll;
 
+  // GST and TDS from all workshop settlements
+  const gstTotal  = Object.values(wsSettlements).reduce((s,x)=>s+(x.gstAmount||0),0);
+  const tdsTotal  = Object.values(wsSettlements).reduce((s,x)=>s+(x.tdsAmount||0),0);
+
   // Stats cards
   document.getElementById('paymentStats').innerHTML = `
     <div class="stat-card"><p class="stat-label">Total Revenue</p><p class="stat-val green">₹${totalRev.toLocaleString('en-IN')}</p></div>
@@ -5386,7 +5390,10 @@ function renderAllPayments(){
     <div class="stat-card"><p class="stat-label">Batch Revenue</p><p class="stat-val" style="color:var(--green)">₹${batchRev.toLocaleString('en-IN')}</p><p class="stat-meta">${batchStudents.length} students</p></div>
     <div class="stat-card"><p class="stat-label">Studio Revenue</p><p class="stat-val" style="color:#6ab0f5">₹${rentalRev.toLocaleString('en-IN')}</p><p class="stat-meta">₹${rentalPend.toLocaleString('en-IN')} pending</p></div>
     <div class="stat-card"><p class="stat-label">Total Expenses</p><p class="stat-val" style="color:#e57373">₹${totalExpAll.toLocaleString('en-IN')}</p><p class="stat-meta">Staff · Expenses · Artists</p></div>
-    <div class="stat-card"><p class="stat-label">Net P&amp;L (All Time)</p><p class="stat-val" style="color:${netPL>=0?'var(--green)':'#e57373'}">${netPL>=0?'+':''}₹${Math.abs(netPL).toLocaleString('en-IN')}</p></div>`;
+    <div class="stat-card"><p class="stat-label">Net P&amp;L (All Time)</p><p class="stat-val" style="color:${netPL>=0?'var(--green)':'#e57373'}">${netPL>=0?'+':''}₹${Math.abs(netPL).toLocaleString('en-IN')}</p></div>
+    ${gstTotal>0?`<div class="stat-card" style="border-color:rgba(106,176,245,0.3)"><p class="stat-label" style="color:#6ab0f5">GST Collected</p><p class="stat-val" style="color:#6ab0f5">₹${gstTotal.toLocaleString('en-IN')}</p><p class="stat-meta">Payable to govt · enter as expense when remitted</p></div>`:''}
+    ${tdsTotal>0?`<div class="stat-card" style="border-color:rgba(106,176,245,0.3)"><p class="stat-label" style="color:#6ab0f5">TDS Collected</p><p class="stat-val" style="color:#6ab0f5">₹${tdsTotal.toLocaleString('en-IN')}</p><p class="stat-meta">Payable to govt · enter as expense when remitted</p></div>`:''}
+    `;
 
   // Labels
   document.getElementById('wsPayLabel').textContent       = `Workshop Payments · ${registrations.length}`;
