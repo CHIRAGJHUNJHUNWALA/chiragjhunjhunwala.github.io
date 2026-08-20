@@ -2468,9 +2468,10 @@ function getFYOptions(){
   return opts;
 }
 
-window.applyFY = async function(fyEncoded){
-  let fy = typeof fyEncoded === 'string' ? JSON.parse(decodeURIComponent(fyEncoded)) : fyEncoded;
-  fy.start = new Date(fy.start); fy.end = new Date(fy.end);
+window.applyFY = async function(fy){
+  if(!fy) return;
+  fy.start = fy.start instanceof Date ? fy.start : new Date(fy.start);
+  fy.end   = fy.end   instanceof Date ? fy.end   : new Date(fy.end);
   currentFY = fy;
   localStorage.setItem('ths_admin_fy', fy.key);
   const badge = document.getElementById('fyBadgeLabel');
@@ -2483,23 +2484,31 @@ window.applyFY = async function(fyEncoded){
   if(typeof renderBatchesView === 'function'){ if(document.getElementById('view-batches')?.classList.contains('active')) renderBatchesView(); }
 };
 
+let _fyOptions = []; // global so selectFY(i) can look them up
+
 window.openFYPicker = function(required){
-  const opts = getFYOptions();
+  _fyOptions = getFYOptions(); // current first → future last (no reverse)
   const el   = document.getElementById('fyOptions');
   const title= document.getElementById('fyModalTitle');
   if(title) title.textContent = required ? 'Select Financial Year to Continue' : 'Change Financial Year';
   if(!el) return;
-  el.innerHTML = opts.reverse().map(fy=>`
-    <button onclick="applyFY(${encodeURIComponent(JSON.stringify(fy))})" onmousedown="this.click()"
-      style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;background:${currentFY?.key===fy.key?'rgba(245,230,66,0.08)':'var(--bg3)'};border:1px solid ${currentFY?.key===fy.key?'rgba(245,230,66,0.4)':'var(--border)'};cursor:pointer;text-align:left;width:100%;margin-bottom:0.4rem">
+  el.innerHTML = _fyOptions.map((fy,i)=>`
+    <button onclick="selectFY(${i})"
+      style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;background:${currentFY?.key===fy.key?'rgba(245,230,66,0.08)':'var(--bg3)'};border:1px solid ${currentFY?.key===fy.key?'rgba(245,230,66,0.4)':'var(--border)'};cursor:pointer;text-align:left;width:100%;margin-bottom:0.4rem;transition:border-color 0.2s">
       <div>
         <p style="font-size:0.95rem;font-weight:700;color:${currentFY?.key===fy.key?'var(--yellow)':'var(--text)'};font-family:'Syne',sans-serif">${fy.label}</p>
-        <p style="font-size:0.72rem;color:var(--muted);margin-top:0.15rem">1 Apr ${fy.start instanceof Date ? fy.start.getFullYear() : new Date(fy.start).getFullYear()} – 31 Mar ${fy.end instanceof Date ? fy.end.getFullYear() : new Date(fy.end).getFullYear()}</p>
+        <p style="font-size:0.72rem;color:var(--muted);margin-top:0.15rem">1 Apr ${fy.start.getFullYear()} – 31 Mar ${fy.end.getFullYear()}</p>
       </div>
       ${currentFY?.key===fy.key?'<span style="font-size:0.68rem;color:var(--yellow);font-weight:700;letter-spacing:0.1em;font-family:\'Syne\',sans-serif">ACTIVE ✓</span>':'<span style="font-size:0.78rem;color:var(--muted)">→</span>'}
     </button>`).join('');
   document.getElementById('fyModal').classList.add('open');
   document.body.style.overflow = 'hidden';
+};
+
+window.selectFY = async function(i){
+  const fy = _fyOptions[i];
+  if(!fy) return;
+  await applyFY(fy);
 };
 
 function inFY(dateInput){
