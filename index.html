@@ -620,14 +620,7 @@ async function loadWorkshops() {
           </div>
           <div class="card-body">
             <p class="card-artist">${w.artist||'—'}</p>
-            <p class="card-style" style="font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.75rem">${w.style||'—'}</p>
-            <div style="display:flex;flex-direction:column;gap:0.35rem;margin-bottom:1rem">
-              ${(w.slots||[]).filter(s=>!s.cancelled).map(s=>`
-                <div style="display:flex;align-items:center;gap:0.5rem">
-                  <svg viewBox="0 0 24 24" width="11" height="11" stroke="var(--red)" fill="none" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  <span style="font-size:0.75rem;color:var(--text-mid)">${[s.date,s.time,s.song?'♪ '+s.song:''].filter(Boolean).join(' · ')}</span>
-                </div>`).join('')}
-            </div>
+            <p class="card-style" style="font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:1.25rem">${w.style||'—'}</p>
             <a href="workshop-detail.html?id=${w.id}" class="card-enroll" ${isFull?'style="background:#555;pointer-events:none"':''}>
               ${isFull ? 'Fully Booked' : 'Enroll Now'}
               <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>

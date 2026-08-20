@@ -4698,19 +4698,47 @@ window.addComboRow = function(c={}){
   document.getElementById('comboEditor').appendChild(div);
 };
 
-window.addSlotRow = function(s={}){
+window.addSlotRow = function(s={}, copyFromPrev=false){
+  // If copyFromPrev, pull values from the last existing slot row
+  if(copyFromPrev){
+    const rows = document.querySelectorAll('#slotsEditor > div');
+    if(rows.length){
+      const prev = rows[rows.length-1];
+      s = {
+        dateISO:    prev.querySelector('.slot-date-iso')?.value   || '',
+        totalSpots: prev.querySelector('.slot-spots-inp')?.value  || '',
+      };
+    }
+  }
+
+  // Auto-generate display text from ISO date
+  function isoToDisplay(iso){
+    if(!iso) return '';
+    const d = new Date(iso+'T00:00');
+    return d.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',year:'numeric'});
+  }
+
   const div = document.createElement('div');
   div.style.cssText = 'background:var(--bg3);border:1px solid var(--border);padding:0.85rem;margin-bottom:0.6rem;position:relative';
   div.innerHTML = `
-    <button onclick="this.closest('div').remove()" style="position:absolute;top:0.6rem;right:0.6rem;background:none;border:1px solid rgba(229,115,115,0.3);color:#e57373;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.85rem;line-height:1">✕</button>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;padding-right:2rem">
-      <div>
-        <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">Date (display text)</p>
-        <input type="text" placeholder="e.g. Saturday, 7 Jun 2025" value="${s.date||''}" class="slot-date-inp" style="width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.8rem;outline:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem">
+      <span style="font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-family:'Syne',sans-serif">Class Details</span>
+      <div style="display:flex;gap:0.4rem">
+        <button type="button" onclick="addSlotRow({},true)" style="font-size:0.62rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--yellow);background:rgba(245,230,66,0.08);border:1px solid rgba(245,230,66,0.25);padding:0.25rem 0.6rem;cursor:pointer;font-family:'Syne',sans-serif">↑ Same as Above</button>
+        <button type="button" onclick="this.closest('div').closest('div').remove()" style="background:none;border:1px solid rgba(229,115,115,0.3);color:#e57373;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.85rem;line-height:1">✕</button>
       </div>
-      <div>
-        <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">Class Date <span style="font-weight:300;text-transform:none;letter-spacing:0;color:var(--muted)">(schedule)</span></p>
-        <input type="date" value="${s.dateISO||''}" class="slot-date-iso" style="color-scheme:dark;width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.8rem;outline:none">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
+      <div style="grid-column:1/-1">
+        <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">Class Date *</p>
+        <input type="date" value="${s.dateISO||''}" class="slot-date-iso" style="color-scheme:dark;width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.5rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.8rem;outline:none"
+          oninput="
+            const disp=this.closest('div').querySelector('.slot-date-display');
+            const iso=this.value;
+            if(iso){const d=new Date(iso+'T00:00');disp.textContent=d.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',year:'numeric'});}
+            else{disp.textContent=''}
+          ">
+        <p class="slot-date-display" style="font-size:0.72rem;color:var(--yellow);margin-top:0.3rem;min-height:1em">${isoToDisplay(s.dateISO||'')}</p>
       </div>
       <div>
         <p style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem">Start Time</p>
@@ -4771,13 +4799,17 @@ window.saveWorkshop = async function(saveStatus){
     const prev  = existing?.slots?.[i];
     const tf    = row.querySelector('.slot-time-from')?.value.trim()||'';
     const tt    = row.querySelector('.slot-time-to')?.value.trim()||'';
-    // Build display time string from pickers if present
     const fmtT  = t => { if(!t) return ''; const [h,m]=t.split(':').map(Number); const ap=h>=12?'PM':'AM'; return (h>12?h-12:h||12)+(m?':'+String(m).padStart(2,'0'):'')+ap; };
-    const displayTime = tf ? (fmtT(tf) + (tt?' – '+fmtT(tt):'')) : (row.querySelector('.slot-time-inp')?.value.trim()||'');
+    const displayTime = tf ? (fmtT(tf) + (tt?' – '+fmtT(tt):'')) : '';
+    // Generate display date from ISO date picker
+    const dateISO = row.querySelector('.slot-date-iso')?.value.trim()||'';
+    const dateDisplay = dateISO
+      ? new Date(dateISO+'T00:00').toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',year:'numeric'})
+      : (row.querySelector('.slot-date-inp')?.value.trim()||''); // fallback for old data
     return {
       id:      's'+(i+1),
-      date:    row.querySelector('.slot-date-inp').value.trim(),
-      dateISO: row.querySelector('.slot-date-iso').value.trim(),
+      date:    dateDisplay,
+      dateISO: dateISO,
       time:    displayTime,
       timeFrom: tf,
       timeTo:   tt,
@@ -4786,7 +4818,7 @@ window.saveWorkshop = async function(saveStatus){
       spots: prev ? prev.spots : total,
       instaLink: row.querySelector('.slot-insta-inp')?.value.trim()||'',
     };
-  }).filter(s=>s.date||s.dateISO);
+  }).filter(s=>s.dateISO||s.date);
 
   // Upload poster to Firebase Storage if new file selected
   let posterToSave = existing?.poster || '';
