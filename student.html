@@ -456,7 +456,7 @@ window.verifyOtp = async function(){
     sessionStorage.setItem('ths_student', currentPhone);
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appScreen').style.display   = 'block';
-    loadStudentData(currentPhone);
+    loadActiveFY().then(()=>loadStudentData(currentPhone));
   } catch(e){
     console.error('OTP verify error:', e);
     errEl.textContent = 'Incorrect OTP. Please try again.';
@@ -535,8 +535,8 @@ async function loadStudentData(phone){
   try {
     const normPhone = normalisePhone(phone);
     const [regSnap, batchSnap] = await Promise.all([
-      getDocs(collection(db,'registrations')),
-      getDocs(collection(db,'batchStudents')),
+      getDocs(fyCol('registrations')),
+      getDocs(fyCol('batchStudents')),
     ]);
     const regs    = regSnap.docs.map(d=>({id:d.id,...d.data()}))
                       .filter(r=>normalisePhone(r.phone||'')===normPhone);
@@ -646,8 +646,8 @@ async function renderAttendance(s){
 
   try {
     // Load all attendance docs for this batch
-    const attSnap  = await getDocs(collection(db,'attendance'));
-    const songSnap = await getDocs(collection(db,'weeklySongs'));
+    const attSnap  = await getDocs(fyCol('attendance'));
+    const songSnap = await getDocs(fyCol('weeklySongs'));
     const attDocs  = attSnap.docs
       .map(d=>({id:d.id,...d.data()}))
       .filter(d=>d.batchId===s.batchId);

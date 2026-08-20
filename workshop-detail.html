@@ -478,8 +478,39 @@ const firebaseConfig = {
   appId: "1:834905576967:web:b16776452b9111b6483ca2"
 };
 
+let workshop = null;
+    _workshop = null; // set on load
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
+
+/* ── FY Path Helpers ── */
+let _activeFY = null;
+let _workshop = null;
+    _workshop = null; // set when workshop loads
+
+async function loadActiveFY(){
+  try{
+    const snap = await getDoc(doc(db,'settings','general'));
+    _activeFY = snap.exists() ? (snap.data().activeFY||null) : null;
+  }catch(e){}
+  if(!_activeFY){
+    const today = new Date();
+    const y = today.getMonth()>=3 ? today.getFullYear() : today.getFullYear()-1;
+    _activeFY = `${y}-${y+1}`;
+  }
+}
+
+// Registrations go into the FY of the WORKSHOP's listed date — not payment date
+function getWsFY(){
+  const wsDate = _workshop?.dateFrom || _workshop?.slots?.[0]?.dateISO;
+  if(!wsDate) return _activeFY;
+  const d = new Date(wsDate+'T00:00');
+  const y = d.getMonth()>=3 ? d.getFullYear() : d.getFullYear()-1;
+  return `${y}-${y+1}`;
+}
+function wsFyCol(name){ return collection(db,'fy',getWsFY(),name); }
+function wsFyDocRef(name,...args){ return doc(db,'fy',getWsFY(),name,...args); }
+
 
 const RAZORPAY_KEY = 'rzp_test_SuqUn8n9z5zkae';
 const CONVENIENCE  = 0;
@@ -535,11 +566,12 @@ async function init() {
     const all = wsSnap.docs.map(d=>({id:d.id,...d.data()}))
                        .filter(w=>w.status==='active'||w.status==='full');
     workshop = all.find(w=>w.id===id) || all[0];
+    _workshop = workshop;
 
     // Try to get registrations for accurate spot counts (may fail if not auth'd)
     if(workshop && workshop.slots){
       try {
-        const regSnap = await getDocs(collection(db,'registrations'));
+        const regSnap = await getDocs(wsFyCol('registrations'));
         const regs = regSnap.docs.map(d=>d.data()).filter(r=>r.workshop===workshop.artist);
         workshop.slots = workshop.slots.map(s=>{
           const slotRegs = regs.filter(r=>{
@@ -556,6 +588,7 @@ async function init() {
     }
   } catch(e) {
     workshop = null;
+    _workshop = null;
   }
 
   document.getElementById('loadingScreen').style.display = 'none';
@@ -973,7 +1006,7 @@ window.initiatePayment = async function(){
             checkedIn:    false,
             checkedInSlots: {},
           };
-          const ref = await addDoc(collection(db,'registrations'), data);
+          const ref = await addDoc(wsFyCol('registrations'), data);
           regIds.push(ref.id);
           try { await setDoc(doc(db,'phoneNames',data.phone),{name:data.name,updatedAt:Date.now()},{merge:true}); } catch(e){}
           // Deduct spot per member
@@ -1050,7 +1083,7 @@ window.initiatePayment = async function(){
           timestamp,
         };
         try{
-          const ref = await addDoc(collection(db,'registrations'), data);
+          const ref = await addDoc(wsFyCol('registrations'), data);
           regIds.push(ref.id);
           try { await setDoc(doc(db,'phoneNames',data.phone),{name:data.name,updatedAt:Date.now()},{merge:true}); } catch(e){}
         } catch(e){ regIds.push(paymentId); }

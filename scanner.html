@@ -575,11 +575,11 @@ async function processCode(raw){
   resultArea.innerHTML = `<div class="result-card valid"><div class="result-header"><div class="result-icon valid"><span class="spinner"></span></div><div><p class="result-title">Looking up…</p><p class="result-sub">${code}</p></div></div></div>`;
 
   try {
-    const snap = await getDoc(doc(db,'registrations',regId));
+    const snap = await getDoc(fyDocRef('registrations',regId));
 
     if(!snap.exists()){
       // Try searching by payment_id as fallback
-      const allSnap = await getDocs(collection(db,'registrations'));
+      const allSnap = await getDocs(fyCol('registrations'));
       const found   = allSnap.docs.find(d=>d.data().payment_id===regId||'THS-REG-'+d.id===code);
       if(!found){
         showResult('invalid', '✗', 'Invalid QR', 'This QR code was not found in the system.', null, null);
@@ -637,7 +637,7 @@ async function processReg(id, data){
       try {
         const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
         const updatedSlots = {...(data.checkedInSlots||{}), [slotKey]: time};
-        await updateDoc(doc(db,'registrations',id),{
+        await updateDoc(fyDocRef('registrations',id),{
           checkedIn:      true,
           checkedInAt:    time,
           checkedInBy:    'Scanner (Auto)',
@@ -733,7 +733,7 @@ window.doCheckInSlot = async function(regId, slotKey, slotLabel, name){
     const update = { checkedInBy:'Scanner' };
     update[field] = time;
     // Also set top-level checkedIn if all slots done (handled on next scan)
-    await updateDoc(doc(db,'registrations',regId), update);
+    await updateDoc(fyDocRef('registrations',regId), update);
 
     // Update UI
     if(btn){ btn.textContent='✓ Done'; btn.style.background='var(--green)'; btn.style.color='#000'; }
@@ -753,7 +753,7 @@ window.doCheckIn = async function(id, name){
   if(btn){ btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Checking in…'; }
   try {
     const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-    await updateDoc(doc(db,'registrations',id),{ checkedIn:true, checkedInAt:time, checkedInBy:'Scanner' });
+    await updateDoc(fyDocRef('registrations',id),{ checkedIn:true, checkedInAt:time, checkedInBy:'Scanner' });
     document.getElementById('resultArea').innerHTML = `
       <div class="result-card valid">
         <div class="result-header">
@@ -991,7 +991,7 @@ window.submitOtsRegistration = async function(){
     const ts   = new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'});
     const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
 
-    await addDoc(collection(db,'registrations'),{
+    await addDoc(fyCol('registrations'),{
       name, phone,
       workshop:       ws.artist,
       workshopId:     ws.id,

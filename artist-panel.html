@@ -679,6 +679,23 @@ const firebaseConfig = {
 
 const app  = initializeApp(firebaseConfig);
 const db   = getFirestore(app);
+
+/* ── FY Path Helpers ── */
+let _activeFY = null;
+async function loadActiveFY(){
+  try{
+    const snap = await getDoc(doc(db,'settings','general'));
+    _activeFY = snap.exists() ? (snap.data().activeFY||null) : null;
+  }catch(e){}
+  if(!_activeFY){
+    const today = new Date();
+    const y = today.getMonth()>=3 ? today.getFullYear() : today.getFullYear()-1;
+    _activeFY = `${y}-${y+1}`;
+  }
+}
+function fyCol(name){ return collection(db,'fy',_activeFY,name); }
+function fyDocRef(name,...args){ return doc(db,'fy',_activeFY,name,...args); }
+
 const auth = getAuth(app);
 
 // Expose Firebase instances for the non-module login script
@@ -853,6 +870,7 @@ document.addEventListener('DOMContentLoaded', async () => {
    INIT
 ══════════════════════════════════════ */
 async function initApp(){
+  await loadActiveFY();
   const name    = currentArtist.name || currentArtist.user;
   const firstName = name.split(' ')[0];
   const dateStr = new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
@@ -942,7 +960,7 @@ function listenWorkshopStats(){
     renderWsStats();
   });
 
-  onSnapshot(collection(db,'registrations'), snap => {
+  onSnapshot(fyCol('registrations'), snap => {
     // Build names from latest workshops
     const names = myWorkshops.map(w=>w.artist);
     // Include registrations matching any of this artist's workshop names OR artist name directly
@@ -1058,7 +1076,7 @@ function renderWsStats(){
 ══════════════════════════════════════ */
 function listenStudents(){
   const batchIds = currentArtist.batches.map(b=>b.id);
-  onSnapshot(collection(db,'batchStudents'), snap => {
+  onSnapshot(fyCol('batchStudents'), snap => {
     students = snap.docs
       .map(d=>({id:d.id,...d.data()}))
       .filter(s=>batchIds.includes(s.batchId));
@@ -1349,7 +1367,7 @@ window.artistAutoFillName = function(digits){
 ══════════════════════════════════════ */
 window.convertEnquiry = async function(enquiryId){
   try {
-    const snap = await getDoc(doc(db,'batchEnquiries',enquiryId));
+    const snap = await getDoc(fyDocRef('batchEnquiries',enquiryId));
     if(!snap.exists()){ showToast('Enquiry not found','error'); return; }
     const e = snap.data();
 
@@ -1395,13 +1413,13 @@ window.saveStudent = async function(){
   const daysVal = document.getElementById('sDaysAttended').value;
   if(daysVal !== '') data.daysAttended = parseInt(daysVal)||0;
   if(!editId) data.createdAt = Date.now();
-  const ref = editId ? doc(db,'batchStudents',editId) : doc(collection(db,'batchStudents'));
+  const ref = editId ? fyDocRef('batchStudents',editId) : doc(fyCol('batchStudents'));
   await setDoc(ref, data, {merge:true});
 
   // If converting from a website enquiry, mark it as converted
   if(window._convertingEnquiryId){
     try {
-      await updateDoc(doc(db,'batchEnquiries',window._convertingEnquiryId),{status:'converted'});
+      await updateDoc(fyDocRef('batchEnquiries',window._convertingEnquiryId),{status:'converted'});
     } catch(e){}
     window._convertingEnquiryId = null;
   }
@@ -1412,7 +1430,7 @@ window.saveStudent = async function(){
 
 window.deleteStudent = async function(id, name){
   if(!confirm(`Delete ${name}? This cannot be undone.`)) return;
-  await deleteDoc(doc(db,'batchStudents',id));
+  await deleteDoc(fyDocRef('batchStudents',id));
   showToast(`${name} removed`);
 };
 
@@ -1424,7 +1442,7 @@ window.openEditDays = function(id, name, current){
   if(newDays === null) return;
   const parsed = parseInt(newDays);
   if(isNaN(parsed) || parsed < 0){ showToast('Invalid number','error'); return; }
-  updateDoc(doc(db,'batchStudents',id), { daysAttended: parsed })
+  updateDoc(fyDocRef('batchStudents',id), { daysAttended: parsed })
     .then(()=>showToast(`${name} — days updated to ${parsed} ✓`))
     .catch(()=>showToast('Update failed','error'));
 };
@@ -1469,11 +1487,11 @@ window.generateAttendanceReport = async function(){
   showToast('Building report…');
   try {
     // Fetch all attendance docs
-    const attSnap = await getDocs(collection(db,'attendance'));
+    const attSnap = await getDocs(fyCol('attendance'));
     const allAtt  = attSnap.docs.map(d=>({id:d.id,...d.data()}));
 
     // Get all students for this artist
-    const stSnap = await getDocs(query(collection(db,'batchStudents'), where('artistId','==',currentArtist.user)));
+    const stSnap = await getDocs(query(fyCol('batchStudents'), where('artistId','==',currentArtist.user)));
     const students = stSnap.docs.map(d=>({id:d.id,...d.data()}));
 
     // Group students by batch
@@ -1486,7 +1504,7 @@ window.generateAttendanceReport = async function(){
     const now = new Date();
 
     // Load weekly songs for the report period
-    const songSnapReport = await getDocs(collection(db,'weeklySongs'));
+    const songSnapReport = await getDocs(fyCol('weeklySongs'));
     const songMap = {};
     songSnapReport.docs.forEach(d=>{ songMap[d.id] = d.data(); });
 
@@ -1633,7 +1651,7 @@ async function renderNewStudentsForWeek(weekStart){
   const toStr = to.toISOString().split('T')[0];
 
   try {
-    const snap = await getDocs(collection(db,'batchEnquiries'));
+    const snap = await getDocs(fyCol('batchEnquiries'));
     const thisWeek = snap.docs
       .map(d=>({id:d.id,...d.data()}))
       .filter(e=>
@@ -1667,7 +1685,7 @@ async function renderNewStudentsForWeek(weekStart){
 
 async function loadWeeklySong(batchId, weekKey){
   try {
-    const snap = await getDoc(doc(db,'weeklySongs',`${batchId}_${weekKey}`));
+    const snap = await getDoc(fyDocRef('weeklySongs',`${batchId}_${weekKey}`));
     currentWeeklySong = snap.exists() ? snap.data() : null;
   } catch(e){ currentWeeklySong = null; }
   renderWeeklySong();
@@ -1700,7 +1718,7 @@ window.deleteWeeklySong = async function(){
   const startStr = document.getElementById('weekStart').value;
   const weekKey  = startStr.replace(/-/g,'');
   try {
-    await deleteDoc(doc(db,'weeklySongs',`${currentAttBatch}_${weekKey}`));
+    await deleteDoc(fyDocRef('weeklySongs',`${currentAttBatch}_${weekKey}`));
     currentWeeklySong = null;
     renderWeeklySong();
     showToast('Song removed ✓');
@@ -1737,7 +1755,7 @@ window.saveSong = async function(){
       setBy: currentArtist.name,
       setAt: new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
     };
-    await setDoc(doc(db,'weeklySongs',`${batchId}_${weekKey}`), data);
+    await setDoc(fyDocRef('weeklySongs',`${batchId}_${weekKey}`), data);
     currentWeeklySong = data;
     renderWeeklySong();
     closeSongModal();
@@ -1751,13 +1769,13 @@ window.saveSong = async function(){
 async function getStudentSongHistory(studentId, batchId){
   try {
     // Get all attendance docs for this trainer+batch
-    const attSnap = await getDocs(collection(db,'attendance'));
+    const attSnap = await getDocs(fyCol('attendance'));
     const attDocs = attSnap.docs
       .map(d=>({id:d.id,...d.data()}))
       .filter(d=>d.id.startsWith(`${currentArtist.user}_${batchId}_`));
 
     // Get all weekly songs for this batch
-    const songSnap = await getDocs(collection(db,'weeklySongs'));
+    const songSnap = await getDocs(fyCol('weeklySongs'));
     const songMap  = {};
     songSnap.docs.forEach(d=>{
       const data = d.data();
@@ -1820,7 +1838,7 @@ window.loadWeekAttendance = async function(){
 
   // Load saved attendance from Firebase
   const weekKey = start.toLocaleDateString('en-CA').replace(/-/g,'');
-  const attRef  = doc(db,'attendance',`${currentArtist.user}_${currentAttBatch}_${weekKey}`);
+  const attRef  = fyDocRef('attendance',`${currentArtist.user}_${currentAttBatch}_${weekKey}`);
   const attSnap = await getDoc(attRef);
 
   // Support both old day-based format and new weekly flat format
@@ -1976,7 +1994,7 @@ window.extendStudent = async function(id, name, subscription){
   const newExtended = (parseInt(s.extendedDays||0)) + (days - 1); // -1 because start day is included
 
   // New joinDate stays same, extendedDays grows
-  await setDoc(doc(db,'batchStudents',id), {extendedDays: newExtended}, {merge:true});
+  await setDoc(fyDocRef('batchStudents',id), {extendedDays: newExtended}, {merge:true});
 
   // Calculate and show new expiry
   const joined  = parseLocalDate(s.joinDate);
@@ -2016,7 +2034,7 @@ window.saveAttendance = async function(){
   const weekKey = start.toLocaleDateString('en-CA').replace(/-/g,'');
 
   // Save weekly attendance record
-  await setDoc(doc(db,'attendance',`${currentArtist.user}_${currentAttBatch}_${weekKey}`),{
+  await setDoc(fyDocRef('attendance',`${currentArtist.user}_${currentAttBatch}_${weekKey}`),{
     artistId: currentArtist.user,
     batchId:  currentAttBatch,
     weekKey,
@@ -2027,7 +2045,7 @@ window.saveAttendance = async function(){
   // Update weeksAttended count on each student's record
   // Count all weeks where they were marked present across all attendance docs for this batch
   try {
-    const allAttSnap = await getDocs(collection(db,'attendance'));
+    const allAttSnap = await getDocs(fyCol('attendance'));
     const batchDocs  = allAttSnap.docs
       .map(d=>d.data())
       .filter(d=>d.artistId===currentArtist.user && d.batchId===currentAttBatch);
@@ -2040,7 +2058,7 @@ window.saveAttendance = async function(){
         if(typeof rec === 'object' && rec !== null) return Object.values(rec).includes('present');
         return false;
       }).length;
-      await setDoc(doc(db,'batchStudents',s.id),{weeksAttended},{merge:true});
+      await setDoc(fyDocRef('batchStudents',s.id),{weeksAttended},{merge:true});
     }
   } catch(e){ console.warn('Could not update weeksAttended:',e); }
 
@@ -2124,8 +2142,8 @@ window.runStudentSearch = async function(query){
   res.innerHTML = '<p style="color:var(--muted);font-size:0.72rem;margin-bottom:1rem">Loading profiles…</p>';
 
   // Load attendance and songs for context
-  const attSnap  = await getDocs(collection(db,'attendance'));
-  const songSnap = await getDocs(collection(db,'weeklySongs'));
+  const attSnap  = await getDocs(fyCol('attendance'));
+  const songSnap = await getDocs(fyCol('weeklySongs'));
 
   const allAtt  = attSnap.docs.map(d=>({id:d.id,...d.data()}));
   const allSong = {};

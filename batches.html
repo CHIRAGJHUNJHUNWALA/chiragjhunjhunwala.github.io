@@ -313,6 +313,23 @@ const app = initializeApp({
 });
 const db = getFirestore(app);
 
+/* ── FY Path Helpers ── */
+let _activeFY = null;
+async function loadActiveFY(){
+  try{
+    const snap = await getDoc(doc(db,'settings','general'));
+    _activeFY = snap.exists() ? (snap.data().activeFY||null) : null;
+  }catch(e){}
+  if(!_activeFY){
+    const today = new Date();
+    const y = today.getMonth()>=3 ? today.getFullYear() : today.getFullYear()-1;
+    _activeFY = `${y}-${y+1}`;
+  }
+}
+function fyCol(name){ return collection(db,'fy',_activeFY,name); }
+function fyDocRef(name,...args){ return doc(db,'fy',_activeFY,name,...args); }
+
+
 function getDayChips(days){
   return (days||'').split('·').map(d=>d.trim()).filter(Boolean)
     .map(d=>`<span class="batch-day-chip">${d}</span>`).join('');
@@ -353,7 +370,7 @@ async function loadBatches(){
   // Load songs for this week from Firestore
   const songMap = {}; // batchId → {song, film}
   try {
-    const songSnap = await getDocs(collection(db,'weeklySongs'));
+    const songSnap = await getDocs(fyCol('weeklySongs'));
     console.log('[THS Batches] Total weeklySongs docs:', songSnap.size);
     songSnap.docs.forEach(d=>{
       const data = d.data();
@@ -584,6 +601,7 @@ window.validateMonday = function(input){
 };
 
 window.submitEnrol = async function(){
+  await loadActiveFY();
   const name      = document.getElementById('enrolName').value.trim();
   const phone     = '+91'+document.getElementById('enrolPhone').value.replace(/\D/g,'');
   const plan      = document.querySelector('input[name="enrolPlan"]:checked')?.value;
@@ -602,7 +620,7 @@ window.submitEnrol = async function(){
   btn.textContent = 'Submitting…';
 
   try {
-    await addDoc(collection(db,'batchEnquiries'),{
+    await addDoc(fyCol('batchEnquiries'),{
       name,
       phone,
       plan,

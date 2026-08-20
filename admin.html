@@ -393,8 +393,18 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <!-- DASHBOARD -->
     <div class="view active" id="view-dashboard">
       <div class="page-header">
-        <div><h1 class="page-title">Dashboard</h1><p class="page-sub" id="dashDate"></p></div>
+        <div>
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-sub" id="dashDate"></p>
+        </div>
         <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap">
+          <!-- FY Badge -->
+          <button onclick="openFYPicker()" id="fyBadge"
+            style="display:flex;align-items:center;gap:0.5rem;background:rgba(245,230,66,0.08);border:1px solid rgba(245,230,66,0.3);padding:0.4rem 0.85rem;cursor:pointer;font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--yellow)">
+            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span id="fyBadgeLabel">FY —</span>
+            <span style="opacity:0.5;font-size:0.7em">▾</span>
+          </button>
           <a href="scanner.html" target="_blank" class="btn btn-outline">
             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M14 17h3M17 14v3"/></svg>Open Scanner
           </a>
@@ -856,6 +866,21 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           </div>
         </div>
         <div id="batchAttGrid" style="margin-top:0.75rem;overflow-x:auto"></div>
+      </div>
+    </div>
+
+    <!-- FINANCIAL YEAR PICKER -->
+    <div class="modal-backdrop" id="fyModal" style="z-index:9999">
+      <div class="modal" style="max-width:440px;width:100%">
+        <div class="modal-head" style="border-bottom:none;padding-bottom:0.5rem">
+          <div>
+            <h2 class="modal-title" id="fyModalTitle">Select Financial Year</h2>
+            <p style="font-size:0.75rem;color:var(--muted);margin-top:0.2rem">All data will be filtered to the selected year (April – March)</p>
+          </div>
+        </div>
+        <div class="modal-body" style="padding-top:0.75rem">
+          <div id="fyOptions" style="display:flex;flex-direction:column;gap:0.5rem"></div>
+        </div>
       </div>
     </div>
 
@@ -2412,7 +2437,105 @@ if(sessionStorage.getItem('ths_auth')==='1'){
 /* ══════════════════════════════════════
    INIT
 ══════════════════════════════════════ */
+/* ══════════════════════════════════════
+   FINANCIAL YEAR
+══════════════════════════════════════ */
+let currentFY = null;
+let activeFY = null;
+
+/* ── FY Collection Helpers (Admin) ── */
+function fyCol(name){
+  const fy = currentFY?.key || activeFY || '2025-26';
+  return collection(db,'fy',fy,name);
+}
+function fyDocRef(name,...args){
+  const fy = currentFY?.key || activeFY || '2025-26';
+  return doc(db,'fy',fy,name,...args);
+}
+
+function getFYOptions(){
+  const today = new Date();
+  const cur   = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear()-1;
+  const opts  = [];
+  for(let y = cur; y <= cur+3; y++){
+    opts.push({
+      label: `FY ${y}-${String(y+1).slice(-2)}`,
+      key:   `${y}-${y+1}`,
+      start: new Date(y, 3, 1),
+      end:   new Date(y+1, 2, 31, 23, 59, 59, 999)
+    });
+  }
+  return opts;
+}
+
+window.applyFY = async function(fyEncoded){
+  let fy = typeof fyEncoded === 'string' ? JSON.parse(decodeURIComponent(fyEncoded)) : fyEncoded;
+  fy.start = new Date(fy.start); fy.end = new Date(fy.end);
+  currentFY = fy;
+  localStorage.setItem('ths_admin_fy', fy.key);
+  const badge = document.getElementById('fyBadgeLabel');
+  if(badge) badge.textContent = fy.label;
+  document.getElementById('fyModal')?.classList.remove('open');
+  document.body.style.overflow = '';
+  // Update activeFY in Firestore so other panels stay in sync
+  try{ await setDoc(doc(db,'settings','general'),{activeFY:fy.key},{merge:true}); }catch(e){}
+  if(typeof renderAllPayments === 'function') renderAllPayments();
+  if(typeof renderBatchesView === 'function'){ if(document.getElementById('view-batches')?.classList.contains('active')) renderBatchesView(); }
+};
+
+window.openFYPicker = function(required){
+  const opts = getFYOptions();
+  const el   = document.getElementById('fyOptions');
+  const title= document.getElementById('fyModalTitle');
+  if(title) title.textContent = required ? 'Select Financial Year to Continue' : 'Change Financial Year';
+  if(!el) return;
+  el.innerHTML = opts.reverse().map(fy=>`
+    <button onclick="applyFY(${encodeURIComponent(JSON.stringify(fy))})" onmousedown="this.click()"
+      style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;background:${currentFY?.key===fy.key?'rgba(245,230,66,0.08)':'var(--bg3)'};border:1px solid ${currentFY?.key===fy.key?'rgba(245,230,66,0.4)':'var(--border)'};cursor:pointer;text-align:left;width:100%;margin-bottom:0.4rem">
+      <div>
+        <p style="font-size:0.95rem;font-weight:700;color:${currentFY?.key===fy.key?'var(--yellow)':'var(--text)'};font-family:'Syne',sans-serif">${fy.label}</p>
+        <p style="font-size:0.72rem;color:var(--muted);margin-top:0.15rem">1 Apr ${fy.start instanceof Date ? fy.start.getFullYear() : new Date(fy.start).getFullYear()} – 31 Mar ${fy.end instanceof Date ? fy.end.getFullYear() : new Date(fy.end).getFullYear()}</p>
+      </div>
+      ${currentFY?.key===fy.key?'<span style="font-size:0.68rem;color:var(--yellow);font-weight:700;letter-spacing:0.1em;font-family:\'Syne\',sans-serif">ACTIVE ✓</span>':'<span style="font-size:0.78rem;color:var(--muted)">→</span>'}
+    </button>`).join('');
+  document.getElementById('fyModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+};
+
+function inFY(dateInput){
+  if(!currentFY || !dateInput) return true;
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  return !isNaN(d) && d >= currentFY.start && d <= currentFY.end;
+}
+
+function fyReg(){   return registrations.filter(r=>inFY(parseAnyDate(r.timestamp))); }
+function fyBatch(){ return batchStudents.filter(s=>s.joinDate&&inFY(new Date(s.joinDate+'T00:00'))); }
+function fyExp(){   return expenses.filter(e=>inFY(parseAnyDate(e.date||e.timestamp))); }
+function fyStaff(){ return staffPayments.filter(p=>inFY(parseAnyDate(p.date||p.timestamp))); }
+function fyRent(){  return rentals.filter(r=>inFY(parseAnyDate(r.date))); }
+function fySettle(){ return Object.values(wsSettlements).filter(x=>inFY(parseAnyDate(x.settledAt||x.date))); }
+
+async function initFY(){
+  try{
+    const snap = await getDoc(doc(db,'settings','general'));
+    if(snap.exists()) activeFY = snap.data().activeFY||null;
+  }catch(e){}
+  const saved = localStorage.getItem('ths_admin_fy');
+  const opts  = getFYOptions();
+  const found = saved ? opts.find(o=>o.key===saved) : null;
+  if(found){
+    found.start = new Date(found.start);
+    found.end   = new Date(found.end);
+    currentFY   = found;
+    const badge = document.getElementById('fyBadgeLabel');
+    if(badge) badge.textContent = found.label;
+  } else {
+    setTimeout(()=>openFYPicker(true), 500);
+  }
+}
+
 async function initApp(){
+  initFY();
   applyMasterAccess();
   if(isMaster()){
     const tag = document.querySelector('.sidebar-tag');
@@ -2460,7 +2583,7 @@ function listenWorkshops(){
 
 function listenRegistrations(){
   return new Promise(resolve => {
-    onSnapshot(collection(db,'registrations'), snap => {
+    onSnapshot(fyCol('registrations'), snap => {
       registrations = snap.docs.map(d => ({id: d.id, ...d.data()}));
       registrations.sort((a,b) => (b.timestamp||'').localeCompare(a.timestamp||''));
       window._registrations = registrations;
@@ -3481,7 +3604,7 @@ window.cancelSlot = async function(wsId, slotId, slotNum){
       }
 
       // Save refund flag on registration
-      await updateDoc(doc(db,'registrations',r.id),{
+      await updateDoc(fyDocRef('registrations',r.id),{
         slotCancelled:      true,
         cancelledSlotId:    slotId,
         cancelledSlotLabel: slotLabel,
@@ -3609,7 +3732,7 @@ window.markRefunded = async function(regId, method){
   };
 
   try {
-    await updateDoc(doc(db,'registrations',regId), update);
+    await updateDoc(fyDocRef('registrations',regId), update);
     const idx = _refundRegs.findIndex(r=>r.id===regId);
     if(idx>-1) _refundRegs[idx] = {..._refundRegs[idx], ...update};
     // Also update global registrations array
@@ -3624,7 +3747,7 @@ window.undoRefund = async function(regId){
   if(!confirm('Undo this refund record?')) return;
   const update = {refundStatus:'pending', refundedAt:null, refundedBy:null, refundMode:null, refundAmount:null};
   try {
-    await updateDoc(doc(db,'registrations',regId), update);
+    await updateDoc(fyDocRef('registrations',regId), update);
     const idx = _refundRegs.findIndex(r=>r.id===regId);
     if(idx>-1) _refundRegs[idx] = {..._refundRegs[idx], ...update};
     const gIdx = registrations.findIndex(r=>r.id===regId);
@@ -3644,7 +3767,7 @@ window.refundAllCash = async function(){
   for(const r of pending){
     const update={refundStatus:'refunded',refundedAt:today,refundedBy:choice,refundMode:'Cash',refundAmount:parseFloat(r.amount_paid||0)};
     try {
-      await updateDoc(doc(db,'registrations',r.id), update);
+      await updateDoc(fyDocRef('registrations',r.id), update);
       const idx=_refundRegs.findIndex(x=>x.id===r.id); if(idx>-1) _refundRegs[idx]={..._refundRegs[idx],...update};
       const gIdx=registrations.findIndex(x=>x.id===r.id); if(gIdx>-1) registrations[gIdx]={...registrations[gIdx],...update};
       done++;
@@ -3664,7 +3787,7 @@ window.refundAllOnline = async function(){
   for(const r of pending){
     const update={refundStatus:'refunded',refundedAt:today,refundedBy:paidBy,refundMode:'Online',refundAmount:parseFloat(r.amount_paid||0)};
     try {
-      await updateDoc(doc(db,'registrations',r.id), update);
+      await updateDoc(fyDocRef('registrations',r.id), update);
       const idx=_refundRegs.findIndex(x=>x.id===r.id); if(idx>-1) _refundRegs[idx]={..._refundRegs[idx],...update};
       const gIdx=registrations.findIndex(x=>x.id===r.id); if(gIdx>-1) registrations[gIdx]={...registrations[gIdx],...update};
       done++;
@@ -3708,7 +3831,7 @@ let _wsSettleDate       = '';
 
 async function loadWsSettlements(){
   try {
-    const snap = await getDocs(collection(db,'workshopSettlements'));
+    const snap = await getDocs(fyCol('workshopSettlements'));
     wsSettlements = {};
     snap.docs.forEach(d=>{ wsSettlements[d.id] = {id:d.id,...d.data()}; });
     updateArtistPayBadge();
@@ -4234,7 +4357,7 @@ window.saveWsSettlement = async function(){
     updatedAt:     Date.now(),
     updatedBy:     currentAdminUser||'admin',
   };
-  await setDoc(doc(db,'workshopSettlements',_wsSettleCurrentId), data);
+  await setDoc(fyDocRef('workshopSettlements',_wsSettleCurrentId), data);
   wsSettlements[_wsSettleCurrentId] = data;
   closeModal('wsSettlementModal');
   showToast('Settlement saved ✓');
@@ -4391,7 +4514,7 @@ window.setStatus = async function(id, status){
 
     // Delete settlement from Firestore and memory
     try {
-      await deleteDoc(doc(db,'workshopSettlements',id));
+      await deleteDoc(fyDocRef('workshopSettlements',id));
     } catch(e){ console.warn('Could not delete settlement:', e); }
     delete wsSettlements[id];
   }
@@ -4978,7 +5101,7 @@ window.saveWorkshop = async function(saveStatus){
           try {
             const d   = new Date(s.dateISO+'T00:00');
             const day = d.toLocaleDateString('en-IN',{weekday:'long'});
-            await addDoc(collection(db,'studioSchedule'),{
+            await addDoc(fyCol('studioSchedule'),{
               date:      s.dateISO,
               day,
               timeFrom:  s.timeFrom || '',
@@ -5078,7 +5201,7 @@ window.confirmDeleteAction = async function(){
 
   // Delete all registrations for this workshop
   const wsRegs = registrations.filter(r=>r.workshop===name);
-  await Promise.all(wsRegs.map(r=>deleteDoc(doc(db,'registrations',r.id))));
+  await Promise.all(wsRegs.map(r=>deleteDoc(fyDocRef('registrations',r.id))));
 
   // Delete the workshop
   await deleteDoc(doc(db,'workshops',deleteTargetId));
@@ -5181,7 +5304,7 @@ window.saveManualStudent = async function(){
     timestamp:    new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
   };
 
-  await addDoc(collection(db,'registrations'), reg);
+  await addDoc(fyCol('registrations'), reg);
 
   // Decrease spots for each selected slot
   const slotIds = Array.from(checkedBoxes).map(cb=>cb.value);
@@ -5302,7 +5425,7 @@ window.deleteRegistration = async function(regId, regName){
     const reg = registrations.find(r => r.id === regId);
 
     // Delete the registration
-    await deleteDoc(doc(db,'registrations',regId));
+    await deleteDoc(fyDocRef('registrations',regId));
 
     // Restore spots in the workshop
     if(reg){
@@ -5355,34 +5478,50 @@ function renderAllPayments(){
     (s.name||'').toLowerCase().includes(batchPaySearch.toLowerCase())
   );
 
-  // Revenue totals
-  const wsRev       = registrations.reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
-  const batchRev    = batchStudents.reduce((s,x)=>s+parseFloat(x.fee||0),0);
-  const rentalRev   = rentals.filter(r=>r.payMode!=='Pending').reduce((s,r)=>s+parseFloat(r.amount||0),0);
-  const rentalPend  = rentals.filter(r=>r.payMode==='Pending').reduce((s,r)=>s+parseFloat(r.amount||0),0);
-  const totalRev    = wsRev + batchRev + rentalRev;
+  // FY-filtered data for all stats
+  const fyRegs    = fyReg();
+  const fyBatches = fyBatch();
+  const fyRents   = fyRent().filter(r=>r.payMode!=='Pending');
+  const fyRentPend= fyRent().filter(r=>r.payMode==='Pending');
+  const fyStaffs  = fyStaff();
+  const fyExps    = fyExp();
+  const fySettles = fySettle();
 
-  // Cash / Online across all income
-  const totalCash   = registrations.filter(r=>r.payment_type!=='Online').reduce((s,r)=>s+parseFloat(r.amount_paid||0),0)
-                    + batchStudents.filter(s=>s.payMode==='Cash').reduce((s,x)=>s+parseFloat(x.fee||0),0)
-                    + rentals.filter(r=>r.payMode==='Cash').reduce((s,r)=>s+parseFloat(r.amount||0),0);
-  const totalOnline = registrations.filter(r=>r.payment_type==='Online').reduce((s,r)=>s+parseFloat(r.amount_paid||0),0)
-                    + batchStudents.filter(s=>s.payMode!=='Cash').reduce((s,x)=>s+parseFloat(x.fee||0),0)
-                    + rentals.filter(r=>r.payMode==='Online').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  // Revenue totals (FY filtered)
+  const wsRev      = fyRegs.reduce((s,r)=>s+parseFloat(r.amount_paid||0),0);
+  const batchRev   = fyBatches.reduce((s,x)=>s+parseFloat(x.fee||0),0);
+  const rentalRev  = fyRents.reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const rentalPend = fyRentPend.reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const totalRev   = wsRev + batchRev + rentalRev;
 
-  // Expenses
-  const staffTotal   = staffPayments.reduce((s,p)=>s+parseFloat(p.amount||0),0);
-  const expTotal     = expenses.reduce((s,e)=>s+parseFloat(e.amount||0),0);
-  const artistTotal  = Object.values(wsSettlements).reduce((s,x)=>s+(x.artistPayout||0),0);
-  const totalExpAll  = staffTotal + expTotal + artistTotal;
-  const netPL        = totalRev - totalExpAll;
+  // Cash / Online (FY filtered)
+  const totalCash   = fyRegs.filter(r=>r.payment_type!=='Online').reduce((s,r)=>s+parseFloat(r.amount_paid||0),0)
+                    + fyBatches.filter(s=>s.payMode==='Cash').reduce((s,x)=>s+parseFloat(x.fee||0),0)
+                    + fyRents.filter(r=>r.payMode==='Cash').reduce((s,r)=>s+parseFloat(r.amount||0),0);
+  const totalOnline = fyRegs.filter(r=>r.payment_type==='Online').reduce((s,r)=>s+parseFloat(r.amount_paid||0),0)
+                    + fyBatches.filter(s=>s.payMode!=='Cash').reduce((s,x)=>s+parseFloat(x.fee||0),0)
+                    + fyRents.filter(r=>r.payMode==='Online').reduce((s,r)=>s+parseFloat(r.amount||0),0);
 
-  // GST and TDS from all workshop settlements
-  const gstTotal  = Object.values(wsSettlements).reduce((s,x)=>s+(x.gstAmount||0),0);
-  const tdsTotal  = Object.values(wsSettlements).reduce((s,x)=>s+(x.tdsAmount||0),0);
+  // Expenses (FY filtered)
+  const staffTotal  = fyStaffs.reduce((s,p)=>s+parseFloat(p.amount||0),0);
+  const expTotal    = fyExps.reduce((s,e)=>s+parseFloat(e.amount||0),0);
+  const artistTotal = fySettles.reduce((s,x)=>s+(x.artistPayout||0),0);
+  const totalExpAll = staffTotal + expTotal + artistTotal;
+  const netPL       = totalRev - totalExpAll;
+
+  // GST and TDS (FY filtered)
+  const gstTotal    = fySettles.reduce((s,x)=>s+(x.gstAmount||0),0);
+  const tdsTotal    = fySettles.reduce((s,x)=>s+(x.tdsAmount||0),0);
+
+  // FY label for display
+  const fyLabel = currentFY ? ` · ${currentFY.label}` : '';
 
   // Stats cards
   document.getElementById('paymentStats').innerHTML = `
+    <div class="stat-card" style="grid-column:1/-1;background:rgba(245,230,66,0.04);border-color:rgba(245,230,66,0.2);padding:0.6rem 1rem;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--yellow);font-family:'Syne',sans-serif;font-weight:700">All Payments${fyLabel}</span>
+      <button onclick="openFYPicker()" style="font-size:0.62rem;color:var(--yellow);background:none;border:1px solid rgba(245,230,66,0.3);padding:0.2rem 0.6rem;cursor:pointer;font-family:'Syne',sans-serif;font-weight:600">Change FY</button>
+    </div>
     <div class="stat-card"><p class="stat-label">Total Revenue</p><p class="stat-val green">₹${totalRev.toLocaleString('en-IN')}</p></div>
     <div class="stat-card"><p class="stat-label">Total Cash</p><p class="stat-val yellow">₹${totalCash.toLocaleString('en-IN')}</p></div>
     <div class="stat-card"><p class="stat-label">Total Online</p><p class="stat-val" style="color:var(--green)">₹${totalOnline.toLocaleString('en-IN')}</p></div>
@@ -6035,7 +6174,7 @@ let batchStudents    = [];
 let currentAdminBatch = 'all';
 
 function listenBatchStudents(){
-  onSnapshot(collection(db,'batchStudents'), snap => {
+  onSnapshot(fyCol('batchStudents'), snap => {
     batchStudents = snap.docs.map(d=>({id:d.id,...d.data()}));
     batchStudents.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
     if(document.getElementById('view-batches')?.classList.contains('active')) renderBatchesView();
@@ -6151,7 +6290,7 @@ async function renderBatchEnquiries(){
   const list    = document.getElementById('newStudentsList');
   if(!section||!list) return;
   try {
-    const snap = await getDocs(collection(db,'batchEnquiries'));
+    const snap = await getDocs(fyCol('batchEnquiries'));
     const enquiries = snap.docs
       .map(d=>({id:d.id,...d.data()}))
       .filter(e=>e.status==='pending')
@@ -6194,7 +6333,7 @@ async function renderBatchEnquiries(){
 window.convertEnquiry = async function(enquiryId){
   // Load the enquiry
   try {
-    const snap = await getDoc(doc(db,'batchEnquiries',enquiryId));
+    const snap = await getDoc(fyDocRef('batchEnquiries',enquiryId));
     if(!snap.exists()) return;
     const e = snap.data();
 
@@ -6228,7 +6367,7 @@ window.convertEnquiry = async function(enquiryId){
 window.dismissEnquiry = async function(enquiryId){
   if(!confirm('Dismiss this enquiry?')) return;
   try {
-    await updateDoc(doc(db,'batchEnquiries',enquiryId),{status:'dismissed'});
+    await updateDoc(fyDocRef('batchEnquiries',enquiryId),{status:'dismissed'});
     renderBatchEnquiries();
     showToast('Enquiry dismissed');
   } catch(e){ showToast('Failed to dismiss','error'); }
@@ -6279,8 +6418,8 @@ window.renderBatchAttGrid = async function(){
   }
 
   // Load attendance docs and songs for this batch
-  const attSnap  = await getDocs(collection(db,'attendance'));
-  const songSnap = await getDocs(collection(db,'weeklySongs'));
+  const attSnap  = await getDocs(fyCol('attendance'));
+  const songSnap = await getDocs(fyCol('weeklySongs'));
 
   const attMap  = {}; // weekKey → {studentId: status}
   const songMap = {}; // weekKey → songName
@@ -6376,7 +6515,7 @@ window.loadAttModalStudents = async function(){
   const students = batchStudents.filter(s=>s.batchId===batchId && isBatchStudentActive(s));
 
   // Try to load saved attendance
-  const attSnap  = await getDocs(collection(db,'attendance'));
+  const attSnap  = await getDocs(fyCol('attendance'));
   const attDoc   = attSnap.docs.find(d=>d.data().batchId===batchId && d.data().weekKey===weekKey);
   const saved    = attDoc ? attDoc.data().records||{} : {};
   _adminAttRecord = {};
@@ -6384,7 +6523,7 @@ window.loadAttModalStudents = async function(){
 
   // Load song for this week
   try {
-    const songDoc = await getDoc(doc(db,'weeklySongs',`${batchId}_${weekKey}`));
+    const songDoc = await getDoc(fyDocRef('weeklySongs',`${batchId}_${weekKey}`));
     if(songDoc.exists()){
       document.getElementById('attModalSong').value = songDoc.data().song||'';
       document.getElementById('attModalFilm').value = songDoc.data().film||'';
@@ -6447,7 +6586,7 @@ window.saveAdminAttendance = async function(){
     ? (BATCHES_CONFIG.find(b=>b.id===batchId)?.trainer||'admin')
     : 'admin';
 
-  await setDoc(doc(db,'attendance',`admin_${batchId}_${weekKey}`),{
+  await setDoc(fyDocRef('attendance',`admin_${batchId}_${weekKey}`),{
     artistId: 'admin',
     batchId,  weekKey,
     records:  _adminAttRecord,
@@ -6456,7 +6595,7 @@ window.saveAdminAttendance = async function(){
 
   // Save song if entered
   if(song){
-    await setDoc(doc(db,'weeklySongs',`${batchId}_${weekKey}`),{
+    await setDoc(fyDocRef('weeklySongs',`${batchId}_${weekKey}`),{
       batchId, weekStart: weekStr, weekKey,
       song, film: film||'',
       setBy: 'Admin',
@@ -6465,7 +6604,7 @@ window.saveAdminAttendance = async function(){
   }
 
   // Update weeksAttended on each student
-  const allAttSnap = await getDocs(collection(db,'attendance'));
+  const allAttSnap = await getDocs(fyCol('attendance'));
   const batchDocs  = allAttSnap.docs.map(d=>d.data()).filter(d=>d.batchId===batchId);
   const students   = batchStudents.filter(s=>s.batchId===batchId);
   for(const s of students){
@@ -6473,7 +6612,7 @@ window.saveAdminAttendance = async function(){
       const rec = d.records?.[s.id];
       return typeof rec==='string' ? rec==='present' : typeof rec==='object'&&rec!==null ? Object.values(rec).includes('present') : false;
     }).length;
-    await setDoc(doc(db,'batchStudents',s.id),{weeksAttended},{merge:true});
+    await setDoc(fyDocRef('batchStudents',s.id),{weeksAttended},{merge:true});
   }
 
   closeModal('takeAttModal');
@@ -6724,7 +6863,7 @@ window.selectCheckinSlot = function(id){
 window.adminCheckIn = async function(regId, name){
   const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
   try {
-    await updateDoc(doc(db,'registrations',regId), {
+    await updateDoc(fyDocRef('registrations',regId), {
       checkedIn:true,
       checkedInAt:time,
       checkedInBy: currentAdminUser || 'Admin'
@@ -6816,7 +6955,7 @@ let studioEnquiries   = [];
 let enquiriesFilter   = 'pending';
 
 // Live listener — also updates badge
-onSnapshot(collection(db,'studioEnquiries'), snap=>{
+onSnapshot(fyCol('studioEnquiries'), snap=>{
   studioEnquiries = snap.docs.map(d=>({id:d.id,...d.data()}))
     .sort((a,b)=>a.date?.localeCompare(b.date||'')||0);
   // Update pending badge
@@ -6993,12 +7132,12 @@ window.confirmApproveEnquiry = async function(){
     const ts = new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'});
 
     // 1. Mark enquiry approved
-    await updateDoc(doc(db,'studioEnquiries',id),{
+    await updateDoc(fyDocRef('studioEnquiries',id),{
       status:'approved', approvedAt:ts, rentalAmount:amount, payMode
     });
 
     // 2. Add to studioSchedule
-    await setDoc(doc(db,'studioSchedule','enq_'+id),{
+    await setDoc(fyDocRef('studioSchedule','enq_'+id),{
       date:      e.date, day: e.day||'',
       timeFrom:  e.timeFrom, timeTo: e.timeTo,
       artist:    e.name,
@@ -7009,7 +7148,7 @@ window.confirmApproveEnquiry = async function(){
     });
 
     // 3. Add to studioRentals
-    await addDoc(collection(db,'studioRentals'),{
+    await addDoc(fyCol('studioRentals'),{
       name:      e.name, phone: e.phone,
       date:      e.date, day: e.day||'',
       timeFrom:  e.timeFrom, timeTo: e.timeTo,
@@ -7069,7 +7208,7 @@ window.rejectEnquiry = async function(id){
   const reason = prompt('Rejection reason (optional):');
   if(reason === null) return; // cancelled
   try {
-    await updateDoc(doc(db,'studioEnquiries',id),{
+    await updateDoc(fyDocRef('studioEnquiries',id),{
       status:'rejected',
       rejectedAt: new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
       rejectionReason: reason||'',
@@ -7081,7 +7220,7 @@ window.rejectEnquiry = async function(id){
 window.deleteEnquiry = async function(id){
   if(!confirm('Permanently delete this enquiry? This cannot be undone.')) return;
   try {
-    await deleteDoc(doc(db,'studioEnquiries',id));
+    await deleteDoc(fyDocRef('studioEnquiries',id));
     showToast('Enquiry deleted');
   } catch(e){ showToast('Failed to delete','error'); }
 };
@@ -7090,18 +7229,18 @@ window.undoEnquiry = async function(id){
   if(!confirm('Move this enquiry back to pending?\n\nThis will remove it from the Schedule and Rental Payments.')) return;
   try {
     // 1. Move enquiry back to pending
-    await updateDoc(doc(db,'studioEnquiries',id),{
+    await updateDoc(fyDocRef('studioEnquiries',id),{
       status:'pending',
       approvedAt: null, rentalAmount: null, payMode: null,
     });
 
     // 2. Delete from studioSchedule (created with id 'enq_'+id)
-    try { await deleteDoc(doc(db,'studioSchedule','enq_'+id)); } catch(err){}
+    try { await deleteDoc(fyDocRef('studioSchedule','enq_'+id)); } catch(err){}
 
     // 3. Delete from studioRentals (matched by enquiryId field)
-    const rentSnap = await getDocs(collection(db,'studioRentals'));
+    const rentSnap = await getDocs(fyCol('studioRentals'));
     const toDelete = rentSnap.docs.filter(d=>d.data().enquiryId===id);
-    await Promise.all(toDelete.map(d=>deleteDoc(doc(db,'studioRentals',d.id))));
+    await Promise.all(toDelete.map(d=>deleteDoc(fyDocRef('studioRentals',d.id))));
 
     showToast(`Undone · removed from schedule & rentals · back to pending`);
   } catch(err){
@@ -7134,7 +7273,7 @@ let scheduleWeekStart = null;
 let scheduleDayIdx   = 0;
 
 function listenSchedule(){
-  onSnapshot(collection(db,'studioSchedule'), snap=>{
+  onSnapshot(fyCol('studioSchedule'), snap=>{
     scheduleEntries = snap.docs.map(d=>({id:d.id,...d.data()}));
     scheduleEntries.sort((a,b)=>(a.date+a.timeFrom).localeCompare(b.date+b.timeFrom));
     if(document.getElementById('view-schedule')?.classList.contains('active')){
@@ -7214,7 +7353,7 @@ window.saveRegulars = async function(){
   // Edit mode — just update the single entry
   if(editId){
     const d = new Date(dateFrom+'T00:00');
-    await setDoc(doc(db,'studioSchedule',editId),{
+    await setDoc(fyDocRef('studioSchedule',editId),{
       artist:name, timeFrom, timeTo,
       category:'Regulars',
       remarks:purpose+(remarks?' · '+remarks:''),
@@ -7239,7 +7378,7 @@ window.saveRegulars = async function(){
     if(activeDays.includes(cur.getDay())){
       const dateStr = cur.toLocaleDateString('en-CA');
       const dayName = cur.toLocaleDateString('en-IN',{weekday:'long'});
-      await addDoc(collection(db,'studioSchedule'),{
+      await addDoc(fyCol('studioSchedule'),{
         date:dateStr, day:dayName,
         timeFrom, timeTo,
         category:'Regulars',
@@ -7400,8 +7539,8 @@ window.saveScheduleEntry=async function(){
     timeFrom,timeTo,
     category:document.getElementById('schCategory').value,
     artist,remarks:document.getElementById('schRemarks').value.trim(),updatedAt:Date.now()};
-  if(editId) await setDoc(doc(db,'studioSchedule',editId),data,{merge:true});
-  else await addDoc(collection(db,'studioSchedule'),{...data,createdAt:Date.now()});
+  if(editId) await setDoc(fyDocRef('studioSchedule',editId),data,{merge:true});
+  else await addDoc(fyCol('studioSchedule'),{...data,createdAt:Date.now()});
   closeModal('scheduleModal');showToast('Booking saved ✓');
 };
 
@@ -7424,7 +7563,7 @@ window.deleteRegularEntry = async function(){
   if(!confirm(msg)) return;
 
   // Delete all matching entries
-  await Promise.all(matching.map(e=>deleteDoc(doc(db,'studioSchedule',e.id))));
+  await Promise.all(matching.map(e=>deleteDoc(fyDocRef('studioSchedule',e.id))));
 
   closeModal('regularsModal');
   showToast(`Deleted ${matching.length} entr${matching.length===1?'y':'ies'} for ${name} ✓`);
@@ -7432,7 +7571,7 @@ window.deleteRegularEntry = async function(){
 
 window.deleteScheduleEntry=async function(id){
   if(!confirm('Delete this booking?'))return;
-  await deleteDoc(doc(db,'studioSchedule',id));showToast('Booking deleted');
+  await deleteDoc(fyDocRef('studioSchedule',id));showToast('Booking deleted');
 };
 
 document.addEventListener('change',e=>{
@@ -7448,7 +7587,7 @@ document.addEventListener('change',e=>{
 let rentals=[],rentalFilter='all',rentalSearch='';
 
 function listenRentals(){
-  onSnapshot(collection(db,'studioRentals'),snap=>{
+  onSnapshot(fyCol('studioRentals'),snap=>{
     rentals=snap.docs.map(d=>({id:d.id,...d.data()}));
     rentals.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
     if(document.getElementById('view-rentals')?.classList.contains('active')) renderRentals();
@@ -7595,9 +7734,9 @@ window.saveRental = async function(){
   const editId = document.getElementById('rentalEditId').value;
   let rentalId = editId;
   if(editId){
-    await setDoc(doc(db,'studioRentals',editId),data,{merge:true});
+    await setDoc(fyDocRef('studioRentals',editId),data,{merge:true});
   } else {
-    const ref = await addDoc(collection(db,'studioRentals'),{...data,createdAt:Date.now()});
+    const ref = await addDoc(fyCol('studioRentals'),{...data,createdAt:Date.now()});
     rentalId = ref.id;
   }
 
@@ -7614,9 +7753,9 @@ window.saveRental = async function(){
       rentalId, updatedAt: Date.now(),
     };
     if(existing){
-      await setDoc(doc(db,'studioSchedule',existing.id),schData,{merge:true});
+      await setDoc(fyDocRef('studioSchedule',existing.id),schData,{merge:true});
     } else {
-      await addDoc(collection(db,'studioSchedule'),{...schData,createdAt:Date.now()});
+      await addDoc(fyCol('studioSchedule'),{...schData,createdAt:Date.now()});
     }
     showToast('Rental saved + added to schedule ✓');
   } else {
@@ -7630,7 +7769,7 @@ window.saveRental = async function(){
     window._saveRentalFromEnquiryId = null;
     try {
       const ts = new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'});
-      await updateDoc(doc(db,'studioEnquiries',enquiryId),{
+      await updateDoc(fyDocRef('studioEnquiries',enquiryId),{
         status:'approved', approvedAt:ts,
         rentalAmount: data.amount, payMode: data.payMode,
       });
@@ -7647,7 +7786,7 @@ window.saveRental = async function(){
 
 window.deleteRental=async function(id,name){
   if(!confirm(`Delete rental payment for ${name}?\n\nNote: Any related Studio Schedule entries will NOT be deleted automatically.`))return;
-  await deleteDoc(doc(db,'studioRentals',id));
+  await deleteDoc(fyDocRef('studioRentals',id));
   showToast('Rental deleted. Schedule entries kept.');
 };
 
@@ -7731,7 +7870,7 @@ let staffPayments = [];
 let staffRoster   = [];
 
 function listenStaffPayments(){
-  onSnapshot(collection(db,'staffPayments'), snap=>{
+  onSnapshot(fyCol('staffPayments'), snap=>{
     staffPayments=snap.docs.map(d=>({id:d.id,...d.data()}));
     staffPayments.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     if(document.getElementById('view-staff')?.classList.contains('active')) renderStaff();
@@ -7902,7 +8041,7 @@ window.saveStaffPayment=async function(){
     }
   }
   const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  await addDoc(collection(db,'staffPayments'),{
+  await addDoc(fyCol('staffPayments'),{
     name,date,amount,
     salaryMonth:month,salaryYear:year,
     salaryMonthLabel:monthNames[month-1]+' '+year,
@@ -7916,7 +8055,7 @@ window.saveStaffPayment=async function(){
 
 window.deleteStaffPayment=async function(id,name){
   if(!confirm(`Delete payment for ${name}?`))return;
-  await deleteDoc(doc(db,'staffPayments',id));showToast('Deleted ✓');
+  await deleteDoc(fyDocRef('staffPayments',id));showToast('Deleted ✓');
 };
 
 /* ══════════════════════════════════════
@@ -7924,7 +8063,7 @@ window.deleteStaffPayment=async function(id,name){
 ══════════════════════════════════════ */
 let expenses=[];
 function listenExpenses(){
-  onSnapshot(collection(db,'expenses'),snap=>{
+  onSnapshot(fyCol('expenses'),snap=>{
     expenses=snap.docs.map(d=>({id:d.id,...d.data()}));
     expenses.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     if(document.getElementById('view-expenses')?.classList.contains('active')) renderExpenses();
@@ -7976,12 +8115,12 @@ window.saveExpense=async function(){
   const amount=document.getElementById('expAmount').value;
   const particulars=document.getElementById('expParticulars').value.trim();
   if(!date||!amount||!particulars){showToast('Date, amount and particulars are required','error');return;}
-  await addDoc(collection(db,'expenses'),{date,amount:parseFloat(amount),particulars,mode:document.getElementById('expMode').value,paidBy:document.getElementById('expPaidBy').value.trim(),category:document.getElementById('expCategory').value,createdAt:Date.now()});
+  await addDoc(fyCol('expenses'),{date,amount:parseFloat(amount),particulars,mode:document.getElementById('expMode').value,paidBy:document.getElementById('expPaidBy').value.trim(),category:document.getElementById('expCategory').value,createdAt:Date.now()});
   closeModal('expenseModal');showToast('Expense saved ✓');
 };
 window.deleteExpense=async function(id){
   if(!confirm('Delete this expense?'))return;
-  await deleteDoc(doc(db,'expenses',id));showToast('Deleted ✓');
+  await deleteDoc(fyDocRef('expenses',id));showToast('Deleted ✓');
 };
 
 /* ══════════════════════════════════════
