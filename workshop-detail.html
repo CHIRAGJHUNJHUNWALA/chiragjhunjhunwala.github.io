@@ -478,15 +478,11 @@ const firebaseConfig = {
   appId: "1:834905576967:web:b16776452b9111b6483ca2"
 };
 
-let workshop = null;
-    _workshop = null; // set on load
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
 /* ── FY Path Helpers ── */
 let _activeFY = null;
-let _workshop = null;
-    _workshop = null; // set when workshop loads
 
 async function loadActiveFY(){
   try{
@@ -502,7 +498,7 @@ async function loadActiveFY(){
 
 // Registrations go into the FY of the WORKSHOP's listed date — not payment date
 function getWsFY(){
-  const wsDate = _workshop?.dateFrom || _workshop?.slots?.[0]?.dateISO;
+  const wsDate = workshop?.dateFrom || workshop?.slots?.[0]?.dateISO;
   if(!wsDate) return _activeFY;
   const d = new Date(wsDate+'T00:00');
   const y = d.getMonth()>=3 ? d.getFullYear() : d.getFullYear()-1;
@@ -566,7 +562,7 @@ async function init() {
     const all = wsSnap.docs.map(d=>({id:d.id,...d.data()}))
                        .filter(w=>w.status==='active'||w.status==='full');
     workshop = all.find(w=>w.id===id) || all[0];
-    _workshop = workshop;
+    
 
     // Try to get registrations for accurate spot counts (may fail if not auth'd)
     if(workshop && workshop.slots){
@@ -588,7 +584,7 @@ async function init() {
     }
   } catch(e) {
     workshop = null;
-    _workshop = null;
+    
   }
 
   document.getElementById('loadingScreen').style.display = 'none';
