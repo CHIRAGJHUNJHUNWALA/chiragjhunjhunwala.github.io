@@ -334,7 +334,7 @@ if(sessionStorage.getItem('ths_scanner')==='1'){
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc, collectionGroup, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 const app  = initializeApp({
@@ -591,27 +591,37 @@ async function processCode(raw){
   resultArea.innerHTML = `<div class="result-card valid"><div class="result-header"><div class="result-icon valid"><span class="spinner"></span></div><div><p class="result-title">Looking up…</p><p class="result-sub">${code}</p></div></div></div>`;
 
   try {
-    // 1. Try FY-partitioned path first
-    let snap = await getDoc(fyDocRef('registrations', regId));
+    let regId  = code.startsWith('THS-REG-') ? code.replace('THS-REG-','') : code;
+    let regDoc = null;
+    let regData = null;
 
-    // 2. Fall back to legacy flat collection (pre-FY migration registrations)
-    if(!snap.exists()){
-      try { snap = await getDoc(doc(db,'registrations',regId)); } catch(e){}
+    // 1. Search across ALL fy/{fyId}/registrations subcollections (any FY)
+    try {
+      const grpSnap = await getDocs(collectionGroup(db, 'registrations'));
+      const found   = grpSnap.docs.find(d =>
+        d.id === regId ||
+        d.data().payment_id === regId ||
+        'THS-REG-' + d.id === code
+      );
+      if(found){ regDoc = found.id; regData = found.data(); }
+    } catch(e){ console.warn('collectionGroup search failed:', e); }
+
+    // 2. Legacy flat collection fallback
+    if(!regData){
+      try {
+        const snap = await getDoc(doc(db,'registrations',regId));
+        if(snap.exists()){ regDoc = snap.id; regData = snap.data(); }
+      } catch(e){ console.warn('legacy lookup failed:', e); }
     }
 
-    if(!snap.exists()){
-      // 3. Search by payment_id or QR code across FY collection
-      const allSnap = await getDocs(fyCol('registrations'));
-      const found   = allSnap.docs.find(d=>d.data().payment_id===regId||'THS-REG-'+d.id===code);
-      if(!found){
-        showResult('invalid', '✗', 'Invalid QR', 'This QR code was not found in the system.', null, null);
-        addHistory(code, 'invalid');
-        return;
-      }
-      await processReg(found.id, found.data());
-    } else {
-      await processReg(snap.id, snap.data());
+    if(!regData){
+      showResult('invalid','✗','Invalid QR','This QR code was not found in the system.',null,null);
+      addHistory(code,'invalid');
+      return;
     }
+
+    await processReg(regDoc, regData);
+
   } catch(e){
     console.error('Scan lookup error:', e);
     showResult('invalid','✗','Error','Could not look up this code. Check connection.',null,null);
