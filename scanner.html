@@ -346,6 +346,22 @@ const app  = initializeApp({
   appId:"1:834905576967:web:b16776452b9111b6483ca2"
 });
 const db   = getFirestore(app);
+
+let _activeFY = null;
+async function loadActiveFY(){
+  try{
+    const snap = await getDoc(doc(db,'settings','general'));
+    _activeFY = snap.exists() ? (snap.data().activeFY||null) : null;
+  }catch(e){}
+  if(!_activeFY){
+    const today = new Date();
+    const y = today.getMonth()>=3 ? today.getFullYear() : today.getFullYear()-1;
+    _activeFY = `${y}-${y+1}`;
+  }
+}
+function fyCol(name){ return collection(db,'fy',_activeFY,name); }
+function fyDocRef(name,...args){ return doc(db,'fy',_activeFY,name,...args); }
+
 const auth = getAuth(app);
 
 let _scannerOtpConfirmation = null;
