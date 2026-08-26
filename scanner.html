@@ -395,9 +395,9 @@ document.addEventListener('scannerVerifyOtp', async (e)=>{
   const errEl = document.getElementById('otpErr');
   try {
     await _scannerOtpConfirmation.confirm(otp);
-    // Phone Auth session is now active — phone number in auth token, no anonymous auth needed
     sessionStorage.setItem('ths_scanner','1');
     showScannerApp();
+    await loadActiveFY();
     loadScanWorkshops();
   } catch(err){
     console.error('OTP verify failed:',err);
@@ -410,7 +410,7 @@ document.addEventListener('scannerVerifyOtp', async (e)=>{
 
 // ── Session restore ──────────────────────────────────
 if(sessionStorage.getItem('ths_scanner')==='1'){
-  loadScanWorkshops();
+  loadActiveFY().then(()=>loadScanWorkshops());
 }
 
 
