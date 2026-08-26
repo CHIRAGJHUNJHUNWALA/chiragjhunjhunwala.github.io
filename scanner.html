@@ -591,10 +591,16 @@ async function processCode(raw){
   resultArea.innerHTML = `<div class="result-card valid"><div class="result-header"><div class="result-icon valid"><span class="spinner"></span></div><div><p class="result-title">Looking up…</p><p class="result-sub">${code}</p></div></div></div>`;
 
   try {
-    const snap = await getDoc(fyDocRef('registrations',regId));
+    // 1. Try FY-partitioned path first
+    let snap = await getDoc(fyDocRef('registrations', regId));
+
+    // 2. Fall back to legacy flat collection (pre-FY migration registrations)
+    if(!snap.exists()){
+      try { snap = await getDoc(doc(db,'registrations',regId)); } catch(e){}
+    }
 
     if(!snap.exists()){
-      // Try searching by payment_id as fallback
+      // 3. Search by payment_id or QR code across FY collection
       const allSnap = await getDocs(fyCol('registrations'));
       const found   = allSnap.docs.find(d=>d.data().payment_id===regId||'THS-REG-'+d.id===code);
       if(!found){
@@ -607,6 +613,7 @@ async function processCode(raw){
       await processReg(snap.id, snap.data());
     }
   } catch(e){
+    console.error('Scan lookup error:', e);
     showResult('invalid','✗','Error','Could not look up this code. Check connection.',null,null);
   }
 }
