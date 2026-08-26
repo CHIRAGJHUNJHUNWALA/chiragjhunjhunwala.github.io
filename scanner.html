@@ -591,31 +591,44 @@ async function processCode(raw){
   resultArea.innerHTML = `<div class="result-card valid"><div class="result-header"><div class="result-icon valid"><span class="spinner"></span></div><div><p class="result-title">Looking up…</p><p class="result-sub">${code}</p></div></div></div>`;
 
   try {
-    let regId  = code.startsWith('THS-REG-') ? code.replace('THS-REG-','') : code;
-    let regDoc = null;
+    let regId   = code.startsWith('THS-REG-') ? code.replace('THS-REG-','') : code;
+    let regDoc  = null;
     let regData = null;
 
-    // 1. Search across ALL fy/{fyId}/registrations subcollections (any FY)
+    console.log('[Scanner] code:', code, '| regId:', regId, '| _activeFY:', _activeFY);
+
+    // 1. Collection group — searches ALL fy/{fyId}/registrations subcollections
     try {
       const grpSnap = await getDocs(collectionGroup(db, 'registrations'));
-      const found   = grpSnap.docs.find(d =>
+      console.log('[Scanner] collectionGroup total docs:', grpSnap.size);
+      const found = grpSnap.docs.find(d =>
         d.id === regId ||
         d.data().payment_id === regId ||
         'THS-REG-' + d.id === code
       );
-      if(found){ regDoc = found.id; regData = found.data(); }
-    } catch(e){ console.warn('collectionGroup search failed:', e); }
+      if(found){
+        console.log('[Scanner] Found in collectionGroup path:', found.ref.path);
+        regDoc = found.id; regData = found.data();
+      } else {
+        console.log('[Scanner] Not found in collectionGroup. Doc IDs:', grpSnap.docs.map(d=>d.id).slice(0,5));
+      }
+    } catch(e){ console.warn('[Scanner] collectionGroup failed:', e.code, e.message); }
 
-    // 2. Legacy flat collection fallback
+    // 2. Legacy flat collection
     if(!regData){
       try {
         const snap = await getDoc(doc(db,'registrations',regId));
+        console.log('[Scanner] legacy flat exists:', snap.exists());
         if(snap.exists()){ regDoc = snap.id; regData = snap.data(); }
-      } catch(e){ console.warn('legacy lookup failed:', e); }
+      } catch(e){ console.warn('[Scanner] legacy lookup failed:', e.code, e.message); }
     }
 
     if(!regData){
-      showResult('invalid','✗','Invalid QR','This QR code was not found in the system.',null,null);
+      resultArea.innerHTML = `<div class="result-card invalid">
+        <div class="result-header"><div class="result-icon invalid">✗</div>
+        <div><p class="result-title">Not Found</p>
+        <p class="result-sub" style="font-family:monospace;font-size:0.7rem">ID: ${regId}<br>FY: ${_activeFY}<br>Open console for details</p>
+        </div></div></div>`;
       addHistory(code,'invalid');
       return;
     }
@@ -623,8 +636,8 @@ async function processCode(raw){
     await processReg(regDoc, regData);
 
   } catch(e){
-    console.error('Scan lookup error:', e);
-    showResult('invalid','✗','Error','Could not look up this code. Check connection.',null,null);
+    console.error('[Scanner] Outer error:', e);
+    showResult('invalid','✗','Error',`${e.message||'Check connection'} | FY: ${_activeFY}`,null,null);
   }
 }
 
