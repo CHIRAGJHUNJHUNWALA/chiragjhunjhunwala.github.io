@@ -438,6 +438,14 @@ async function submitBooking(){
   const endH   = h + hours;
   const timeTo = `${String(endH).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
 
+  // Determine FY from booking date (April–March cycle)
+  function bookingFY(dateStr){
+    const d = new Date(dateStr + 'T00:00');
+    const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1;
+    return `${y}-${y+1}`;
+  }
+  const fyKey = bookingFY(date);
+
   const btn = document.querySelector('.submit-btn');
   btn.disabled    = true;
   btn.textContent = 'Submitting…';
@@ -455,10 +463,12 @@ async function submitBooking(){
     }, 'studio-booking');
     const db = getFirestore(app);
 
-    await addDoc(collection(db,'studioEnquiries'),{
+    // Write to fy/{bookingDateFY}/studioEnquiries
+    await addDoc(collection(db,'fy',fyKey,'studioEnquiries'),{
       name, phone, date, day,
       timeFrom: timeFrom24, timeTo,
       hours, purpose,
+      fyKey,
       timestamp: new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
       status: 'pending',
     });
