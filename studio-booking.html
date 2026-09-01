@@ -402,7 +402,20 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
 
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getFirestore, collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey:"AIzaSyCvGMYRUhDAr4r2zoTbnRJ3PiCwhCWxLFs",
+  authDomain:"the-happening-space.firebaseapp.com",
+  projectId:"the-happening-space",
+  storageBucket:"the-happening-space.firebasestorage.app",
+  messagingSenderId:"834905576967",
+  appId:"1:834905576967:web:b16776452b9111b6483ca2"
+});
+const db = getFirestore(app);
+
 const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
 // Set minimum date to today
@@ -413,11 +426,26 @@ function onDateChange(){
   const val = document.getElementById('f-date').value;
   const dayEl = document.getElementById('f-day');
   if(!val){ dayEl.value=''; return; }
-  const d = new Date(val+'T00:00');
-  dayEl.value = DAYS[d.getDay()];
+  dayEl.value = DAYS[new Date(val+'T00:00').getDay()];
+}
+window.onDateChange = onDateChange;
+
+// Determine FY from booking date (April–March cycle)
+function bookingFY(dateStr){
+  const d = new Date(dateStr+'T00:00');
+  const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear()-1;
+  return `${y}-${y+1}`;
 }
 
-// SUBMIT — saves to Firestore
+function convertTo24(t){
+  if(!t) return '00:00';
+  const [time,mod] = t.split(' ');
+  let [h,m] = time.split(':').map(Number);
+  if(mod==='PM' && h!==12) h+=12;
+  if(mod==='AM' && h===12) h=0;
+  return `${String(h).padStart(2,'0')}:${String(m||0).padStart(2,'0')}`;
+}
+
 async function submitBooking(){
   const name    = document.getElementById('f-name').value.trim();
   const phone   = '+91' + document.getElementById('f-phone').value.replace(/\D/g,'');
@@ -432,42 +460,16 @@ async function submitBooking(){
     return;
   }
 
-  // Calculate end time from start + duration
   const timeFrom24 = convertTo24(start);
-  const [h,m]  = timeFrom24.split(':').map(Number);
-  const endH   = h + hours;
-  const timeTo = `${String(endH).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-
-  // Determine FY from booking date (April–March cycle)
-  function bookingFY(dateStr){
-    const d = new Date(dateStr + 'T00:00');
-    const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1;
-    return `${y}-${y+1}`;
-  }
-  const fyKey = bookingFY(date);
+  const [h,m] = timeFrom24.split(':').map(Number);
+  const timeTo = `${String(h+hours).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  const fyKey  = bookingFY(date);
 
   const btn = document.querySelector('.submit-btn');
-  btn.disabled    = true;
+  btn.disabled = true;
   btn.textContent = 'Submitting…';
 
   try {
-    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    const { getFirestore, collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-
-    const firebaseConfig = {
-      apiKey:"AIzaSyCvGMYRUhDAr4r2zoTbnRJ3PiCwhCWxLFs",
-      authDomain:"the-happening-space.firebaseapp.com",
-      projectId:"the-happening-space",
-      storageBucket:"the-happening-space.firebasestorage.app",
-      messagingSenderId:"834905576967",
-      appId:"1:834905576967:web:b16776452b9111b6483ca2"
-    };
-
-    // Reuse existing app if already initialized
-    const existing = getApps().find(a=>a.name==='studio-booking');
-    const app = existing || initializeApp(firebaseConfig, 'studio-booking');
-    const db  = getFirestore(app);
-
     await addDoc(collection(db,'fy',fyKey,'studioEnquiries'),{
       name, phone, date, day,
       timeFrom: timeFrom24, timeTo,
@@ -475,27 +477,16 @@ async function submitBooking(){
       timestamp: new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
       status: 'pending',
     });
-
     document.getElementById('bookingForm').style.display = 'none';
     document.getElementById('successMsg').classList.add('show');
-
   } catch(e){
-    console.error('Studio booking submit error:', e);
-    btn.disabled    = false;
+    console.error('Booking error:', e);
+    btn.disabled = false;
     btn.textContent = 'Request Booking';
-    // Show actual error so we can diagnose — remove this detail in production
-    alert('Error: ' + (e?.code||'') + ' — ' + (e?.message||'Unknown') + '\n\nPlease screenshot this and try again.');
+    alert('Error: ' + (e?.code||e?.message||'Unknown') + '\n\nPlease try again or call us directly.');
   }
 }
-
-function convertTo24(t){
-  if(!t) return '00:00';
-  const [time,mod] = t.split(' ');
-  let [h,m] = time.split(':').map(Number);
-  if(mod==='PM' && h!==12) h+=12;
-  if(mod==='AM' && h===12) h=0;
-  return `${String(h).padStart(2,'0')}:${String(m||0).padStart(2,'0')}`;
-}
+window.submitBooking = submitBooking;
 
 // NAV
 function toggleMenu(){
@@ -505,6 +496,7 @@ function toggleMenu(){
   b.classList.toggle('open',open);
   document.body.style.overflow=open?'hidden':'';
 }
+window.toggleMenu = toggleMenu;
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
     document.getElementById('navOverlay').classList.remove('open');
