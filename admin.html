@@ -921,8 +921,14 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           <div class="form-group">
             <label>Delay Duration *</label>
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem">
-              ${[5,10,15,20,30,45,60].map(m=>`<button type="button" class="delay-min-btn" onclick="setDelayMins(${m})" style="padding:0.4rem 0.85rem;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-size:0.82rem;font-family:'DM Sans',sans-serif;transition:all 0.15s">${m} min</button>`).join('')}
-              <input type="number" id="delayMinsCustom" min="1" max="120" placeholder="Custom mins" oninput="setDelayMins(parseInt(this.value)||0)" style="width:100px;background:var(--bg2);border:1px solid var(--border2);padding:0.4rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none">
+              <button type="button" class="delay-min-btn" onclick="setDelayMins(5)"  style="padding:0.4rem 0.85rem;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-size:0.82rem;font-family:'DM Sans',sans-serif;transition:all 0.15s">5 min</button>
+              <button type="button" class="delay-min-btn" onclick="setDelayMins(10)" style="padding:0.4rem 0.85rem;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-size:0.82rem;font-family:'DM Sans',sans-serif;transition:all 0.15s">10 min</button>
+              <button type="button" class="delay-min-btn" onclick="setDelayMins(15)" style="padding:0.4rem 0.85rem;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-size:0.82rem;font-family:'DM Sans',sans-serif;transition:all 0.15s">15 min</button>
+              <button type="button" class="delay-min-btn" onclick="setDelayMins(20)" style="padding:0.4rem 0.85rem;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-size:0.82rem;font-family:'DM Sans',sans-serif;transition:all 0.15s">20 min</button>
+              <button type="button" class="delay-min-btn" onclick="setDelayMins(30)" style="padding:0.4rem 0.85rem;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-size:0.82rem;font-family:'DM Sans',sans-serif;transition:all 0.15s">30 min</button>
+              <button type="button" class="delay-min-btn" onclick="setDelayMins(45)" style="padding:0.4rem 0.85rem;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-size:0.82rem;font-family:'DM Sans',sans-serif;transition:all 0.15s">45 min</button>
+              <button type="button" class="delay-min-btn" onclick="setDelayMins(60)" style="padding:0.4rem 0.85rem;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-size:0.82rem;font-family:'DM Sans',sans-serif;transition:all 0.15s">60 min</button>
+              <input type="number" id="delayMinsCustom" min="1" max="120" placeholder="Custom" oninput="setDelayMins(parseInt(this.value)||0)" style="width:80px;background:var(--bg2);border:1px solid var(--border2);padding:0.4rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none">
             </div>
             <input type="hidden" id="delayMins" value="0">
           </div>
