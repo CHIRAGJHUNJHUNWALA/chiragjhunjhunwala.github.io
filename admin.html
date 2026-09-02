@@ -2573,15 +2573,16 @@ async function initApp(){
 
 /* Start / restart all FY-dependent listeners — called after FY is set or changed */
 let _unsubRentals=null, _unsubSchedule=null, _unsubBatchStudents=null,
-    _unsubStaff=null, _unsubExpenses=null;
+    _unsubStaff=null, _unsubExpenses=null, _unsubStudioEnq=null;
 
 async function startListeners(){
   // Unsubscribe any existing FY-dependent listeners
-  [_unsubRentals,_unsubSchedule,_unsubBatchStudents,_unsubStaff,_unsubExpenses]
+  [_unsubRentals,_unsubSchedule,_unsubBatchStudents,_unsubStaff,_unsubExpenses,_unsubStudioEnq]
     .forEach(u=>{ try{if(u)u()}catch(e){} });
   showToast('Loading data…');
-  _unsubStaff    = listenStaffPayments();
-  _unsubExpenses = listenExpenses();
+  _unsubStaff     = listenStaffPayments();
+  _unsubExpenses  = listenExpenses();
+  _unsubStudioEnq = listenStudioEnquiries();
   await Promise.all([listenWorkshops(), listenRegistrations(), loadWsSettlements()]);
   _unsubBatchStudents = listenBatchStudents();
   _unsubSchedule      = listenSchedule();
@@ -6885,16 +6886,60 @@ window.selectCheckinSlot = function(id){
 };
 
 window.adminCheckIn = async function(regId, name){
+  // Find the registration to check if it's multi-slot
+  const reg = registrations.find(r=>r.id===regId);
+  const slotParts = (reg?.slots||'').split('|').map(s=>s.trim()).filter(Boolean);
+
+  if(slotParts.length > 1){
+    // Multi-slot: show picker for which slot to check in
+    const checkedInSlots = reg?.checkedInSlots||{};
+    const buttons = slotParts.map((sp,i)=>{
+      const key  = 's'+(i+1);
+      const done = !!checkedInSlots[key];
+      const song = sp.split('·')[0].trim();
+      return done
+        ? `<div style="padding:0.6rem 1rem;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);font-size:0.82rem;color:var(--green);margin-bottom:0.4rem">✓ ${song} — Checked in at ${checkedInSlots[key]}</div>`
+        : `<button onclick="adminCheckInSlot('${regId}','${key}','${song.replace(/'/g,"\\'")}','${name.replace(/'/g,"\\'")}',this)"
+            style="width:100%;text-align:left;padding:0.6rem 1rem;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-size:0.82rem;cursor:pointer;margin-bottom:0.4rem">
+            ○ ${song} — Check In Now
+          </button>`;
+    }).join('');
+    openModal('takeAttModal');
+    document.getElementById('takeAttModal').querySelector('.modal-body').innerHTML = `
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem">Select which class to check in <strong>${name}</strong> for:</p>
+      ${buttons}
+      <button class="btn btn-ghost" onclick="closeModal('takeAttModal')" style="width:100%;margin-top:0.5rem">Cancel</button>
+    `;
+    return;
+  }
+
+  // Single slot: check in directly
   const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
   try {
     await updateDoc(fyDocRef('registrations',regId), {
-      checkedIn:true,
-      checkedInAt:time,
-      checkedInBy: currentAdminUser || 'Admin'
+      checkedIn:true, checkedInAt:time,
+      checkedInBy: currentAdminUser||'Admin'
     });
     showToast(`${name} checked in ✓`);
+  } catch(e){ showToast('Check-in failed — try again','error'); }
+};
+
+window.adminCheckInSlot = async function(regId, slotKey, slotLabel, name, btn){
+  if(btn){ btn.disabled=true; btn.textContent='Checking in…'; }
+  const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  try {
+    const reg = registrations.find(r=>r.id===regId);
+    const slotParts = (reg?.slots||'').split('|').map(s=>s.trim()).filter(Boolean);
+    const updatedSlots = {...(reg?.checkedInSlots||{}), [slotKey]: time};
+    const allDone = slotParts.every((_,i)=>!!updatedSlots['s'+(i+1)]);
+    const update = { checkedInSlots: updatedSlots, checkedInBy: currentAdminUser||'Admin' };
+    if(allDone){ update.checkedIn = true; update.checkedInAt = time; }
+    await updateDoc(fyDocRef('registrations',regId), update);
+    if(btn){ btn.style.background='rgba(34,197,94,0.15)'; btn.style.color='var(--green)'; btn.textContent='✓ '+slotLabel+' — Checked in'; btn.disabled=true; }
+    showToast(`${name} — ${slotLabel} ✓`);
   } catch(e){
-    showToast('Check-in failed — try again','error');
+    if(btn){ btn.disabled=false; btn.textContent='○ '+slotLabel+' — Check In Now'; }
+    showToast('Check-in failed','error');
   }
 };
 
@@ -6978,21 +7023,22 @@ function initAboutEditor(data){
 let studioEnquiries   = [];
 let enquiriesFilter   = 'pending';
 
-// Live listener — also updates badge
-onSnapshot(fyCol('studioEnquiries'), snap=>{
-  studioEnquiries = snap.docs.map(d=>({id:d.id,...d.data()}))
-    .sort((a,b)=>a.date?.localeCompare(b.date||'')||0);
-  // Update pending badge
-  const pending = studioEnquiries.filter(e=>e.status==='pending').length;
-  const badge   = document.getElementById('enquiryBadge');
-  if(badge){
-    badge.textContent    = pending;
-    badge.style.display  = pending>0 ? 'inline' : 'none';
-  }
-  if(document.getElementById('view-studioEnquiries')?.classList.contains('active')){
-    renderStudioEnquiries();
-  }
-});
+// Listener — called from startListeners() after FY is set
+function listenStudioEnquiries(){
+  return onSnapshot(fyCol('studioEnquiries'), snap=>{
+    studioEnquiries = snap.docs.map(d=>({id:d.id,...d.data()}))
+      .sort((a,b)=>a.date?.localeCompare(b.date||'')||0);
+    const pending = studioEnquiries.filter(e=>e.status==='pending').length;
+    const badge   = document.getElementById('enquiryBadge');
+    if(badge){
+      badge.textContent    = pending;
+      badge.style.display  = pending>0 ? 'inline' : 'none';
+    }
+    if(document.getElementById('view-studioEnquiries')?.classList.contains('active')){
+      renderStudioEnquiries();
+    }
+  });
+}
 
 window.filterEnquiries = function(status, el){
   enquiriesFilter = status;
