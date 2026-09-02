@@ -884,6 +884,53 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
     </div>
 
+    <!-- DELAY UPDATE MODAL -->
+    <div class="modal-backdrop" id="delayModal">
+      <div class="modal" style="max-width:520px">
+        <div class="modal-head">
+          <div>
+            <h2 class="modal-title">🕐 Send Delay Update</h2>
+            <p style="font-size:0.75rem;color:var(--muted);margin-top:0.2rem" id="delayWsName">Workshop</p>
+          </div>
+          <button class="modal-close" onclick="closeModal('delayModal')">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Which class is delayed? *</label>
+            <select id="delaySlotPicker" onchange="updateDelayPreview()" style="width:100%;background:var(--bg2);border:1px solid var(--border2);padding:0.55rem 0.75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none">
+              <option value="">— Select class slot —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Delay Duration *</label>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem">
+              ${[5,10,15,20,30,45,60].map(m=>`<button type="button" class="delay-min-btn" onclick="setDelayMins(${m})" style="padding:0.4rem 0.85rem;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-size:0.82rem;font-family:'DM Sans',sans-serif;transition:all 0.15s">${m} min</button>`).join('')}
+              <input type="number" id="delayMinsCustom" min="1" max="120" placeholder="Custom mins" oninput="setDelayMins(parseInt(this.value)||0)" style="width:100px;background:var(--bg2);border:1px solid var(--border2);padding:0.4rem 0.65rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none">
+            </div>
+            <input type="hidden" id="delayMins" value="0">
+          </div>
+          <div id="delayPreview" style="display:none;background:rgba(245,230,66,0.06);border:1px solid rgba(245,230,66,0.25);padding:1rem;margin-bottom:0.75rem">
+            <p style="font-size:0.58rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--yellow);margin-bottom:0.6rem;font-family:'Syne',sans-serif">WhatsApp Message Preview</p>
+            <p id="delayMsgPreview" style="font-size:0.82rem;color:var(--text);line-height:1.6;white-space:pre-line"></p>
+          </div>
+          <p id="delayRecipients" style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem"></p>
+          <div id="delayProgress" style="display:none;margin-bottom:0.75rem">
+            <div style="height:4px;background:var(--border);border-radius:999px;overflow:hidden">
+              <div id="delayProgressBar" style="height:100%;width:0%;background:var(--green);transition:width 0.3s"></div>
+            </div>
+            <p id="delayProgressText" style="font-size:0.75rem;color:var(--muted);margin-top:0.4rem;text-align:center"></p>
+          </div>
+          <div style="display:flex;gap:0.75rem;justify-content:flex-end">
+            <button class="btn btn-ghost" onclick="closeModal('delayModal')">Cancel</button>
+            <button class="btn" id="delaySendBtn" onclick="sendDelayUpdate()" disabled
+              style="background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.4);color:#25d366;min-width:180px">
+              📲 Send WhatsApp Updates
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- TAKE ATTENDANCE MODAL -->
     <div class="modal-backdrop" id="takeAttModal">
       <div class="modal" style="max-width:560px;width:100%">
@@ -3653,7 +3700,191 @@ window.cancelSlot = async function(wsId, slotId, slotNum){
 };
 
 /* ══════════════════════════════════════
-   AISENSY SETTINGS
+   WORKSHOP DELAY UPDATE — WhatsApp
+══════════════════════════════════════ */
+let _delayWsId = null;
+
+window.openDelayModal = function(wsId){
+  _delayWsId = wsId;
+  const w = workshops.find(x=>x.id===wsId);
+  if(!w){ showToast('Workshop not found','error'); return; }
+
+  // Set workshop name
+  document.getElementById('delayWsName').textContent = w.artist + (w.style?' · '+w.style:'');
+
+  // Populate slot picker
+  const slots = (w.slots||[]).filter(s=>!s.cancelled);
+  const picker = document.getElementById('delaySlotPicker');
+  picker.innerHTML = '<option value="">— Select class slot —</option>' +
+    slots.map((s,i)=>`<option value="${i}">${s.date||s.dateISO||'Class '+(i+1)}${s.song?' · ♪ '+s.song:''}${s.time?' · '+s.time:''}</option>`).join('');
+
+  // Reset state
+  document.getElementById('delayMins').value = '0';
+  document.getElementById('delayPreview').style.display = 'none';
+  document.getElementById('delayRecipients').textContent = '';
+  document.getElementById('delayProgress').style.display = 'none';
+  document.getElementById('delaySendBtn').disabled = true;
+  document.querySelectorAll('.delay-min-btn').forEach(b=>b.style.background='var(--bg3)');
+  const custom = document.getElementById('delayMinsCustom');
+  if(custom) custom.value = '';
+
+  openModal('delayModal');
+};
+
+window.setDelayMins = function(mins){
+  document.getElementById('delayMins').value = mins;
+  // Highlight selected quick button
+  document.querySelectorAll('.delay-min-btn').forEach(b=>{
+    const active = parseInt(b.textContent) === mins;
+    b.style.background = active ? 'rgba(245,230,66,0.12)' : 'var(--bg3)';
+    b.style.borderColor = active ? 'rgba(245,230,66,0.5)' : 'var(--border2)';
+    b.style.color = active ? 'var(--yellow)' : 'var(--muted)';
+  });
+  updateDelayPreview();
+};
+
+window.updateDelayPreview = function(){
+  const w    = workshops.find(x=>x.id===_delayWsId);
+  if(!w) return;
+  const idx  = parseInt(document.getElementById('delaySlotPicker').value);
+  const mins = parseInt(document.getElementById('delayMins').value)||0;
+  if(isNaN(idx)||idx<0||!mins){ document.getElementById('delaySendBtn').disabled=true; return; }
+
+  const slot = (w.slots||[]).filter(s=>!s.cancelled)[idx];
+  if(!slot){ return; }
+
+  // Build slot display string: "Sunday 6 Jul · 5:00 PM · Kesariya"
+  const dateShort = (slot.date||slot.dateISO||'').replace(/\d{4}/,'').replace(/,/,'').trim();
+  const timeStart = (slot.time||slot.timeFrom||'').split('–')[0].split('-')[0].trim();
+  const song      = (slot.song||'').replace(/^♪\s*/,'');
+  const slotStr   = [dateShort, timeStart, song].filter(Boolean).join(' · ');
+
+  // Calculate new start time
+  function addMinsTo(timeStr, addMins){
+    const clean = timeStr.trim();
+    // Parse "5:00 PM" or "17:00"
+    let h,m,ampm='';
+    if(clean.includes('AM')||clean.includes('PM')){
+      ampm = clean.includes('PM')?'PM':'AM';
+      const t = clean.replace(/AM|PM/,'').trim();
+      [h,m] = t.split(':').map(Number);
+      if(ampm==='PM' && h!==12) h+=12;
+      if(ampm==='AM' && h===12) h=0;
+    } else {
+      [h,m] = clean.split(':').map(Number);
+    }
+    const total = h*60+(m||0)+addMins;
+    const nh = Math.floor(total/60)%24;
+    const nm = total%60;
+    const nap = nh>=12?'PM':'AM';
+    const fh  = nh>12?nh-12:nh||12;
+    return `${fh}:${String(nm).padStart(2,'0')} ${nap}`;
+  }
+  const newTime = addMinsTo(timeStart, mins);
+  const artist  = w.artist||'The Happening Space';
+
+  // Count registrations for this slot
+  const slotId = slot.id||('s'+(idx+1));
+  const regsForSlot = registrations.filter(r=>{
+    if(r.workshopId !== _delayWsId && r.workshop !== w.artist) return false;
+    const rSlots = (r.slots||'').toLowerCase();
+    return rSlots.includes((slot.song||'').toLowerCase()) ||
+           rSlots.includes((slot.date||'').toLowerCase().slice(0,6)) ||
+           (r.selectedSlots||[]).includes(slotId);
+  });
+
+  document.getElementById('delayRecipients').textContent =
+    `📋 ${regsForSlot.length} student${regsForSlot.length!==1?'s':''} registered for this slot`;
+
+  // Build preview using approved template
+  const preview = `Hey [Name], quick heads up -
+
+The [${slotStr}] class with [${artist}] is running [${mins}] minutes late.
+
+New start time: [${newTime}]
+Venue: The Happening Space, Surat
+
+Apologies for the wait, see you soon!
+— The Happening Space`;
+
+  document.getElementById('delayMsgPreview').textContent = preview;
+  document.getElementById('delayPreview').style.display  = 'block';
+  document.getElementById('delaySendBtn').disabled = regsForSlot.length === 0;
+
+  // Store data for send
+  window._delayData = { w, slot, slotStr, artist, mins, newTime, regsForSlot, slotId };
+};
+
+window.sendDelayUpdate = async function(){
+  const d = window._delayData;
+  if(!d||!d.regsForSlot?.length){ showToast('No recipients found','error'); return; }
+
+  // Get AiSensy API key
+  let apiKey = '';
+  try {
+    const snap = await getDoc(doc(db,'settings','aisensy'));
+    apiKey = snap.data()?.apiKey||'';
+  } catch(e){}
+  if(!apiKey){
+    showToast('AiSensy API key not set — go to Settings → AiSensy','error');
+    return;
+  }
+
+  const btn = document.getElementById('delaySendBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  document.getElementById('delayProgress').style.display = 'block';
+
+  let sent=0, failed=0;
+  const total = d.regsForSlot.length;
+
+  for(const reg of d.regsForSlot){
+    const phone     = (reg.phone||'').replace(/\D/g,'').slice(-10);
+    const firstName = (reg.name||'Student').split(' ')[0];
+    if(!phone){ failed++; continue; }
+
+    try {
+      await fetch('https://backend.aisensy.com/campaign/t1/api/v2',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          apiKey,
+          campaignName: 'ths_delay_update', // ← update to your exact template name
+          destination: '+91'+phone,
+          userName: 'The Happening Space',
+          templateParams: [
+            firstName,          // {{1}} Hey [John]
+            d.slotStr,          // {{2}} Sunday 6 Jul · 5:00 PM · Kesariya
+            d.artist,           // {{3}} Heet Samani
+            String(d.mins),     // {{4}} 15
+            d.newTime           // {{5}} 5:15 PM
+          ],
+          source: 'new-landing-prod',
+          media:{}, buttons:[], carouselCards:[], location:{},
+          paramsFallbackValue:{ FirstName:'Student' }
+        })
+      });
+      sent++;
+    } catch(e){
+      console.warn('WA failed for',phone,e);
+      failed++;
+    }
+
+    // Update progress
+    const pct = Math.round(((sent+failed)/total)*100);
+    document.getElementById('delayProgressBar').style.width = pct+'%';
+    document.getElementById('delayProgressText').textContent = `${sent+failed} / ${total} sent`;
+
+    // Small delay to avoid rate limiting
+    if(sent+failed < total) await new Promise(r=>setTimeout(r,300));
+  }
+
+  btn.textContent = `✓ Sent ${sent} · Failed ${failed}`;
+  btn.style.background = 'rgba(34,197,94,0.12)';
+  showToast(`Delay updates sent: ${sent} successful${failed?' · '+failed+' failed':''}`, failed?'error':'success');
+};
+
+/* ══════════════════════════════════════
 ══════════════════════════════════════ */
 async function saveAisensyKey(key){
   try {
@@ -4620,6 +4851,9 @@ window.openWsDetail = function(id){
         </button>
         <button class="btn btn-outline" onclick="document.getElementById('wsDetailPanel').remove();openManualStudent('${w.id}')">
           <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Add Student
+        </button>
+        <button class="btn btn-outline" style="border-color:rgba(245,230,66,0.4);color:var(--yellow)" onclick="openDelayModal('${w.id}')">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Send Delay Update
         </button>
       </div>
     </div>`;
