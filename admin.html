@@ -511,11 +511,28 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <div><h1 class="page-title" id="settingsPageTitle">Account</h1><p class="page-sub" id="settingsPageSub">Logged in as <span id="settingsCurrentUser">—</span></p></div>
       </div>
       <!-- Master sees change password form -->
-      <div id="settingsMasterView" style="display:none;max-width:420px">
-        <div style="background:var(--bg2);border:1px solid var(--border);padding:1.5rem">
+      <div id="settingsMasterView" style="display:none;max-width:480px">
+        <div style="background:var(--bg2);border:1px solid var(--border);padding:1.5rem;margin-bottom:1rem">
           <p style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem;font-family:'Syne',sans-serif">Admin Access</p>
           <p style="font-size:0.82rem;color:var(--text);margin-bottom:0.5rem;line-height:1.6">Login is now via <strong>Phone OTP</strong> — no passwords needed.</p>
           <p style="font-size:0.75rem;color:var(--muted);line-height:1.7">To add or remove an admin, update the <code style="background:var(--bg3);padding:0.1rem 0.3rem;font-size:0.7rem">ADMIN_PHONES</code> object in admin.html and the Firestore security rules in Firebase Console.</p>
+        </div>
+        <!-- AiSensy API Key -->
+        <div style="background:var(--bg2);border:1px solid var(--border);padding:1.5rem">
+          <p style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem;font-family:'Syne',sans-serif">WhatsApp / AiSensy</p>
+          <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.6">Used for workshop delay updates, booking confirmations and other WhatsApp automations.</p>
+          <div class="form-group">
+            <label>AiSensy API Key</label>
+            <div style="display:flex;gap:0.5rem">
+              <input type="password" id="aisensyKeyInput" placeholder="Paste your AiSensy API key here"
+                style="flex:1;background:var(--bg3);border:1px solid var(--border2);padding:0.55rem 0.75rem;color:var(--text);font-family:'DM Mono',monospace;font-size:0.78rem;outline:none">
+              <button class="btn btn-outline btn-sm" onclick="document.getElementById('aisensyKeyInput').type=document.getElementById('aisensyKeyInput').type==='password'?'text':'password'">👁</button>
+            </div>
+          </div>
+          <button class="btn btn-red" onclick="saveAisensyKeyFromUI()">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Save API Key
+          </button>
+          <p id="aisensyKeySaved" style="display:none;font-size:0.75rem;color:var(--green);margin-top:0.5rem">✓ API key saved successfully</p>
         </div>
       </div>
       <div id="settingsStaffView" style="display:none;max-width:420px">
@@ -2681,7 +2698,7 @@ window.showView = function(id){
     if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+id+"'")) n.classList.add('active');
   });
   if(id==='marketing')      renderMarketing();
-  if(id==='abouteditor') loadAboutContent();
+  if(id==='settings') loadAisensyKey();
   if(id==='batches')     renderBatchesView();
   if(id==='editbatches') renderEditBatches();
   if(id==='gallery')     renderGallery();
@@ -3886,6 +3903,28 @@ window.sendDelayUpdate = async function(){
 
 /* ══════════════════════════════════════
 ══════════════════════════════════════ */
+window.saveAisensyKeyFromUI = async function(){
+  const key = document.getElementById('aisensyKeyInput').value.trim();
+  if(!key){ showToast('Please paste your AiSensy API key','error'); return; }
+  try {
+    await setDoc(doc(db,'settings','aisensy'),{ apiKey: key },{ merge:true });
+    document.getElementById('aisensyKeySaved').style.display = 'block';
+    setTimeout(()=>{ document.getElementById('aisensyKeySaved').style.display='none'; },3000);
+    showToast('AiSensy API key saved ✓');
+  } catch(e){
+    showToast('Failed to save key — try again','error');
+  }
+};
+
+async function loadAisensyKey(){
+  try {
+    const snap = await getDoc(doc(db,'settings','aisensy'));
+    const key  = snap.data()?.apiKey||'';
+    const inp  = document.getElementById('aisensyKeyInput');
+    if(inp && key) inp.value = key;
+  } catch(e){}
+}
+
 async function saveAisensyKey(key){
   try {
     await setDoc(doc(db,'settings','aisensy'),{ apiKey: key }, { merge: true });
