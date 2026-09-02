@@ -351,6 +351,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
         <div class="form-field">
           <label>Date *</label>
           <input type="date" id="f-date" onchange="onDateChange()">
+        </div>
         <div class="form-field">
           <label>Day</label>
           <input type="text" id="f-day" readonly placeholder="Auto from date"
@@ -385,6 +386,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
         <input type="text" id="f-purpose" placeholder="e.g. Dance rehearsal, photo shoot, event…">
       </div>
 
+      <div id="formError" style="display:none;background:rgba(229,57,53,0.12);border:1px solid rgba(229,57,53,0.4);color:#ef5350;padding:0.75rem 1rem;font-size:0.85rem;margin-bottom:1rem"></div>
+
       <button class="submit-btn" onclick="submitBooking()">
         Request Booking
         <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -406,15 +409,126 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-const app = initializeApp({
-  apiKey:"AIzaSyCvGMYRUhDAr4r2zoTbnRJ3PiCwhCWxLFs",
-  authDomain:"the-happening-space.firebaseapp.com",
-  projectId:"the-happening-space",
-  storageBucket:"the-happening-space.firebasestorage.app",
-  messagingSenderId:"834905576967",
-  appId:"1:834905576967:web:b16776452b9111b6483ca2"
+let db;
+try {
+  const app = initializeApp({
+    apiKey:"AIzaSyCvGMYRUhDAr4r2zoTbnRJ3PiCwhCWxLFs",
+    authDomain:"the-happening-space.firebaseapp.com",
+    projectId:"the-happening-space",
+    storageBucket:"the-happening-space.firebasestorage.app",
+    messagingSenderId:"834905576967",
+    appId:"1:834905576967:web:b16776452b9111b6483ca2"
+  });
+  db = getFirestore(app);
+} catch(e){
+  console.error('Firebase init failed:', e);
+}
+
+const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+document.getElementById('f-date').min = new Date().toLocaleDateString('en-CA');
+
+function showError(msg){
+  const el = document.getElementById('formError');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+function clearError(){ document.getElementById('formError').style.display = 'none'; }
+
+function onDateChange(){
+  const val = document.getElementById('f-date').value;
+  const dayEl = document.getElementById('f-day');
+  if(!val){ dayEl.value=''; return; }
+  dayEl.value = DAYS[new Date(val+'T00:00').getDay()];
+}
+window.onDateChange = onDateChange;
+
+function bookingFY(dateStr){
+  const d = new Date(dateStr+'T00:00');
+  const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear()-1;
+  return `${y}-${y+1}`;
+}
+
+function convertTo24(t){
+  if(!t) return '00:00';
+  const [time,mod] = t.split(' ');
+  let [h,m] = time.split(':').map(Number);
+  if(mod==='PM' && h!==12) h+=12;
+  if(mod==='AM' && h===12) h=0;
+  return `${String(h).padStart(2,'0')}:${String(m||0).padStart(2,'0')}`;
+}
+
+async function submitBooking(){
+  clearError();
+  const name    = document.getElementById('f-name').value.trim();
+  const rawPhone = document.getElementById('f-phone').value.replace(/\D/g,'');
+  const phone   = '+91' + rawPhone;
+  const date    = document.getElementById('f-date').value;
+  const day     = document.getElementById('f-day').value;
+  const start   = document.getElementById('f-start').value;
+  const hours   = parseInt(document.getElementById('f-hours').value)||1;
+  const purpose = document.getElementById('f-purpose').value.trim();
+
+  if(!name)            return showError('Please enter your name.');
+  if(rawPhone.length !== 10) return showError('Please enter a valid 10-digit phone number.');
+  if(!date)            return showError('Please select a date.');
+  if(!start)           return showError('Please select a start time.');
+  if(!purpose)         return showError('Please describe the purpose.');
+
+  if(!db) return showError('Connection error — please refresh the page and try again.');
+
+  const timeFrom24 = convertTo24(start);
+  const [h,m] = timeFrom24.split(':').map(Number);
+  const timeTo = `${String(h+hours).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  const fyKey  = bookingFY(date);
+
+  const btn = document.querySelector('.submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  try {
+    await addDoc(collection(db,'fy',fyKey,'studioEnquiries'),{
+      name, phone, date, day,
+      timeFrom: timeFrom24, timeTo,
+      hours, purpose, fyKey,
+      timestamp: new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
+      status: 'pending',
+    });
+    document.getElementById('bookingForm').style.display = 'none';
+    document.getElementById('successMsg').classList.add('show');
+  } catch(e){
+    console.error('Booking submit error:', e);
+    btn.disabled = false;
+    btn.textContent = 'Request Booking';
+    showError('Could not submit: ' + (e?.code || e?.message || 'Unknown error') + '. Please try again.');
+  }
+}
+window.submitBooking = submitBooking;
+
+function toggleMenu(){
+  const o=document.getElementById('navOverlay');
+  const b=document.getElementById('hamburger');
+  const open=o.classList.toggle('open');
+  b.classList.toggle('open',open);
+  document.body.style.overflow=open?'hidden':'';
+}
+window.toggleMenu = toggleMenu;
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    document.getElementById('navOverlay').classList.remove('open');
+    document.getElementById('hamburger').classList.remove('open');
+    document.body.style.overflow='';
+  }
 });
-const db = getFirestore(app);
+
+const cursor=document.getElementById('cursor');
+const ring=document.getElementById('cursorRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.transform=`translate(${mx}px,${my}px) translate(-50%,-50%)`;});
+(function animRing(){rx+=(mx-rx)*0.14;ry+=(my-ry)*0.14;ring.style.transform=`translate(${rx}px,${ry}px) translate(-50%,-50%)`;requestAnimationFrame(animRing);})();
+document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';ring.style.opacity='0';});
+document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';ring.style.opacity='1';});
+</script>
 
 const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
