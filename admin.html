@@ -4845,14 +4845,26 @@ window.openWsDetail = function(id){
   const existing = document.getElementById('wsDetailPanel');
   if(existing) existing.remove();
 
-  // Count registered students per slot
+  // Count class slots per registration (a 2-class package = 2 slots)
+  function regSlotCount(r){
+    const sel = (r.selectedSlots||[]).length;
+    if(sel > 0) return sel;
+    const piped = (r.slots||'').split('|').filter(Boolean).length;
+    if(piped > 0) return piped;
+    return 1; // fallback: 1 class
+  }
+
+  // Total class slots sold across all registrations
+  const totalClassSlots = regs.reduce((sum, r) => sum + regSlotCount(r), 0);
+
+  // Count class slots registered for a specific slot
   function slotRegCount(s){
     return regs.filter(r=>{
       const rSlots = (r.slots||'').toLowerCase();
       return rSlots.includes((s.song||'').toLowerCase())||
              rSlots.includes((s.date||'').toLowerCase().slice(0,6))||
              (r.selectedSlots||[]).includes(s.id);
-    }).length;
+    }).reduce((sum, r) => sum + regSlotCount(r), 0);
   }
 
   // Backdrop
@@ -4886,7 +4898,7 @@ window.openWsDetail = function(id){
           <span class="pill ${({active:'pill-green',full:'pill-red',cancelled:'pill-orange',completed:'pill-grey',draft:'pill-blue'}[w.status]||'pill-grey')}">${w.status}</span>
           ${w.dateFrom?`<span class="pill pill-grey">${w.dateFrom}${w.dateTo&&w.dateTo!==w.dateFrom?' → '+w.dateTo:''}</span>`:''}
           <span class="pill pill-grey">${slots.length} class${slots.length!==1?'es':''}</span>
-          <span class="pill pill-green">${regs.length} registered</span>
+          <span class="pill pill-green">${totalClassSlots} class${totalClassSlots!==1?'es':''} registered</span>
         </div>
         ${w.desc?`<p style="font-size:0.83rem;color:var(--text-muted);line-height:1.7;margin-bottom:1.25rem">${w.desc}</p>`:''}
         <!-- Slots -->
