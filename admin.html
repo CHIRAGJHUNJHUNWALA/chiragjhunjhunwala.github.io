@@ -3867,29 +3867,40 @@ window.sendDelayUpdate = async function(){
     if(!phone){ failed++; continue; }
 
     try {
-      await fetch('https://backend.aisensy.com/campaign/t1/api/v2',{
+      const res  = await fetch('https://backend.aisensy.com/campaign/t1/api/v2',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
           apiKey,
-          campaignName: 'ths_delay_update', // ← update to your exact template name
+          campaignName: 'ths_delay_update',
           destination: '+91'+phone,
           userName: 'The Happening Space',
           templateParams: [
-            firstName,          // {{1}} Hey [John]
-            d.slotStr,          // {{2}} Sunday 6 Jul · 5:00 PM · Kesariya
-            d.artist,           // {{3}} Heet Samani
-            String(d.mins),     // {{4}} 15
-            d.newTime           // {{5}} 5:15 PM
+            firstName,
+            d.slotStr,
+            d.artist,
+            String(d.mins),
+            d.newTime
           ],
           source: 'new-landing-prod',
           media:{}, buttons:[], carouselCards:[], location:{},
           paramsFallbackValue:{ FirstName:'Student' }
         })
       });
-      sent++;
+      const data = await res.json().catch(()=>({}));
+      console.log('[AiSensy response]', phone, res.status, data);
+      if(res.ok && data.status !== 'error'){ sent++; }
+      else {
+        console.warn('[AiSensy error]', data?.message || data);
+        if(sent+failed === 0){
+          // Show first error prominently
+          document.getElementById('delayProgressText').textContent =
+            'API Error: ' + (data?.message || res.status);
+        }
+        failed++;
+      }
     } catch(e){
-      console.warn('WA failed for',phone,e);
+      console.warn('[AiSensy network error]', phone, e.message);
       failed++;
     }
 
@@ -4830,89 +4841,115 @@ window.setStatus = async function(id, status){
 /* WORKSHOP DETAIL PANEL */
 window.openWsDetail = function(id){
   const w    = workshops.find(x=>x.id===id);
-  const regs = registrations.filter(r=>r.workshop===w.artist);
+  const regs = registrations.filter(r=>r.workshop===w.artist||r.workshopId===id);
   const existing = document.getElementById('wsDetailPanel');
   if(existing) existing.remove();
 
-  const panel = document.createElement('div');
-  panel.id = 'wsDetailPanel';
-  panel.style.cssText = 'position:fixed;top:0;right:0;width:480px;max-width:100vw;height:100vh;background:var(--bg2);border-left:1px solid var(--border2);z-index:400;overflow-y:auto;transform:translateX(100%);transition:transform 0.3s ease;display:flex;flex-direction:column';
+  // Count registered students per slot
+  function slotRegCount(s){
+    return regs.filter(r=>{
+      const rSlots = (r.slots||'').toLowerCase();
+      return rSlots.includes((s.song||'').toLowerCase())||
+             rSlots.includes((s.date||'').toLowerCase().slice(0,6))||
+             (r.selectedSlots||[]).includes(s.id);
+    }).length;
+  }
+
+  // Backdrop
+  const backdrop = document.createElement('div');
+  backdrop.id = 'wsDetailPanel';
+  backdrop.style.cssText = 'position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1rem';
+  backdrop.addEventListener('click', e=>{ if(e.target===backdrop) backdrop.remove(); });
 
   const slots = w.slots||[];
   const bgStyle = w.poster
-    ? `background-image:url('${w.poster}');background-size:cover;background-position:center;padding-top:125%`
-    : `background:${w.posterBg||'linear-gradient(135deg,#1a0407,#bc1f2e)'};padding-top:125%`;
+    ? `background-image:url('${w.poster}');background-size:cover;background-position:center;height:180px`
+    : `background:${w.posterBg||'linear-gradient(135deg,#1a0407,#bc1f2e)'};height:180px`;
 
-  panel.innerHTML = `
-    <div style="position:relative;overflow:hidden">
-      <div style="${bgStyle};position:relative"></div>
-      <div style="position:absolute;inset:0;background:linear-gradient(to top,var(--bg2) 0%,transparent 60%)"></div>
-      <button onclick="document.getElementById('wsDetailPanel').remove()" style="position:absolute;top:1rem;right:1rem;background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--text);width:36px;height:36px;font-size:1.1rem;cursor:pointer;z-index:1">✕</button>
-      <div style="position:absolute;bottom:1.25rem;left:1.5rem">
-        <p style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:0.04em;color:#fff;line-height:1">${w.artist}</p>
-        <p style="font-size:0.72rem;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.5)">${w.style||''}</p>
+  backdrop.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border2);width:100%;max-width:560px;max-height:90vh;overflow-y:auto;position:relative;animation:fadeInUp 0.2s ease">
+      <!-- Poster header -->
+      <div style="position:relative;overflow:hidden">
+        <div style="${bgStyle}"></div>
+        <div style="position:absolute;inset:0;background:linear-gradient(to top,var(--bg2) 0%,transparent 55%)"></div>
+        <button onclick="document.getElementById('wsDetailPanel').remove()"
+          style="position:absolute;top:0.75rem;right:0.75rem;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.2);color:var(--text);width:32px;height:32px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+        <div style="position:absolute;bottom:1rem;left:1.5rem">
+          <p style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:0.04em;color:#fff;line-height:1">${w.artist}</p>
+          <p style="font-size:0.68rem;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.55)">${w.style||''}</p>
+        </div>
       </div>
-    </div>
-    <div style="padding:1.5rem;flex:1">
-      <!-- Meta -->
-      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.25rem">
-        <span class="pill ${({active:'pill-green',full:'pill-red',cancelled:'pill-orange',completed:'pill-grey',draft:'pill-blue'}[w.status]||'pill-grey')}">${w.status}</span>
-        ${w.dateFrom?`<span class="pill pill-grey">${w.dateFrom}${w.dateTo&&w.dateTo!==w.dateFrom?' → '+w.dateTo:''}</span>`:''}
-        <span class="pill pill-grey">${slots.length} slot${slots.length!==1?'s':''}</span>
-      </div>
-      <!-- Desc -->
-      ${w.desc?`<p style="font-size:0.85rem;color:var(--text-muted);line-height:1.7;margin-bottom:1.25rem">${w.desc}</p>`:''}
-      <!-- Slots -->
-      <p style="font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;font-family:'Syne',sans-serif;font-weight:600">Class Details</p>
-      ${slots.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:0.65rem 0.85rem;background:var(--bg3);border:1px solid var(--border);margin-bottom:0.4rem;font-size:0.82rem">
-        <div>
-          <span style="color:var(--text)">${s.song ? '♪ '+s.song : '—'}</span>
-          <span style="color:var(--muted);margin-left:0.5rem;font-size:0.75rem">${s.time}</span>
+      <!-- Body -->
+      <div style="padding:1.25rem 1.5rem">
+        <!-- Pills -->
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.25rem">
+          <span class="pill ${({active:'pill-green',full:'pill-red',cancelled:'pill-orange',completed:'pill-grey',draft:'pill-blue'}[w.status]||'pill-grey')}">${w.status}</span>
+          ${w.dateFrom?`<span class="pill pill-grey">${w.dateFrom}${w.dateTo&&w.dateTo!==w.dateFrom?' → '+w.dateTo:''}</span>`:''}
+          <span class="pill pill-grey">${slots.length} class${slots.length!==1?'es':''}</span>
+          <span class="pill pill-green">${regs.length} registered</span>
         </div>
-        <span style="font-size:0.7rem;color:var(--muted)">${s.spots||0} left</span>
-      </div>`).join('')}
-      <!-- Packages -->
-      <p style="font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;margin-top:1.25rem;font-family:'Syne',sans-serif;font-weight:600">Packages</p>
-      ${(w.packages||[]).map(p=>`<div style="display:flex;justify-content:space-between;padding:0.55rem 0.85rem;background:var(--bg3);border:1px solid var(--border);margin-bottom:0.4rem;font-size:0.82rem">
-        <span style="color:var(--text)">${p.name}</span>
-        <span style="color:var(--yellow);font-family:'Bebas Neue',sans-serif;font-size:1.1rem">₹${parseInt(p.price||0).toLocaleString('en-IN')}</span>
-      </div>`).join('')}
-      <!-- Registrations -->
-      <p style="font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;margin-top:1.25rem;font-family:'Syne',sans-serif;font-weight:600">Registrations (${regs.length})</p>
-      ${regs.length ? regs.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0.85rem;background:var(--bg3);border:1px solid var(--border);margin-bottom:0.35rem;font-size:0.82rem">
-        <div>
-          <span style="color:var(--text);font-weight:500">${r.name||'—'}</span>
-          <span style="color:var(--muted);margin-left:0.5rem;font-size:0.72rem">${r.phone||''}</span>
+        ${w.desc?`<p style="font-size:0.83rem;color:var(--text-muted);line-height:1.7;margin-bottom:1.25rem">${w.desc}</p>`:''}
+        <!-- Slots -->
+        <p style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;font-family:'Syne',sans-serif;font-weight:600">Class Details</p>
+        ${slots.map(s=>{
+          const regCount = slotRegCount(s);
+          const total    = parseInt(s.totalSpots)||0;
+          const pct      = total>0 ? Math.round((regCount/total)*100) : 0;
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:0.65rem 0.85rem;background:var(--bg3);border:1px solid var(--border);margin-bottom:0.4rem;font-size:0.82rem">
+            <div>
+              <span style="color:var(--text)">${s.song?'♪ '+s.song:'—'}</span>
+              <span style="color:var(--muted);margin-left:0.5rem;font-size:0.74rem">${s.date||''} ${s.time||''}</span>
+            </div>
+            <div style="text-align:right">
+              <span style="font-size:0.8rem;font-weight:600;color:${pct>=80?'var(--red)':pct>=50?'var(--yellow)':'var(--green)'}">${regCount} registered</span>
+              <span style="display:block;font-size:0.65rem;color:var(--muted)">${total>0?'of '+total+' spots':''}</span>
+            </div>
+          </div>`;
+        }).join('')}
+        <!-- Packages -->
+        ${(w.packages||[]).length?`
+        <p style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;margin-top:1.1rem;font-family:'Syne',sans-serif;font-weight:600">Packages</p>
+        ${(w.packages||[]).map(p=>`<div style="display:flex;justify-content:space-between;padding:0.55rem 0.85rem;background:var(--bg3);border:1px solid var(--border);margin-bottom:0.35rem;font-size:0.82rem">
+          <span style="color:var(--text)">${p.name}</span>
+          <span style="color:var(--yellow);font-family:'Bebas Neue',sans-serif;font-size:1rem">₹${parseInt(p.price||0).toLocaleString('en-IN')}</span>
+        </div>`).join('')}`:''}
+        <!-- Registrations list -->
+        <p style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;margin-top:1.1rem;font-family:'Syne',sans-serif;font-weight:600">Registrations (${regs.length})</p>
+        ${regs.length ? regs.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:0.55rem 0.85rem;background:var(--bg3);border:1px solid var(--border);margin-bottom:0.3rem;font-size:0.82rem">
+          <div>
+            <span style="color:var(--text);font-weight:500">${r.name||'—'}</span>
+            <span style="color:var(--muted);margin-left:0.5rem;font-size:0.7rem">${r.phone||''}</span>
+          </div>
+          <div style="text-align:right">
+            <span style="color:var(--yellow);font-size:0.78rem">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</span>
+            <span style="display:block;font-size:0.65rem;color:var(--muted)">${r.package||''}</span>
+          </div>
+        </div>`).join('') : '<p style="font-size:0.82rem;color:var(--muted);padding:0.5rem 0">No registrations yet</p>'}
+        <!-- Actions -->
+        <div style="display:flex;gap:0.65rem;margin-top:1.25rem;flex-wrap:wrap">
+          <button class="btn btn-outline" onclick="document.getElementById('wsDetailPanel').remove();openEditWorkshop('${w.id}')">
+            <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit
+          </button>
+          <button class="btn btn-outline" onclick="document.getElementById('wsDetailPanel').remove();openManualStudent('${w.id}')">
+            <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Add Student
+          </button>
+          <button class="btn btn-outline" style="border-color:rgba(245,230,66,0.4);color:var(--yellow)" onclick="openDelayModal('${w.id}')">
+            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Send Delay Update
+          </button>
         </div>
-        <div style="text-align:right">
-          <span style="color:var(--yellow);font-size:0.78rem">₹${parseFloat(r.amount_paid||0).toLocaleString('en-IN')}</span>
-          <span style="display:block;font-size:0.65rem;color:var(--muted)">${r.package||''}</span>
-        </div>
-      </div>`).join('') : '<p style="font-size:0.82rem;color:var(--muted);padding:0.75rem 0">No registrations yet</p>'}
-      <!-- Actions -->
-      <div style="display:flex;gap:0.75rem;margin-top:1.5rem;flex-wrap:wrap">
-        <button class="btn btn-outline" onclick="document.getElementById('wsDetailPanel').remove();openEditWorkshop('${w.id}')">
-          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit Workshop
-        </button>
-        <button class="btn btn-outline" onclick="document.getElementById('wsDetailPanel').remove();openManualStudent('${w.id}')">
-          <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Add Student
-        </button>
-        <button class="btn btn-outline" style="border-color:rgba(245,230,66,0.4);color:var(--yellow)" onclick="openDelayModal('${w.id}')">
-          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Send Delay Update
-        </button>
       </div>
     </div>`;
 
-  document.body.appendChild(panel);
-  requestAnimationFrame(()=>panel.style.transform='translateX(0)');
-  // Click outside to close
-  setTimeout(()=>document.addEventListener('click', function close(e){
-    if(!panel.contains(e.target)&&!e.target.closest('.ws-card')){
-      panel.style.transform='translateX(100%)';
-      setTimeout(()=>panel.remove(),300);
-      document.removeEventListener('click',close);
-    }
-  }), 100);
+  // Add fade-in animation
+  const styleEl = document.getElementById('wsDetailAnim');
+  if(!styleEl){
+    const s = document.createElement('style');
+    s.id = 'wsDetailAnim';
+    s.textContent = '@keyframes fadeInUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}';
+    document.head.appendChild(s);
+  }
+
+  document.body.appendChild(backdrop);
 };
 
 /* DRAFT — publish draft */
