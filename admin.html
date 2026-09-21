@@ -4857,14 +4857,14 @@ window.openWsDetail = function(id){
   // Total class slots sold across all registrations
   const totalClassSlots = regs.reduce((sum, r) => sum + regSlotCount(r), 0);
 
-  // Count class slots registered for a specific slot
+  // Count registrations that include a specific slot (1 per student, not per package)
   function slotRegCount(s){
     return regs.filter(r=>{
       const rSlots = (r.slots||'').toLowerCase();
       return rSlots.includes((s.song||'').toLowerCase())||
              rSlots.includes((s.date||'').toLowerCase().slice(0,6))||
              (r.selectedSlots||[]).includes(s.id);
-    }).reduce((sum, r) => sum + regSlotCount(r), 0);
+    }).length;
   }
 
   // Backdrop
