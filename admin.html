@@ -8625,7 +8625,7 @@ window.openAddBatch = function(){
     const el=document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('beTrainer').value = '';
-  buildTrainerOptions('beTrainerPicker', '');
+  buildArtistOptions('beTrainerPicker', '');
   setBatchDays('Mon · Tue · Wed'); // default selection
   document.getElementById('beGradient').value = 'linear-gradient(145deg,#1a0407,#bc1f2e)';
   document.querySelectorAll('#bgGradientPicker div').forEach((d,i)=>d.style.borderColor=i===0?'var(--red)':'transparent');
@@ -8641,7 +8641,7 @@ window.openEditBatch = async function(id){
   document.getElementById('beBatchName').value = b.name||'';
   document.getElementById('beBatchId').value   = b.batchId||b.id||'';
   document.getElementById('beTrainer').value   = b.trainer||'';
-  buildTrainerOptions('beTrainerPicker', b.trainer||'');
+  buildArtistOptions('beTrainerPicker', b.trainer||'');
   document.getElementById('beStyle').value     = b.style||'';
   setBatchDays(b.days||'');
   document.getElementById('beTime').value      = b.time||'';
