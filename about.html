@@ -301,7 +301,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
     <h2 class="founders-title">MEET THE <span>FOUNDERS</span></h2>
     <div class="founders-grid">
       <div class="founder-card fade-up">
-        <div class="founder-avatar">
+        <div class="founder-avatar" id="ab-f1avatar">
           <div class="founder-avatar-bg" style="background:linear-gradient(145deg,#1a0407,#bc1f2e)"></div>
           <span class="founder-avatar-initials">CJ</span>
         </div>
@@ -313,7 +313,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
         </div>
       </div>
       <div class="founder-card fade-up">
-        <div class="founder-avatar">
+        <div class="founder-avatar" id="ab-f2avatar">
           <div class="founder-avatar-bg" style="background:linear-gradient(145deg,#05080f,#1a3a6b)"></div>
           <span class="founder-avatar-initials">GB</span>
         </div>
@@ -423,6 +423,14 @@ async function loadAbout(){
     setText('ab-f1bio',  data.f1bio);
     setText('ab-f2name', data.f2name);
     setText('ab-f2bio',  data.f2bio);
+    // Founder photos — swap in image if uploaded, keep initials fallback otherwise
+    [1,2].forEach(n=>{
+      const url = data['f'+n+'image'];
+      const avatar = document.getElementById('ab-f'+n+'avatar');
+      if(url && avatar){
+        avatar.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`;
+      }
+    });
     setText('ab-stat1',  data.stat1);
     setText('ab-stat2',  data.stat2);
     setText('ab-stat3',  data.stat3);

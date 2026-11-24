@@ -563,10 +563,46 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         </div>
         <div class="table-wrap" style="padding:1.5rem">
           <p class="section-bar-title" style="margin-bottom:1.25rem">Founders</p>
-          <div class="form-group" style="margin-bottom:1rem"><label>Founder 1 — Name</label><input type="text" id="ab-f1name" placeholder="Chirag Jhunjhunwala"></div>
-          <div class="form-group" style="margin-bottom:1rem"><label>Founder 1 — Bio</label><textarea id="ab-f1bio" style="min-height:80px"></textarea></div>
-          <div class="form-group" style="margin-bottom:1rem"><label>Founder 2 — Name</label><input type="text" id="ab-f2name" placeholder="Govind Bhutra"></div>
-          <div class="form-group" style="margin-bottom:1rem"><label>Founder 2 — Bio</label><textarea id="ab-f2bio" style="min-height:80px"></textarea></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1rem">
+            <!-- Founder 1 -->
+            <div>
+              <div class="form-group" style="margin-bottom:0.75rem"><label>Founder 1 — Name</label><input type="text" id="ab-f1name" placeholder="Chirag Jhunjhunwala"></div>
+              <div class="form-group" style="margin-bottom:0.75rem"><label>Founder 1 — Bio</label><textarea id="ab-f1bio" style="min-height:80px"></textarea></div>
+              <div class="form-group">
+                <label>Founder 1 — Photo</label>
+                <div id="ab-f1image-preview" style="display:none;margin-bottom:0.5rem;position:relative;width:72px">
+                  <img id="ab-f1image-img" style="width:72px;height:72px;object-fit:cover;border-radius:50%;border:2px solid var(--border);display:block">
+                  <button type="button" onclick="clearFounderPhoto(1)" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
+                </div>
+                <label style="display:inline-flex;align-items:center;gap:0.4rem;cursor:pointer;background:var(--bg3);border:1px solid var(--border2);padding:0.4rem 0.75rem;font-size:0.78rem;color:var(--text)">
+                  <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                  Upload Photo
+                  <input type="file" id="ab-f1image-file" accept="image/*" style="display:none" onchange="previewFounderPhoto(1,this)">
+                </label>
+                <span id="ab-f1image-status" style="font-size:0.72rem;color:var(--muted);margin-left:0.4rem"></span>
+                <input type="hidden" id="ab-f1image">
+              </div>
+            </div>
+            <!-- Founder 2 -->
+            <div>
+              <div class="form-group" style="margin-bottom:0.75rem"><label>Founder 2 — Name</label><input type="text" id="ab-f2name" placeholder="Govind Bhutra"></div>
+              <div class="form-group" style="margin-bottom:0.75rem"><label>Founder 2 — Bio</label><textarea id="ab-f2bio" style="min-height:80px"></textarea></div>
+              <div class="form-group">
+                <label>Founder 2 — Photo</label>
+                <div id="ab-f2image-preview" style="display:none;margin-bottom:0.5rem;position:relative;width:72px">
+                  <img id="ab-f2image-img" style="width:72px;height:72px;object-fit:cover;border-radius:50%;border:2px solid var(--border);display:block">
+                  <button type="button" onclick="clearFounderPhoto(2)" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
+                </div>
+                <label style="display:inline-flex;align-items:center;gap:0.4rem;cursor:pointer;background:var(--bg3);border:1px solid var(--border2);padding:0.4rem 0.75rem;font-size:0.78rem;color:var(--text)">
+                  <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                  Upload Photo
+                  <input type="file" id="ab-f2image-file" accept="image/*" style="display:none" onchange="previewFounderPhoto(2,this)">
+                </label>
+                <span id="ab-f2image-status" style="font-size:0.72rem;color:var(--muted);margin-left:0.4rem"></span>
+                <input type="hidden" id="ab-f2image">
+              </div>
+            </div>
+          </div>
           <p class="section-bar-title" style="margin-bottom:1.25rem;margin-top:1.5rem">Stats</p>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
             <div class="form-group"><label>Students Taught</label><input type="text" id="ab-stat1" placeholder="150+"></div>
@@ -7316,8 +7352,21 @@ function initAboutEditor(data){
     ]
   };
   const d = {...defaults,...data};
-  ['tagline','founded','story1','story2','story3','quote','f1name','f1bio','f2name','f2bio','stat1','stat2','stat3','stat4'].forEach(k=>{
+  ['tagline','founded','story1','story2','story3','quote','f1name','f1bio','f2name','f2bio','stat1','stat2','stat3','stat4','f1image','f2image'].forEach(k=>{
     const el = document.getElementById('ab-'+k); if(el) el.value = d[k]||'';
+  });
+  // Show existing founder photos
+  [1,2].forEach(n=>{
+    const url = d['f'+n+'image']||'';
+    const fileInput = document.getElementById('ab-f'+n+'image-file');
+    if(fileInput) fileInput.value = '';
+    document.getElementById('ab-f'+n+'image-status').textContent = '';
+    if(url){
+      document.getElementById('ab-f'+n+'image-img').src = url;
+      document.getElementById('ab-f'+n+'image-preview').style.display = 'block';
+    } else {
+      document.getElementById('ab-f'+n+'image-preview').style.display = 'none';
+    }
   });
   const be = document.getElementById('believeEditor');
   if(be) be.innerHTML = (d.believes||defaults.believes).map((b,i)=>`
@@ -8619,6 +8668,25 @@ function setBatchDays(daysStr){
   document.getElementById('beDays').value = daysStr;
 }
 
+/* Founder photo helpers */
+window.previewFounderPhoto = function(n, input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('ab-f'+n+'image-img').src = e.target.result;
+    document.getElementById('ab-f'+n+'image-preview').style.display = 'block';
+    document.getElementById('ab-f'+n+'image-status').textContent = file.name;
+  };
+  reader.readAsDataURL(file);
+};
+window.clearFounderPhoto = function(n){
+  document.getElementById('ab-f'+n+'image').value = '';
+  document.getElementById('ab-f'+n+'image-file').value = '';
+  document.getElementById('ab-f'+n+'image-preview').style.display = 'none';
+  document.getElementById('ab-f'+n+'image-status').textContent = '';
+};
+
 window.openAddBatch = function(){
   document.getElementById('batchEditTitle').textContent = 'Add New Batch';
   document.getElementById('batchEditId').value = '';
@@ -9357,9 +9425,26 @@ window.deleteArtist = async function(i, name){
 window.saveAboutContent = async function(){
   try {
     const data = {};
-    ['tagline','founded','story1','story2','story3','quote','f1name','f1bio','f2name','f2bio','stat1','stat2','stat3','stat4'].forEach(k=>{
+    ['tagline','founded','story1','story2','story3','quote','f1name','f1bio','f2name','f2bio','stat1','stat2','stat3','stat4','f1image','f2image'].forEach(k=>{
       const el = document.getElementById('ab-'+k); if(el) data[k] = el.value.trim();
     });
+    // Upload any new founder photos
+    for(const n of [1,2]){
+      const file = document.getElementById('ab-f'+n+'image-file').files[0];
+      if(file){
+        document.getElementById('ab-f'+n+'image-status').textContent = 'Uploading…';
+        try {
+          const safeName = file.name.replace(/[^a-z0-9.]/gi,'_');
+          const url = await uploadToStorage(file, `founderPhotos/f${n}_${Date.now()}_${safeName}`);
+          data['f'+n+'image'] = url;
+          document.getElementById('ab-f'+n+'image').value = url;
+          document.getElementById('ab-f'+n+'image-status').textContent = 'Uploaded ✓';
+        } catch(e){
+          showToast('Photo upload failed: '+e.message,'error');
+          return;
+        }
+      }
+    }
     data.believes = Array.from({length:6},(_,i)=>({
       title:(document.getElementById('bel-title-'+i)||{}).value||'',
       text: (document.getElementById('bel-text-'+i)||{}).value||'',
