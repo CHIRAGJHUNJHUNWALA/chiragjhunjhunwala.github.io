@@ -1624,19 +1624,11 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         </div>
       </div>
       <div class="form-group">
-        <label>Trainer Photo</label>
-        <div id="beImagePreview" style="display:none;margin-bottom:0.6rem;position:relative;width:80px">
-          <img id="beImagePreviewImg" style="width:80px;height:80px;object-fit:cover;border-radius:50%;border:2px solid var(--border);display:block">
-          <button type="button" onclick="document.getElementById('beImage').value='';document.getElementById('beImagePreview').style.display='none';document.getElementById('beImageUploadStatus').textContent=''"
-            style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-size:0.7rem;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
+        <label>Trainer Photo URL <span style="font-weight:300;color:var(--muted);font-size:0.8em">(paste image URL)</span></label>
+        <input type="url" id="beImage" placeholder="https://...">
+        <div id="beImagePreview" style="margin-top:0.6rem;display:none">
+          <img id="beImagePreviewImg" style="width:80px;height:80px;object-fit:cover;border-radius:50%;border:2px solid var(--border)">
         </div>
-        <label style="display:inline-flex;align-items:center;gap:0.5rem;cursor:pointer;background:var(--bg3);border:1px solid var(--border2);padding:0.5rem 0.9rem;font-size:0.82rem;color:var(--text)">
-          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
-          Upload Photo
-          <input type="file" id="beImageFile" accept="image/*" style="display:none" onchange="previewBatchPhoto(this)">
-        </label>
-        <span id="beImageUploadStatus" style="font-size:0.75rem;color:var(--muted);margin-left:0.5rem"></span>
-        <input type="hidden" id="beImage">
       </div>
       <div class="form-group">
         <label>Background Gradient</label>
@@ -2716,6 +2708,7 @@ window.showView = function(id){
   if(id==='batches')     renderBatchesView();
   if(id==='editbatches') renderEditBatches();
   if(id==='gallery')     renderGallery();
+  if(id==='abouteditor') loadAboutContent();
   if(id==='checkins')    renderCheckinsView();
   if(id==='payments')        renderAllPayments();
   if(id==='analysis')        renderAnalysis();
@@ -4865,14 +4858,14 @@ window.openWsDetail = function(id){
   // Total class slots sold across all registrations
   const totalClassSlots = regs.reduce((sum, r) => sum + regSlotCount(r), 0);
 
-  // Count registrations that include a specific slot (1 per student, not per package)
+  // Count class slots registered for a specific slot
   function slotRegCount(s){
     return regs.filter(r=>{
       const rSlots = (r.slots||'').toLowerCase();
       return rSlots.includes((s.song||'').toLowerCase())||
              rSlots.includes((s.date||'').toLowerCase().slice(0,6))||
              (r.selectedSlots||[]).includes(s.id);
-    }).length;
+    }).reduce((sum, r) => sum + regSlotCount(r), 0);
   }
 
   // Backdrop
@@ -8626,30 +8619,14 @@ function setBatchDays(daysStr){
   document.getElementById('beDays').value = daysStr;
 }
 
-/* Preview batch trainer photo before upload */
-window.previewBatchPhoto = function(input){
-  const file = input.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    document.getElementById('beImagePreviewImg').src = e.target.result;
-    document.getElementById('beImagePreview').style.display = 'block';
-    document.getElementById('beImageUploadStatus').textContent = file.name;
-  };
-  reader.readAsDataURL(file);
-};
-
 window.openAddBatch = function(){
   document.getElementById('batchEditTitle').textContent = 'Add New Batch';
   document.getElementById('batchEditId').value = '';
   ['beBatchName','beBatchId','beStyle','beTime','beDesc','beImage','beFee','beFeeWeekly','beContact'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
-  const fileInput = document.getElementById('beImageFile');
-  if(fileInput) fileInput.value = '';
-  document.getElementById('beImageUploadStatus').textContent = '';
   document.getElementById('beTrainer').value = '';
-  buildArtistOptions('beTrainerPicker', '');
+  buildTrainerOptions('beTrainerPicker', '');
   setBatchDays('Mon · Tue · Wed'); // default selection
   document.getElementById('beGradient').value = 'linear-gradient(145deg,#1a0407,#bc1f2e)';
   document.querySelectorAll('#bgGradientPicker div').forEach((d,i)=>d.style.borderColor=i===0?'var(--red)':'transparent');
@@ -8665,7 +8642,7 @@ window.openEditBatch = async function(id){
   document.getElementById('beBatchName').value = b.name||'';
   document.getElementById('beBatchId').value   = b.batchId||b.id||'';
   document.getElementById('beTrainer').value   = b.trainer||'';
-  buildArtistOptions('beTrainerPicker', b.trainer||'');
+  buildTrainerOptions('beTrainerPicker', b.trainer||'');
   document.getElementById('beStyle').value     = b.style||'';
   setBatchDays(b.days||'');
   document.getElementById('beTime').value      = b.time||'';
@@ -8675,9 +8652,6 @@ window.openEditBatch = async function(id){
   document.getElementById('beImage').value     = b.image||'';
   document.getElementById('beContact').value   = b.contact||'';
   document.getElementById('beGradient').value  = b.gradient||'linear-gradient(145deg,#1a0407,#bc1f2e)';
-  const beFileInput = document.getElementById('beImageFile');
-  if(beFileInput) beFileInput.value = '';
-  document.getElementById('beImageUploadStatus').textContent = '';
   if(b.image){
     document.getElementById('beImagePreview').style.display='block';
     document.getElementById('beImagePreviewImg').src=b.image;
@@ -8697,24 +8671,6 @@ window.saveBatch = async function(){
   if(!name||!trainer){ showToast('Batch name and trainer are required','error'); return; }
   const editId = document.getElementById('batchEditId').value;
   const rawContact = document.getElementById('beContact').value.trim().replace(/\D/g,'');
-
-  // Upload photo if a new file was selected
-  let imageURL = document.getElementById('beImage').value.trim();
-  const photoFile = document.getElementById('beImageFile').files[0];
-  if(photoFile){
-    const statusEl = document.getElementById('beImageUploadStatus');
-    statusEl.textContent = 'Uploading…';
-    try {
-      const safeName = photoFile.name.replace(/[^a-z0-9.]/gi,'_');
-      imageURL = await uploadToStorage(photoFile, `batchPhotos/${Date.now()}_${safeName}`);
-      document.getElementById('beImage').value = imageURL;
-      statusEl.textContent = 'Uploaded ✓';
-    } catch(e){
-      showToast('Photo upload failed: '+e.message,'error');
-      return;
-    }
-  }
-
   const data = {
     name, trainer,
     batchId:    batchId || name.toLowerCase().replace(/\s+/g,'-'),
@@ -8724,7 +8680,7 @@ window.saveBatch = async function(){
     fee:        parseFloat(document.getElementById('beFee').value)||0,
     feeWeekly:  parseFloat(document.getElementById('beFeeWeekly').value)||0,
     desc:       document.getElementById('beDesc').value.trim(),
-    image:      imageURL,
+    image:      document.getElementById('beImage').value.trim(),
     contact:    rawContact ? '+91'+rawContact.slice(-10) : '',
     gradient:   document.getElementById('beGradient').value,
     updatedAt:  Date.now()
