@@ -572,7 +572,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
             <div class="form-group"><label>Students Taught</label><input type="text" id="ab-stat1" placeholder="150+"></div>
             <div class="form-group"><label>Workshops Completed</label><input type="text" id="ab-stat2" placeholder="1000+"></div>
             <div class="form-group"><label>Artists Hosted</label><input type="text" id="ab-stat3" placeholder="10+"></div>
-            <div class="form-group"><label>Stat 4 Label</label><input type="text" id="ab-stat4label" placeholder="Community"></div>
+            <div class="form-group"><label>Community (Value)</label><input type="text" id="ab-stat4" placeholder="e.g. 500+"></div>
           </div>
         </div>
       </div>
@@ -7305,7 +7305,7 @@ function initAboutEditor(data){
     quote:'Learn, fail, make friends, spend the best time of your day at your second home.',
     f1name:'Chirag Jhunjhunwala', f1bio:'Born and brought up in Surat. Business and marketing background.',
     f2name:'Govind Bhutra', f2bio:'Same school, same batch, same city.',
-    stat1:'150+', stat2:'1000+', stat3:'10+', stat4label:'Community',
+    stat1:'150+', stat2:'1000+', stat3:'10+', stat4:'1',
     believes:[
       {title:'Everyone Belongs',text:'Whether you\'ve been dancing for 10 years or 10 days — this space was made for you.'},
       {title:'Passion Has a Home',text:'We built this for every person who needed a space to pursue what they love.'},
@@ -7316,7 +7316,7 @@ function initAboutEditor(data){
     ]
   };
   const d = {...defaults,...data};
-  ['tagline','founded','story1','story2','story3','quote','f1name','f1bio','f2name','f2bio','stat1','stat2','stat3','stat4label'].forEach(k=>{
+  ['tagline','founded','story1','story2','story3','quote','f1name','f1bio','f2name','f2bio','stat1','stat2','stat3','stat4'].forEach(k=>{
     const el = document.getElementById('ab-'+k); if(el) el.value = d[k]||'';
   });
   const be = document.getElementById('believeEditor');
@@ -9357,7 +9357,7 @@ window.deleteArtist = async function(i, name){
 window.saveAboutContent = async function(){
   try {
     const data = {};
-    ['tagline','founded','story1','story2','story3','quote','f1name','f1bio','f2name','f2bio','stat1','stat2','stat3','stat4label'].forEach(k=>{
+    ['tagline','founded','story1','story2','story3','quote','f1name','f1bio','f2name','f2bio','stat1','stat2','stat3','stat4'].forEach(k=>{
       const el = document.getElementById('ab-'+k); if(el) data[k] = el.value.trim();
     });
     data.believes = Array.from({length:6},(_,i)=>({

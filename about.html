@@ -253,8 +253,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.25rem 2rem;display
       <p class="stat-label">Artists Hosted</p>
     </div>
     <div class="stat-item fade-up">
-      <p class="stat-num">1</p>
-      <p class="stat-label" id="ab-stat4label">Community</p>
+      <p class="stat-num" id="ab-stat4">1</p>
+      <p class="stat-label">Community</p>
     </div>
   </div>
 </div>
@@ -426,7 +426,7 @@ async function loadAbout(){
     setText('ab-stat1',  data.stat1);
     setText('ab-stat2',  data.stat2);
     setText('ab-stat3',  data.stat3);
-    setText('ab-stat4label', data.stat4label);
+    setText('ab-stat4', data.stat4);
     (data.believes||[]).forEach((b,i)=>{
       setText('bel-title-'+i, b.title);
       setText('bel-text-'+i,  b.text);
